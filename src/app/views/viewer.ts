@@ -41,6 +41,7 @@ import type {
 import { formatDate, createPanel } from '../viewer/panel';
 import type { CompareInfo, FrameInfo, PanelModel } from '../viewer/panel';
 import { createPlayer } from '../viewer/player';
+import { targetNote } from '../viewer/target-notes';
 import {
   AUTO_REST_LIMIT,
   DEFAULT_SIZE,
@@ -1629,11 +1630,7 @@ export const mount: Mount = (root, ctx) => {
       cachedSlug === 'wise-0855' ||
       cachedData?.slug === 'wise-0855' ||
       normalizeName(`${target.name ?? ''} ${params.q ?? ''}`).includes('wise0855');
-    panel.setTitleNote(
-      isWise
-        ? 'WISE 0855 is one of the faintest known brown dwarfs and may not be visible in any single SPHEREx image; we mark where it should be. A faint dot near the marker at short wavelengths is probably a background source, not the brown dwarf.'
-        : null,
-    );
+    panel.setTitleNote(targetNote(cachedSlug ?? cachedData?.slug) ?? (isWise ? targetNote('wise-0855') : null));
     panel.setHeader(
       name,
       `RA ${formatRaDeg(target.ra)} deg, Dec ${formatDecDeg(target.dec)} deg${det !== null ? `. Detector ${det}.` : ''}`,

@@ -1,3 +1,4 @@
+import { isMock } from '../data';
 import type { Detector, MovieMode, Progress, SpherexErrorCode } from '../data';
 import { divergingColor } from './render';
 import type { PlayMode } from './player';
@@ -29,7 +30,13 @@ export interface PanelModel {
   snr: boolean;
   mode: MovieMode;
   det: Detector;
-  detectors: Detector[];
+  detectorList: { detector: Detector; label: string; enabled: boolean }[];
+  size: number;
+  sizeEnabled: boolean;
+  sizeNote: string;
+  overlays: { gaia: boolean; wise: boolean; masked: boolean };
+  wiseAvailable: boolean;
+  overlayNote: string;
   compare: CompareInfo | null;
 }
 
@@ -50,15 +57,24 @@ export interface PanelHandlers {
   openTarget: (name: string) => void;
   loadRest: () => void;
   stopRest: () => void;
+  setSize: (n: number) => void;
+  toggleOverlay: (k: 'gaia' | 'wise' | 'masked') => void;
+  goBack: () => void;
+  openPrepared: () => void;
 }
 
 export type RestState =
-  | { kind: 'optin'; n: number; mb: number }
+  | { kind: 'optin'; n: number; mb: number; single: boolean }
   | { kind: 'loading'; done: number; total: number; mb: number }
-  | { kind: 'stopped'; n: number; mb: number; loaded: number; total: number };
+  | { kind: 'stopped'; n: number; mb: number; loaded: number; total: number; single: boolean };
 
 export interface Panel {
   el: HTMLElement;
+  setBack: (label: string | null) => void;
+  setSkyEntry: (name: string | null) => void;
+  attach: (spectrum: HTMLElement, quality: HTMLElement) => void;
+  toggleHelp: () => void;
+  closeHelp: () => boolean;
   showEmpty: (targets: { slug: string; name: string; blurb: string }[]) => void;
   showControls: (on: boolean) => void;
   setHeader: (name: string, meta: string) => void;
@@ -239,19 +255,130 @@ export function createPanel(hd: PanelHandlers): Panel {
   const bSingle = btn('Every exposure', 'v-seg-btn', () => hd.setMode('single'));
   modeSeg.append(bVisit, bSingle);
   const modeHint = h('p', 'v-hint', 'Per visit averages the exposures taken in one pass. Every exposure shows each one separately.');
-  const selDet = h('select', 'v-select');
-  selDet.id = 'v-sel-det';
-  const labDet = h('label', 'v-field');
-  labDet.htmlFor = selDet.id;
-  const labDetT = h('span', 'v-lab', 'Detector');
-  labDet.append(labDetT, selDet);
-  selDet.addEventListener('change', () => hd.setDet(Number(selDet.value) as Detector));
-  secDisp.append(hDisp, modeSeg, modeHint, labDet);
+  const detLab = h('p', 'v-lab v-subhead', 'Detector');
+  const detList = h('div', 'v-detlist');
+  detList.setAttribute('role', 'group');
+  detList.setAttribute('aria-label', 'Detector');
+  let detKey = '';
+  const sizeLab = h('p', 'v-lab v-subhead', 'Patch size');
+  const sizeSeg = h('div', 'v-seg');
+  sizeSeg.setAttribute('role', 'group');
+  sizeSeg.setAttribute('aria-label', 'Patch size in arcsec');
+  const sizeBtns = [200, 400, 800].map((n) => {
+    const b = btn(`${n} arcsec`, 'v-seg-btn', () => hd.setSize(n));
+    b.dataset.size = String(n);
+    sizeSeg.append(b);
+    return b;
+  });
+  const sizeNote = h('p', 'v-hint', '');
+  secDisp.append(hDisp, modeSeg, modeHint, detLab, detList, sizeLab, sizeSeg, sizeNote);
 
-  controls.append(secPlay, secTl, secCmp, secDisp);
+  // overlays
+  const secOv = h('section', 'v-sec');
+  secOv.append(h('h3', 'v-h', 'Overlays'));
+  const ovRow = h('div', 'v-row');
+  const mkOv = (key: 'gaia' | 'wise' | 'masked', text: string) => {
+    const b = btn(text, 'v-btn v-toggle', () => hd.toggleOverlay(key));
+    b.setAttribute('aria-pressed', 'false');
+    ovRow.append(b);
+    return b;
+  };
+  const bGaia = mkOv('gaia', 'Gaia stars');
+  const bWise = mkOv('wise', 'WISE sources');
+  const bMask = mkOv('masked', 'Masked pixels');
+  const ovNote = h('p', 'v-hint', '');
+  secOv.append(ovRow, ovNote);
+
+  const slotSpec = h('div', 'v-slot');
+  const slotQual = h('div', 'v-slot');
+
+  // share
+  const secShare = h('section', 'v-sec');
+  secShare.append(h('h3', 'v-h', 'Share'));
+  const shareRow = h('div', 'v-row');
+  const bCopy = btn('Copy link', 'v-btn', () => void copyLink());
+  const bKeys = btn('Keyboard', 'v-btn', () => toggleHelp());
+  bKeys.setAttribute('aria-expanded', 'false');
+  shareRow.append(bCopy, bKeys);
+  const copied = h('p', 'v-hint v-copied', '');
+  copied.setAttribute('aria-live', 'polite');
+  const help = h('div', 'v-help');
+  help.hidden = true;
+  help.id = 'v-help';
+  bKeys.setAttribute('aria-controls', 'v-help');
+  help.setAttribute('role', 'group');
+  help.setAttribute('aria-label', 'Keyboard shortcuts');
+  const helpList = h('dl', 'v-keys');
+  for (const [k, d] of [
+    ['Space', 'Start or stop blinking or playing'],
+    ['Left and right arrows', 'Step through the frames'],
+    ['D', 'Turn the difference image on or off'],
+    ['G', 'Show or hide Gaia stars'],
+    ['?', 'Open this list'],
+    ['Escape', 'Close this list'],
+  ]) {
+    helpList.append(h('dt', '', k), h('dd', '', d));
+  }
+  help.append(helpList);
+  secShare.append(shareRow, copied, help);
+
+  let copiedTimer: ReturnType<typeof setTimeout> | null = null;
+  async function copyLink(): Promise<void> {
+    const url = location.href;
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      ok = true;
+    } catch {
+      const t = document.createElement('input');
+      t.value = url;
+      t.setAttribute('aria-hidden', 'true');
+      t.style.position = 'fixed';
+      t.style.opacity = '0';
+      document.body.append(t);
+      t.select();
+      try {
+        ok = document.execCommand('copy');
+      } catch {
+        ok = false;
+      }
+      t.remove();
+      bCopy.focus();
+    }
+    copied.textContent = ok ? 'Link copied' : 'Could not copy. Copy the address from the browser bar.';
+    if (copiedTimer !== null) clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => {
+      copied.textContent = '';
+    }, 2000);
+  }
+
+  function toggleHelp(): void {
+    help.hidden = !help.hidden;
+    bKeys.setAttribute('aria-expanded', String(!help.hidden));
+  }
+
+  function closeHelp(): boolean {
+    if (help.hidden) return false;
+    help.hidden = true;
+    bKeys.setAttribute('aria-expanded', 'false');
+    bKeys.focus();
+    return true;
+  }
+
+  controls.append(secPlay, secTl, secCmp, secDisp, secOv, slotSpec, slotQual, secShare);
   const restBox = h('div', 'v-rest');
   restBox.hidden = true;
-  el.append(head, status, restBox, empty, controls);
+  if (isMock) {
+    const mockLine = h('p', 'v-mock', 'Simulated data. Real SPHEREx images are being connected.');
+    el.append(mockLine);
+  }
+  const backRow = h('div', 'v-top');
+  backRow.hidden = true;
+  const backBtn = btn('', 'v-btn', hd.goBack);
+  backRow.append(backBtn);
+  const skyRow = h('div', 'v-top v-skyline');
+  skyRow.hidden = true;
+  el.append(backRow, skyRow, head, status, restBox, empty, controls);
 
   // timeline rendering
   let tlKey = '';
@@ -422,18 +549,31 @@ export function createPanel(hd: PanelHandlers): Panel {
 
     bVisit.setAttribute('aria-pressed', String(m.mode === 'visit-stack'));
     bSingle.setAttribute('aria-pressed', String(m.mode === 'single'));
-    const dkey = m.detectors.join(',');
-    if (selDet.dataset.key !== dkey) {
-      selDet.dataset.key = dkey;
-      selDet.replaceChildren();
-      for (const d of m.detectors) {
-        const o = h('option', '', `Detector ${d}`);
-        o.value = String(d);
-        selDet.append(o);
+    const dkey = m.detectorList.map((d) => `${d.detector}${d.enabled ? 1 : 0}`).join(',');
+    if (dkey !== detKey) {
+      detKey = dkey;
+      detList.replaceChildren();
+      for (const d of m.detectorList) {
+        const b = btn(d.label, 'v-det', () => hd.setDet(d.detector));
+        b.dataset.det = String(d.detector);
+        b.disabled = !d.enabled;
+        detList.append(b);
       }
     }
-    selDet.value = String(m.det);
-    labDet.hidden = m.detectors.length < 2;
+    for (const b of Array.from(detList.children) as HTMLButtonElement[]) {
+      b.setAttribute('aria-pressed', String(Number(b.dataset.det) === m.det));
+    }
+    sizeBtns.forEach((b) => {
+      b.disabled = !m.sizeEnabled;
+      b.setAttribute('aria-pressed', String(Number(b.dataset.size) === m.size));
+    });
+    sizeNote.textContent = m.sizeNote;
+    bGaia.setAttribute('aria-pressed', String(m.overlays.gaia));
+    bMask.setAttribute('aria-pressed', String(m.overlays.masked));
+    bWise.setAttribute('aria-pressed', String(m.overlays.wise && m.wiseAvailable));
+    bWise.disabled = !m.wiseAvailable;
+    bWise.textContent = m.wiseAvailable ? 'WISE sources' : 'WISE sources, not available yet';
+    ovNote.textContent = m.overlayNote;
   }
 
   function clearStatus(): void {
@@ -499,7 +639,7 @@ export function createPanel(hd: PanelHandlers): Panel {
       box.append(bar, h('p', 'v-detail', `${r.done} of ${r.total}, about ${r.mb} MB downloaded`));
       box.append(btn('Stop loading', 'v-btn', hd.stopRest));
     } else {
-      box.append(h('p', 'v-stage-word', 'You are looking at single exposures from different dates.'));
+      if (r.single) box.append(h('p', 'v-stage-word', 'You are looking at single exposures from different dates.'));
       if (r.kind === 'optin') {
         box.append(h('p', '', `${r.n} more exposures, about ${r.mb} MB. Load them to see every visit.`));
       } else {
@@ -606,6 +746,23 @@ export function createPanel(hd: PanelHandlers): Panel {
   return {
     el,
     showEmpty,
+    setBack: (label) => {
+      backRow.hidden = label === null;
+      if (label !== null) backBtn.textContent = label;
+    },
+    setSkyEntry: (name) => {
+      skyRow.replaceChildren();
+      skyRow.hidden = name === null;
+      if (name !== null) {
+        skyRow.append(h('span', '', `This is ${name}. `), btn('Open the prepared set', 'v-linkbtn', hd.openPrepared));
+      }
+    },
+    attach: (spectrum, quality) => {
+      slotSpec.replaceChildren(spectrum);
+      slotQual.replaceChildren(quality);
+    },
+    toggleHelp,
+    closeHelp,
     showControls: (on) => {
       controls.hidden = !on;
       if (on) {

@@ -43,12 +43,24 @@ export function formatDecDeg(deg: number): string {
   return (deg >= 0 ? '+' : '-') + Math.abs(deg).toFixed(5);
 }
 
+export type ExtraDraw = (
+  ctx: CanvasRenderingContext2D,
+  toCanvas: (gx: number, gy: number) => [number, number],
+  scale: number,
+  dpr: number,
+) => void;
+
 export interface Stage {
   el: HTMLElement;
   setImage: (rgba: Uint8ClampedArray, w: number, h: number) => void;
   setOverlay: (grid: Grid, targetXY: [number, number] | null) => void;
   setValueProvider: (fn: ((x: number, y: number) => string) | null) => void;
   setNote: (text: string | null) => void;
+  setExtraDraw: (fn: ExtraDraw | null) => void;
+  setHover: (fn: ((gx: number, gy: number) => string | null) | null) => void;
+  setPick: (pos: [number, number] | null) => void;
+  onPick: (fn: ((gx: number, gy: number) => void) | null) => void;
+  redraw: () => void;
   dispose: () => void;
 }
 
@@ -88,6 +100,10 @@ export function createStage(): Stage {
   let grid: Grid | null = null;
   let targetXY: [number, number] | null = null;
   let valueFn: ((x: number, y: number) => string) | null = null;
+  let extra: ExtraDraw | null = null;
+  let hoverFn: ((gx: number, gy: number) => string | null) | null = null;
+  let pickPos: [number, number] | null = null;
+  let pickFn: ((gx: number, gy: number) => void) | null = null;
   let scale = 1;
   let ox = 0;
   let oy = 0;
@@ -136,6 +152,11 @@ export function createStage(): Stage {
     if (!ctx) return;
     ctx.clearRect(0, 0, over.width, over.height);
     if (!hasImage || !grid) return;
+    if (extra) {
+      ctx.save();
+      extra(ctx, (gx, gy) => [ox + (gx + 0.5) * scale, oy + (gy + 0.5) * scale], scale, dpr);
+      ctx.restore();
+    }
     const right = ox + imgW * scale;
     const bottom = oy + imgH * scale;
     const lw = Math.max(1, Math.round(1.5 * dpr));
@@ -199,6 +220,22 @@ export function createStage(): Stage {
     ctx.globalAlpha = 1;
     ctx.textAlign = 'left';
 
+    if (pickPos) {
+      const px = Math.round(ox + (pickPos[0] + 0.5) * scale);
+      const py = Math.round(oy + (pickPos[1] + 0.5) * scale);
+      const arm = Math.round(7 * dpr);
+      const cross = () => {
+        ctx.beginPath();
+        ctx.moveTo(px - arm, py);
+        ctx.lineTo(px + arm, py);
+        ctx.moveTo(px, py - arm);
+        ctx.lineTo(px, py + arm);
+        ctx.stroke();
+      };
+      halo(cross, 'rgba(4,6,13,0.8)', lw + 2 * dpr);
+      halo(cross, '#ffffff', lw);
+    }
+
     // target marker: two short ticks, north (above) and east (left), clear of the star
     if (targetXY) {
       const mx = Math.round(ox + (targetXY[0] + 0.5) * scale);
@@ -255,6 +292,21 @@ export function createStage(): Stage {
     return [x, y];
   }
 
+  function fractional(ev: PointerEvent | MouseEvent): [number, number] {
+    const rect = over.getBoundingClientRect();
+    const dx = (ev.clientX - rect.left) * (over.width / rect.width);
+    const dy = (ev.clientY - rect.top) * (over.height / rect.height);
+    return [(dx - ox) / scale - 0.5, (dy - oy) / scale - 0.5];
+  }
+
+  const onClick = (ev: MouseEvent) => {
+    if (!hasImage || !pickFn) return;
+    const [fx, fy] = fractional(ev);
+    if (fx < -0.5 || fy < -0.5 || fx > imgW - 0.5 || fy > imgH - 0.5) return;
+    pickFn(fx, fy);
+  };
+  over.addEventListener('click', onClick);
+
   const onMove = (ev: PointerEvent) => {
     const p = pixelAt(ev);
     if (!p || !grid) {
@@ -263,7 +315,8 @@ export function createStage(): Stage {
     }
     const w = gridToWorld(grid, p[0], p[1]);
     line1.textContent = `RA ${formatRaDeg(w.ra)} deg, ${formatRa(w.ra)}   Dec ${formatDecDeg(w.dec)} deg, ${formatDec(w.dec)}`;
-    line2.textContent = `Pixel ${p[0]}, ${p[1]}   ${valueFn ? valueFn(p[0], p[1]) : ''}`;
+    const near = hoverFn ? hoverFn(...fractional(ev)) : null;
+    line2.textContent = `Pixel ${p[0]}, ${p[1]}   ${valueFn ? valueFn(p[0], p[1]) : ''}${near ? '   ' + near : ''}`;
   };
   over.addEventListener('pointermove', onMove);
   over.addEventListener('pointerdown', onMove);
@@ -279,6 +332,21 @@ export function createStage(): Stage {
     setValueProvider: (fn) => {
       valueFn = fn;
     },
+    setExtraDraw: (fn) => {
+      extra = fn;
+      drawOverlay();
+    },
+    setHover: (fn) => {
+      hoverFn = fn;
+    },
+    setPick: (pos) => {
+      pickPos = pos;
+      drawOverlay();
+    },
+    onPick: (fn) => {
+      pickFn = fn;
+    },
+    redraw: drawOverlay,
     setNote: (text) => {
       note.hidden = text === null;
       note.textContent = text ?? '';
@@ -288,6 +356,7 @@ export function createStage(): Stage {
       over.removeEventListener('pointermove', onMove);
       over.removeEventListener('pointerdown', onMove);
       over.removeEventListener('pointerleave', idle);
+      over.removeEventListener('click', onClick);
     },
   };
 }

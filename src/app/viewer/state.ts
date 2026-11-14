@@ -11,7 +11,13 @@ export interface ViewerParams {
   diff: boolean;
   snr: boolean;
   frame: number | null;
+  size: number | null;
+  overlays: string[];
+  from: 'sky' | 'globe' | null;
+  fromParams: Record<string, string>;
 }
+
+export const OVERLAY_KEYS = ['gaia', 'wise', 'masked'] as const;
 
 function num(v: string | null): number | null {
   if (v === null || v.trim() === '') return null;
@@ -22,6 +28,14 @@ function num(v: string | null): number | null {
 function int(v: string | null): number | null {
   const n = num(v);
   return n === null ? null : Math.max(0, Math.round(n));
+}
+
+function fromParams(sp: URLSearchParams): Record<string, string> {
+  const out: Record<string, string> = {};
+  sp.forEach((v, k) => {
+    if (k.startsWith('from-') && k.length > 5) out[k.slice(5)] = v;
+  });
+  return out;
 }
 
 export function readParams(): ViewerParams {
@@ -39,6 +53,12 @@ export function readParams(): ViewerParams {
     diff: sp.get('diff') === '1',
     snr: sp.get('snr') === '1',
     frame: int(sp.get('frame')),
+    size: [200, 400, 800].includes(int(sp.get('size')) ?? 0) ? int(sp.get('size')) : null,
+    overlays: (sp.get('overlays') ?? '')
+      .split(',')
+      .filter((k) => (OVERLAY_KEYS as readonly string[]).includes(k)),
+    from: sp.get('from') === 'sky' ? 'sky' : sp.get('from') === 'globe' ? 'globe' : null,
+    fromParams: fromParams(sp),
   };
 }
 

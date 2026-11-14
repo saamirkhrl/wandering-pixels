@@ -10,38 +10,64 @@ import {
   resolveTarget,
   summarize,
 } from '../data';
-import type { CachedSlug, Detector, Exposure, Frame, Grid, Progress, Target } from '../data';
+import type { CachedSlug, CachedTarget, Detector, Exposure, Frame, Grid, Progress, Target } from '../data';
 
 export interface LoadRequest {
   q: string | null;
   ra: number | null;
   dec: number | null;
   det: Detector | null;
+  size: number | null;
 }
 
 export interface LoadCallbacks {
   onStage: (p: Progress) => void;
 }
 
+export interface DetInfo {
+  detector: Detector;
+  count: number;
+  visits: number;
+}
+
+export interface LiveSearch {
+  target: Target;
+  exposures: Exposure[];
+  available: DetInfo[];
+}
+
 export interface LiveContext {
   grid: Grid;
   rest: Exposure[];
+  size: number;
 }
 
 export const ONCE_ONLY = 'ONCE_ONLY';
 export const FRAME_MB_ESTIMATE = 2.0;
 export const AUTO_REST_LIMIT = 20;
+export const DEFAULT_SIZE = 400;
 
 export interface LoadResult {
   live: LiveContext | null;
+  search: LiveSearch | null;
+  cachedData: CachedTarget | null;
   target: Target;
   frames: Frame[];
   det: Detector;
-  available: { detector: Detector; count: number }[];
+  available: DetInfo[];
   failed: number;
   total: number;
   cached: boolean;
 }
+
+export const DET_BANDS: Record<Detector, [number, number]> = {
+  1: [0.75, 1.09],
+  2: [1.1, 1.62],
+  3: [1.63, 2.42],
+  4: [2.42, 3.82],
+  5: [3.82, 4.42],
+  6: [4.42, 5.0],
+};
 
 export const STAGE_WORDS: Record<Progress['stage'], string> = {
   resolve: 'Finding the star',
@@ -74,11 +100,14 @@ function sepArcsec(ra1: number, dec1: number, ra2: number, dec2: number): number
   return Math.acos(Math.min(1, Math.max(-1, c))) * (180 / Math.PI) * 3600;
 }
 
-async function matchCachedPosition(ra: number, dec: number): Promise<CachedSlug | null> {
+export async function findCachedByPosition(
+  ra: number,
+  dec: number,
+): Promise<{ slug: CachedSlug; name: string } | null> {
   for (const c of listCached()) {
     try {
       const t = await resolveTarget(c.name);
-      if (sepArcsec(ra, dec, t.ra, t.dec) <= 60) return c.slug;
+      if (sepArcsec(ra, dec, t.ra, t.dec) <= 60) return { slug: c.slug, name: c.name };
     } catch {
       // a cached name failing to resolve just means no match
     }
@@ -97,9 +126,9 @@ export function chooseDetector(
   return best.detector;
 }
 
-function availableOf(exposures: Exposure[]): { detector: Detector; count: number }[] {
+function availableOf(exposures: Exposure[]): DetInfo[] {
   return summarize(exposures)
-    .map((s) => ({ detector: s.detector, count: s.count }))
+    .map((x) => ({ detector: x.detector, count: x.count, visits: x.visits.length }))
     .sort((x, y) => x.detector - y.detector);
 }
 
@@ -107,37 +136,8 @@ function abortedError(): SpherexError {
   return new SpherexError('ABORTED', 'Loading stopped');
 }
 
-export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: AbortSignal): Promise<LoadResult> {
-  const check = () => {
-    if (signal.aborted) throw abortedError();
-  };
-
-  let slug: CachedSlug | null = null;
-  if (req.q) slug = matchCachedName(req.q);
-  else if (req.ra !== null && req.dec !== null) slug = await matchCachedPosition(req.ra, req.dec);
-  check();
-
-  if (slug) {
-    const c = await loadCached(slug, { signal });
-    check();
-    const available = availableOf(c.exposures);
-    const det = chooseDetector(available, req.det);
-    const frames = c.frames.filter((f) => f.exposure.detector === det);
-    return {
-      live: null,
-      target: c.target,
-      frames: c.frames,
-      det,
-      available,
-      failed: 0,
-      total: frames.length,
-      cached: true,
-    };
-  }
-
-  const stage = (s: Progress['stage'], message: string, done = 0, total = 0) =>
-    cb.onStage({ stage: s, done, total, message });
-
+export async function searchLive(req: LoadRequest, cb: LoadCallbacks, signal: AbortSignal): Promise<LiveSearch> {
+  const stage = (s: Progress['stage'], message: string) => cb.onStage({ stage: s, done: 0, total: 0, message });
   let target: Target;
   if (req.q) {
     stage('resolve', 'Looking up the name');
@@ -145,17 +145,30 @@ export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: Ab
   } else {
     target = { ra: req.ra as number, dec: req.dec as number, source: 'coordinates' };
   }
-  check();
-
+  if (signal.aborted) throw abortedError();
   stage('search', 'Asking the archive which images cover this spot');
   const exposures = await findExposures(target.ra, target.dec, { signal, onProgress: cb.onStage });
-  check();
+  if (signal.aborted) throw abortedError();
   if (exposures.length === 0) throw new SpherexError('NO_COVERAGE', 'No images cover this position');
+  return { target, exposures, available: availableOf(exposures) };
+}
 
-  const grid = makeGrid(target, exposures, 400);
-  const available = availableOf(exposures);
-  const det = chooseDetector(available, req.det);
-
+export async function loadPair(
+  search: LiveSearch,
+  preferred: Detector | null,
+  size: number,
+  cb: LoadCallbacks,
+  signal: AbortSignal,
+): Promise<LoadResult> {
+  const check = () => {
+    if (signal.aborted) throw abortedError();
+  };
+  const { target, exposures, available } = search;
+  const stage = (s: Progress['stage'], message: string, done = 0, total = 0) =>
+    cb.onStage({ stage: s, done, total, message });
+  const grid = makeGrid(target, exposures, size);
+  const det = chooseDetector(available, preferred);
+  stage('headers', 'Reading image headers');
   const annotated = await annotateWavelengths(
     exposures.filter((e) => e.detector === det),
     target.ra,
@@ -181,7 +194,9 @@ export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: Ab
   const frames = [...result.frames].sort((x, y) => x.exposure.mjd - y.exposure.mjd);
   const pairIds = new Set(pair.map((e) => e.id));
   return {
-    live: { grid, rest: annotated.filter((e) => !pairIds.has(e.id)) },
+    live: { grid, rest: annotated.filter((e) => !pairIds.has(e.id)), size },
+    search,
+    cachedData: null,
     target,
     frames,
     det,
@@ -190,6 +205,30 @@ export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: Ab
     total: 2,
     cached: false,
   };
+}
+
+export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: AbortSignal): Promise<LoadResult> {
+  const slug = req.q ? matchCachedName(req.q) : null;
+  if (slug) {
+    const c = await loadCached(slug, { signal });
+    if (signal.aborted) throw abortedError();
+    const available = availableOf(c.exposures);
+    const det = chooseDetector(available, req.det);
+    return {
+      live: null,
+      search: null,
+      cachedData: c,
+      target: c.target,
+      frames: c.frames,
+      det,
+      available,
+      failed: 0,
+      total: c.frames.length,
+      cached: true,
+    };
+  }
+  const search = await searchLive(req, cb, signal);
+  return loadPair(search, req.det, req.size ?? DEFAULT_SIZE, cb, signal);
 }
 
 export async function loadRest(

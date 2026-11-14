@@ -59,7 +59,7 @@ const NEG_HI: Rgb = [190, 224, 255];
 export function divergingColor(t: number): Rgb {
   if (Number.isNaN(t)) return HATCH_A;
   const m = Math.min(1, Math.abs(t));
-  const soft = Math.sqrt(m);
+  const soft = Math.pow(m, 1.6);
   const mid = t >= 0 ? POS_MID : NEG_MID;
   const hi = t >= 0 ? POS_HI : NEG_HI;
   return soft < 0.65 ? mix(ZERO_RGB, mid, soft / 0.65) : mix(mid, hi, (soft - 0.65) / 0.35);
@@ -85,4 +85,21 @@ export function renderDiverging(pixels: Float32Array, w: number, h: number, rang
 export function integerScale(w: number, h: number, boxW: number, boxH: number): number {
   if (w <= 0 || h <= 0) return 1;
   return Math.max(1, Math.floor(Math.min(boxW / w, boxH / h)));
+}
+
+// 1.4826 times the median absolute deviation of the finite pixels.
+export function robustSigma(pixels: ArrayLike<number>): number {
+  const vals: number[] = [];
+  for (let i = 0; i < pixels.length; i++) {
+    const v = pixels[i];
+    if (Number.isFinite(v)) vals.push(v);
+  }
+  if (vals.length === 0) return 0;
+  const median = (a: number[]): number => {
+    const s = Float64Array.from(a).sort();
+    const n = s.length;
+    return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+  };
+  const m = median(vals);
+  return 1.4826 * median(vals.map((v) => Math.abs(v - m)));
 }

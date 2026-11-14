@@ -17,6 +17,8 @@ export const loadFrame = lib.loadFrame;
 export const loadFrames = lib.loadFrames;
 export const annotateWavelengths = lib.annotateWavelengths;
 export const pickBlinkPair = lib.pickBlinkPair;
+export const loadFirstLook = lib.loadFirstLook;
+export const saturatedSources = lib.saturatedSources;
 export const buildMovie = lib.buildMovie;
 export const difference = lib.difference;
 export const spectrumAt = lib.spectrumAt;
@@ -24,8 +26,8 @@ export const loadCached = lib.loadCached;
 export const listCached = lib.listCached;
 export const gaiaCone = lib.gaiaCone;
 export const wiseCone = lib.wiseCone;
-// The real WISE layer stays 'not available yet' until the data seat confirms real rows.
-export const wiseAvailable = useMock || (real as unknown) === (mock as unknown);
+// wiseCone is real (CatWISE2020, radius capped at 300 arcsec).
+export const wiseAvailable = true;
 export const worldToGrid = lib.worldToGrid;
 export const gridToWorld = lib.gridToWorld;
 export const summarize = lib.summarize;

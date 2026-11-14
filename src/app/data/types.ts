@@ -39,6 +39,9 @@ export interface Frame {
   flags: Uint8Array;                // 0 = good, non-zero = masked (bit meaning in FLAG_BITS)
   w: number; h: number;             // copies of grid.w, grid.h
   coverage: number;                 // 0..1 fraction of grid pixels with data
+  wavelengthMap?: Float32Array;     // um per grid pixel, NaN where no data
+  bandwidthMap?: Float32Array;      // um per grid pixel
+  bytes: number;                    // bytes transferred for this frame; 0 from cache
 }
 
 export type MovieMode = 'visit-stack' | 'single';
@@ -123,6 +126,7 @@ export interface Progress {
   done: number; total: number;      // total may be 0 while unknown
   message: string;                  // short, user-presentable, plain ASCII
   retrying?: boolean;               // true while backing off after a 503
+  bytes?: number;                   // cumulative bytes transferred so far in this call
 }
 
 export interface CallOptions {
@@ -132,6 +136,8 @@ export interface CallOptions {
 
 export interface FrameOptions extends CallOptions {
   background?: 'zodi' | 'none';     // default 'zodi': subtract the file's ZODI model plane
+  wavelengthMap?: boolean;          // also fill Frame.wavelengthMap / bandwidthMap
+  target?: Target;                  // wavelengthAtTarget uses positionAt(target, exposure.mjd)
 }
 
 export type SpherexErrorCode =
@@ -149,4 +155,25 @@ export class SpherexError extends Error {
     this.name = 'SpherexError';
     this.code = code;
   }
+}
+
+export const FLAG_BITS = {
+  NO_DATA: 1,
+  SATURATED: 2,
+  BAD_PIXEL: 4,
+  TRANSIENT: 8,
+  PERSIST: 16,
+  ARTIFACT: 32,
+} as const;
+
+export interface FirstLook {
+  frames: Frame[];
+  matched: boolean;
+  detector: Detector;
+}
+
+export interface SaturatedSource {
+  x: number;
+  y: number;
+  npix: number;
 }

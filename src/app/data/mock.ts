@@ -1,4 +1,4 @@
-import { SpherexError } from './types';
+import { FLAG_BITS, SpherexError } from './types';
 import type {
   CachedSlug,
   CachedTarget,
@@ -6,6 +6,7 @@ import type {
   Detector,
   DifferenceImage,
   Exposure,
+  FirstLook,
   Frame,
   FrameOptions,
   GaiaStar,
@@ -14,6 +15,7 @@ import type {
   MovieFrame,
   MovieMode,
   Progress,
+  SaturatedSource,
   SpectrumPoint,
   Target,
   WiseSource,
@@ -322,6 +324,8 @@ interface Def {
   w2: number | null;
   spectrum: [number, number][];
   visitMult: number[];
+  visitDays: number[];
+  perVisit: [number, number];
   bandShift: number;
   startShift: number;
   noD6: boolean;
@@ -352,7 +356,9 @@ const DEFS: Def[] = [
       [4.4, 40],
       [5.0, 32],
     ],
-    visitMult: [1, 1, 1, 1, 1],
+    visitMult: [1, 1, 1],
+    visitDays: [91, 300, 456],
+    perVisit: [2, 4],
     bandShift: 0,
     startShift: 0,
     noD6: true,
@@ -384,6 +390,8 @@ const DEFS: Def[] = [
       [5.0, 100],
     ],
     visitMult: [1, 1, 1, 1, 1],
+    visitDays: VISIT_DAYS,
+    perVisit: [2, 4],
     bandShift: 0.03,
     startShift: 4,
     noD6: true,
@@ -412,6 +420,8 @@ const DEFS: Def[] = [
       [5.0, 25],
     ],
     visitMult: [1, 1, 1, 1, 1],
+    visitDays: VISIT_DAYS,
+    perVisit: [2, 4],
     bandShift: -0.03,
     startShift: 7,
     noD6: false,
@@ -441,6 +451,8 @@ const DEFS: Def[] = [
       [5.0, 350],
     ],
     visitMult: [1.0, 0.45, 0.8, 0.3, 1.3],
+    visitDays: VISIT_DAYS,
+    perVisit: [2, 4],
     bandShift: 0.02,
     startShift: 2,
     noD6: false,
@@ -469,7 +481,9 @@ const DEFS: Def[] = [
       [4.4, 350],
       [5.0, 400],
     ],
-    visitMult: [1.0, 0.25, 1.6, 0.5, 1.2],
+    visitMult: Array.from({ length: 16 }, (_, i) => 0.2 + 0.9 * (0.5 + 0.5 * Math.cos((2 * Math.PI * i * 31) / 245))),
+    visitDays: Array.from({ length: 16 }, (_, i) => i * 31),
+    perVisit: [1, 2],
     bandShift: -0.02,
     startShift: 9,
     noD6: false,
@@ -525,6 +539,7 @@ function makeSchedule(
   detectors: Detector[],
   visitDays: number[],
   live: boolean,
+  perVisit: [number, number] = [2, 4],
 ): { exposures: Exposure[]; spec: Map<string, { wl: number; bw: number }> } {
   const exposures: Exposure[] = [];
   const spec = new Map<string, { wl: number; bw: number }>();
@@ -532,7 +547,7 @@ function makeSchedule(
   for (let v = 0; v < visitDays.length; v++) {
     for (const d of detectors) {
       const rng = makeRng(seed * 31 + v * 7 + d);
-      const n = live ? 18 + Math.floor(rng.u() * 5) : 2 + Math.floor(rng.u() * 3);
+      const n = live ? 18 + Math.floor(rng.u() * 5) : perVisit[0] + Math.floor(rng.u() * (perVisit[1] - perVisit[0] + 1));
       let t = MJD0 + shift + visitDays[v] + (d - 1) * 0.3 + rng.u() * 0.4;
       const [lo, hi] = DETECTOR_RANGE[d];
       for (let k = 0; k < n; k++) {
@@ -602,7 +617,7 @@ function base(slug: CachedSlug): Base {
   const def = DEFS.find((d) => d.slug === slug);
   if (!def) throw new SpherexError('NOT_FOUND', 'That challenge target is not available.');
   const target = defTarget(def);
-  const sched = makeSchedule(def.seed, def.startShift, def.bandShift, def.noD6 ? [1, 2, 3, 4, 5] : DETECTORS, VISIT_DAYS, false);
+  const sched = makeSchedule(def.seed, def.startShift, def.bandShift, def.noD6 ? [1, 2, 3, 4, 5] : DETECTORS, def.visitDays, false, def.perVisit);
   const grid = makeGrid(target, sched.exposures);
   const ref = { ra: grid.ra0, dec: grid.dec0 };
   const p2016 = positionAt(target, epochToMjd(2016));
@@ -654,6 +669,11 @@ function posKey(ra: number, dec: number): string {
   return `${ra.toFixed(3)},${dec.toFixed(3)}`;
 }
 
+function brightenFirst(stars: Star[]): Star[] {
+  stars[0] = { ...stars[0], gmag: 10.5, peak1: 900 * Math.pow(10, -0.4 * (10.5 - 11)) };
+  return stars;
+}
+
 function sceneForPosition(ra: number, dec: number): Scene {
   for (const def of DEFS) {
     const b = base(def.slug);
@@ -678,7 +698,7 @@ function sceneForPosition(ra: number, dec: number): Scene {
     kind: 'live',
     target,
     ref: { ra, dec },
-    stars: genStars(seed, { ra, dec }),
+    stars: brightenFirst(genStars(seed, { ra, dec })),
     exposures: sched.exposures,
     amp: (wl, visit, jitter) => Math.max(0, (120 / wl) * mult[visit % 4] * (1 + 0.03 * jitter)),
     gaiaTarget: {
@@ -746,6 +766,8 @@ function coneWise(scene: Scene, ra: number, dec: number, radius: number): WiseSo
 
 // ------------------------------------------------------- frame rendering
 
+const SATURATION_PEAK = 400;
+
 function psfSigma(wl: number): number {
   return 0.6 + 0.3 * clamp((wl - 0.75) / 4.25, 0, 1);
 }
@@ -757,6 +779,7 @@ function renderFrame(
   bw: number,
   grid: Grid,
   background: 'zodi' | 'none',
+  withMaps = false,
 ): Frame {
   const { w, h } = grid;
   const n = w * h;
@@ -765,8 +788,10 @@ function renderFrame(
   const psf = psfSigma(wl);
   const signal = new Float32Array(n);
 
+  const sat: [number, number][] = [];
   const addSource = (x0: number, y0: number, amp: number) => {
     if (amp < 0.01) return;
+    if (amp > SATURATION_PEAK) sat.push([Math.round(x0), Math.round(y0)]);
     const r = Math.ceil(4 * psf);
     const xa = Math.max(0, Math.floor(x0) - r);
     const xb = Math.min(w - 1, Math.ceil(x0) + r);
@@ -795,9 +820,6 @@ function renderFrame(
   const variance = new Float32Array(n);
   const flags = new Uint8Array(n);
   const s2 = sigmaSky * sigmaSky;
-  const base0 = rng.n() * 0.03;
-  const gx = rng.n() * 0.002;
-  const gy = rng.n() * 0.002;
   const zodi = background === 'none' ? 18 : 0;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -805,20 +827,21 @@ function renderFrame(
       const sig = signal[i];
       const v = s2 + 0.02 * (sig > 0 ? sig : 0);
       variance[i] = v;
-      pixels[i] = base0 + gx * x + gy * y + zodi + 0.04 * (zodi ? x + y : 0) + sig + rng.n() * Math.sqrt(v);
+      pixels[i] = zodi + 0.04 * (zodi ? x + y : 0) + sig + rng.n() * Math.sqrt(v);
     }
   }
 
-  const mask = (x: number, y: number) => {
+  const mask = (x: number, y: number, bit: number) => {
     if (x < 0 || y < 0 || x >= w || y >= h) return;
     const i = y * w + x;
     pixels[i] = NaN;
     variance[i] = NaN;
-    flags[i] |= 1;
+    flags[i] |= bit;
   };
-  const cluster = (cx: number, cy: number, cw: number, ch: number) => {
-    for (let y = cy; y < cy + ch; y++) for (let x = cx; x < cx + cw; x++) mask(x, y);
+  const cluster = (cx: number, cy: number, cw: number, ch: number, bit: number) => {
+    for (let y = cy; y < cy + ch; y++) for (let x = cx; x < cx + cw; x++) mask(x, y, bit);
   };
+  for (const [sx, sy] of sat) cluster(sx - 1, sy - 1, 3, 3, FLAG_BITS.SATURATED);
 
   const nClusters = 2 + Math.floor(rng.u() * 2);
   for (let c = 0; c < nClusters; c++) {
@@ -826,7 +849,7 @@ function renderFrame(
       const cx = Math.floor(rng.u() * (w - 3));
       const cy = Math.floor(rng.u() * (h - 3));
       if (Math.hypot(cx - tx, cy - ty) < 5) continue;
-      cluster(cx, cy, 1 + Math.floor(rng.u() * 3), 1 + Math.floor(rng.u() * 3));
+      cluster(cx, cy, 1 + Math.floor(rng.u() * 3), 1 + Math.floor(rng.u() * 3), FLAG_BITS.BAD_PIXEL);
       break;
     }
   }
@@ -834,20 +857,20 @@ function renderFrame(
   if (hs % 3 === 0) {
     const width = 2 + Math.floor(rng.u() * 4);
     const side = (hs >> 3) % 3;
-    if (side === 0) cluster(0, 0, width, h);
-    else if (side === 1) cluster(w - width, 0, width, h);
-    else cluster(0, h - width, w, width);
+    if (side === 0) cluster(0, 0, width, h, FLAG_BITS.NO_DATA);
+    else if (side === 1) cluster(w - width, 0, width, h, FLAG_BITS.NO_DATA);
+    else cluster(0, h - width, w, width, FLAG_BITS.NO_DATA);
   }
-  if (hs % 11 === 0) cluster(Math.round(tx), Math.round(ty), 2, 2);
+  if (hs % 11 === 0) cluster(Math.round(tx), Math.round(ty), 2, 2, FLAG_BITS.BAD_PIXEL);
   for (let k = 0; k < 4; k++) {
     const i = Math.floor(rng.u() * n);
-    if (Number.isFinite(pixels[i])) flags[i] |= 2;
+    if (Number.isFinite(pixels[i])) flags[i] |= FLAG_BITS.BAD_PIXEL;
   }
 
   let good = 0;
   for (let i = 0; i < n; i++) if (Number.isFinite(pixels[i])) good++;
 
-  return {
+  const frame: Frame = {
     exposure: { ...exp, wavelengthAtTarget: wl, bandwidthAtTarget: bw },
     grid,
     pixels,
@@ -856,7 +879,29 @@ function renderFrame(
     w,
     h,
     coverage: good / n,
+    bytes: scene.kind === 'live' ? 2_000_000 + (hashStr(exp.id + 'bytes') % 200_000) : 0,
   };
+  if (withMaps) {
+    const wlMap = new Float32Array(n);
+    const bwMap = new Float32Array(n);
+    const chan = exp.detector <= 4 ? 40 : 120;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (Number.isFinite(pixels[i])) {
+          const v = wl * (1 + 0.02 * ((x - (w - 1) / 2) / w));
+          wlMap[i] = v;
+          bwMap[i] = v / chan;
+        } else {
+          wlMap[i] = NaN;
+          bwMap[i] = NaN;
+        }
+      }
+    }
+    frame.wavelengthMap = wlMap;
+    frame.bandwidthMap = bwMap;
+  }
+  return frame;
 }
 
 // ----------------------------------------------------- resolve + search
@@ -944,27 +989,29 @@ export async function findExposures(ra: number, dec: number, opts: CallOptions =
   const say = (done: number, total: number, message: string, retrying?: boolean) =>
     emit(opts, retrying ? { stage: 'search', done, total, message, retrying: true } : { stage: 'search', done, total, message });
 
-  say(0, 0, 'Asking the SPHEREx archive');
-  await wait(300, opts.signal);
+  const pace = (1300 + (hashStr(posKey(ra, dec)) % 2400)) / 2500;
+  const nap = (ms: number) => wait(ms * pace, opts.signal);
+  say(0, 0, 'Searching the SPHEREx archive');
+  await nap(300);
 
   if (ra === 1 && dec === 1) {
     say(0, 0, 'The archive is busy, trying again in 2 s', true);
-    await wait(1200, opts.signal);
+    await nap(1200);
     say(0, 0, 'The archive is still busy, trying again in 4 s', true);
-    await wait(1000, opts.signal);
+    await nap(1000);
     throw new SpherexError('UPSTREAM_BUSY', 'The archive is busy right now. Try again in a minute.');
   }
   if (dec > 85) {
-    await wait(300, opts.signal);
+    await nap(300);
     throw new SpherexError('NO_COVERAGE', 'SPHEREx has no exposures at this position.');
   }
 
-  say(0, 0, 'Looking for exposures that cover this position');
-  await wait(500, opts.signal);
+  say(0, 0, 'Searching the SPHEREx archive');
+  await nap(500);
   say(0, 0, 'The archive is busy, trying again in 2 s', true);
-  await wait(1100, opts.signal);
+  await nap(1100);
   say(0, 0, 'Reading the exposure list');
-  await wait(600, opts.signal);
+  await nap(600);
 
   const scene = sceneForPosition(ra, dec);
   const list = scene.exposures.map((e) => ({ ...e }));
@@ -976,18 +1023,19 @@ export async function annotateWavelengths(
   exposures: Exposure[],
   _ra: number,
   _dec: number,
-  opts: CallOptions = {},
+  opts: CallOptions & { target?: Target } = {},
 ): Promise<Exposure[]> {
   throwIfAborted(opts.signal);
   const total = exposures.length;
-  emit(opts, { stage: 'headers', done: 0, total, message: 'Reading file headers' });
+  emit(opts, { stage: 'headers', done: 0, total, message: 'Reading file headers', bytes: 0 });
   await wait(250, opts.signal);
   const out = exposures.map((e) => {
     const r = registry.get(e.id);
     if (!r) return e;
     return { ...e, wavelengthAtTarget: r.wl, bandwidthAtTarget: r.bw };
   });
-  emit(opts, { stage: 'headers', done: total, total, message: 'Read all file headers' });
+  const liveCount = exposures.filter((e) => registry.get(e.id)?.scene.kind === 'live').length;
+  emit(opts, { stage: 'headers', done: total, total, message: 'Read all file headers', bytes: liveCount * 235_000 });
   return out;
 }
 
@@ -1006,7 +1054,7 @@ export async function loadFrame(exposure: Exposure, grid: Grid, opts: FrameOptio
   const range = DETECTOR_RANGE[exposure.detector];
   const wl = r?.wl ?? exposure.wavelengthAtTarget ?? (range[0] + range[1]) / 2;
   const bw = r?.bw ?? exposure.bandwidthAtTarget ?? wl / (exposure.detector <= 4 ? 40 : 120);
-  return renderFrame(scene, exposure, wl, bw, grid, opts.background ?? 'zodi');
+  return renderFrame(scene, exposure, wl, bw, grid, opts.background ?? 'zodi', opts.wavelengthMap === true);
 }
 
 export async function loadFrames(
@@ -1022,12 +1070,14 @@ export async function loadFrames(
   const failIndex = total >= 4 && registry.get(exposures[0].id)?.scene.kind === 'live' ? 2 : -1;
   let next = 0;
   let done = 0;
+  let bytes = 0;
   const report = () =>
     emit(opts, {
       stage: 'pixels',
       done,
       total,
       message: `Downloaded ${done} of ${total} exposures`,
+      bytes,
     });
   report();
 
@@ -1044,6 +1094,7 @@ export async function loadFrames(
         }
         const f = await loadFrame(e, grid, opts);
         results[i] = f;
+        bytes += f.bytes;
         opts.onFrame?.(f);
       } catch (err) {
         if (err instanceof SpherexError && err.code === 'ABORTED') throw err;
@@ -1058,6 +1109,73 @@ export async function loadFrames(
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, total) }, worker));
   return { frames: results.filter((f): f is Frame => f !== null), failed };
+}
+
+export async function loadFirstLook(
+  _target: Target,
+  exposures: Exposure[],
+  grid: Grid,
+  opts: FrameOptions & { detector?: Detector } = {},
+): Promise<FirstLook> {
+  throwIfAborted(opts.signal);
+  let detector = opts.detector;
+  if (detector === undefined) {
+    const s = summarize(exposures);
+    if (s.find((d) => d.detector === 2)?.count) detector = 2;
+    else detector = s.reduce((a, b) => (b.count > a.count ? b : a)).detector;
+  }
+  const pool = exposures.filter((e) => e.detector === detector).sort((a, b) => a.mjd - b.mjd);
+  const firsts = new Map<number, Exposure>();
+  for (const e of pool) if (!firsts.has(e.visitIndex)) firsts.set(e.visitIndex, e);
+  const visits = [...firsts.values()].sort((a, b) => a.mjd - b.mjd);
+  if (visits.length === 0) return { frames: [], matched: false, detector };
+  const pick = visits.length === 1 ? [visits[0]] : [visits[0], visits[visits.length - 1]];
+  const { frames, failed } = await loadFrames(pick, grid, { ...opts, concurrency: 2 });
+  if (failed.length) throw failed[0].error;
+  let matched = false;
+  if (frames.length === 2) {
+    const [a, b] = frames.map((f) => f.exposure);
+    const wa = a.wavelengthAtTarget ?? 0;
+    const wb = b.wavelengthAtTarget ?? 0;
+    matched = Math.abs(wa - wb) <= Math.max(a.bandwidthAtTarget ?? bandwidthOf(detector, wa), b.bandwidthAtTarget ?? bandwidthOf(detector, wb));
+  }
+  return { frames, matched, detector };
+}
+
+export function saturatedSources(frame: Frame): SaturatedSource[] {
+  const { w, h, flags } = frame;
+  const seen = new Uint8Array(w * h);
+  const out: SaturatedSource[] = [];
+  for (let start = 0; start < w * h; start++) {
+    if (seen[start] || !(flags[start] & FLAG_BITS.SATURATED)) continue;
+    const stack = [start];
+    seen[start] = 1;
+    let sx = 0;
+    let sy = 0;
+    let n = 0;
+    while (stack.length) {
+      const i = stack.pop() as number;
+      const x = i % w;
+      const y = (i - x) / w;
+      sx += x;
+      sy += y;
+      n++;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const j = ny * w + nx;
+          if (!seen[j] && flags[j] & FLAG_BITS.SATURATED) {
+            seen[j] = 1;
+            stack.push(j);
+          }
+        }
+      }
+    }
+    out.push({ x: sx / n, y: sy / n, npix: n });
+  }
+  return out;
 }
 
 // ---------------------------------------------------------- movie + diff

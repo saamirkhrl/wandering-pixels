@@ -6,6 +6,7 @@ import {
   HATCH_B,
   hatchColor,
   integerScale,
+  robustSigma,
   renderDiverging,
   renderPixels,
 } from './render';
@@ -89,5 +90,32 @@ describe('integerScale', () => {
   it('picks the largest integer that fits', () => {
     expect(integerScale(65, 65, 800, 700)).toBe(10);
     expect(integerScale(65, 65, 30, 30)).toBe(1);
+  });
+});
+
+describe('robustSigma', () => {
+  it('ignores outliers and NaN', () => {
+    const a = new Float32Array(1001);
+    let seed = 7;
+    for (let i = 0; i < a.length; i++) {
+      seed = (seed * 16807) % 2147483647;
+      a[i] = (seed / 2147483647 - 0.5) * 2;
+    }
+    a[0] = 1e6;
+    a[1] = NaN;
+    const s = robustSigma(a);
+    expect(s).toBeGreaterThan(0.5);
+    expect(s).toBeLessThan(1.1);
+  });
+
+  it('is zero for no data', () => {
+    expect(robustSigma(new Float32Array([NaN, NaN]))).toBe(0);
+  });
+});
+
+describe('diverging noise level', () => {
+  it('keeps one sigma of a five sigma range dark', () => {
+    const [r, g, b] = divergingColor(0.2);
+    expect(Math.max(r, g, b)).toBeLessThan(60);
   });
 });

@@ -1,6 +1,7 @@
 import type { ViewName, ViewParams } from '../app/types';
 import { listCached } from '../app/data';
-import '../app/viewer/shell.css';
+import './shell.css';
+import { createAbout } from './about';
 
 export interface Shell {
   viewRoot: HTMLElement;
@@ -31,7 +32,7 @@ export function createShell(
   const input = document.createElement('input');
   input.type = 'search';
   input.name = 'q';
-  input.placeholder = 'Star name or coordinates';
+  input.placeholder = 'Name or coordinates';
   input.setAttribute('aria-label', 'Star name or coordinates');
   input.setAttribute('aria-describedby', 'search-help');
   input.autocomplete = 'off';
@@ -171,7 +172,20 @@ export function createShell(
     }
   });
 
-  bar.append(wordmark, form, help, menu);
+  const about = createAbout();
+  const aboutBtn = document.createElement('button');
+  aboutBtn.type = 'button';
+  aboutBtn.className = 'shell-about';
+  aboutBtn.textContent = 'About';
+  aboutBtn.addEventListener('click', () => {
+    closeMenu();
+    about.open();
+  });
+  const brand = document.createElement('div');
+  brand.className = 'shell-brand';
+  brand.append(wordmark, aboutBtn);
+
+  bar.append(brand, form, help, menu);
 
   const viewRoot = document.createElement('main');
   viewRoot.className = 'view-root';
@@ -183,6 +197,7 @@ export function createShell(
   };
   fitViewRoot();
   new ResizeObserver(fitViewRoot).observe(bar);
+  about.maybeOpenOnArrival();
 
   return {
     viewRoot,

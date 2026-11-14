@@ -13,12 +13,13 @@ export interface ViewerParams {
   frame: number | null;
   size: number | null;
   trueSharp: boolean;
+  drange: 'faint' | 'balanced' | 'bright';
   overlays: string[];
   from: 'sky' | 'globe' | null;
   fromParams: Record<string, string>;
 }
 
-export const OVERLAY_KEYS = ['gaia', 'wise', 'masked'] as const;
+export const OVERLAY_KEYS = ['gaia', 'wise', 'masked', 'adv'] as const;
 
 function num(v: string | null): number | null {
   if (v === null || v.trim() === '') return null;
@@ -55,6 +56,7 @@ export function readParams(): ViewerParams {
     snr: sp.get('snr') === '1',
     frame: int(sp.get('frame')),
     trueSharp: sp.get('px') === '1',
+    drange: sp.get('drange') === 'f' ? 'faint' : sp.get('drange') === 'h' ? 'bright' : 'balanced',
     size: [200, 400, 800].includes(int(sp.get('size')) ?? 0) ? int(sp.get('size')) : null,
     overlays: (sp.get('overlays') ?? '')
       .split(',')

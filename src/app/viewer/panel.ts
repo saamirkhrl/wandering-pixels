@@ -39,7 +39,8 @@ export interface PanelModel {
   size: number;
   sizeEnabled: boolean;
   sizeNote: string;
-  overlays: { gaia: boolean; wise: boolean; masked: boolean };
+  overlays: { gaia: boolean; wise: boolean; masked: boolean; adv: boolean };
+  drange: 'faint' | 'balanced' | 'bright';
   wiseAvailable: boolean;
   overlayNote: string;
   smooth: boolean;
@@ -68,7 +69,8 @@ export interface PanelHandlers {
   setSize: (n: number) => void;
   setSmooth: (on: boolean) => void;
   setContrast: (c: 'soft' | 'normal' | 'hard') => void;
-  toggleOverlay: (k: 'gaia' | 'wise' | 'masked') => void;
+  toggleOverlay: (k: 'gaia' | 'wise' | 'masked' | 'adv') => void;
+  setDrange: (r: 'faint' | 'balanced' | 'bright') => void;
   goBack: () => void;
   openPrepared: () => void;
 }
@@ -213,6 +215,21 @@ export function createPanel(hd: PanelHandlers): Panel {
   // Prepared difference slot. It sits between the units control and the legend. While
   // PREPARED_DIFF_ENABLED is false nothing is rendered; when it is switched on, the Plain /
   // Colour-matched control and its residual line appear here, so no other control moves.
+  const drangeSeg = h('div', 'v-seg v-unitseg');
+  drangeSeg.setAttribute('role', 'group');
+  drangeSeg.setAttribute('aria-label', 'Difference brightness range');
+  const drangeBtns = (
+    [
+      ['faint', 'Faint'],
+      ['balanced', 'Balanced'],
+      ['bright', 'Bright'],
+    ] as const
+  ).map(([k, label]) => {
+    const b = btn(label, 'v-seg-btn', () => hd.setDrange(k));
+    b.dataset.dr = k;
+    drangeSeg.append(b);
+    return b;
+  });
   const prepSlot = h('div', 'v-prepslot');
   const prepResidual = h('p', 'v-detail', '');
   if (PREPARED_DIFF_ENABLED) {
@@ -262,7 +279,7 @@ export function createPanel(hd: PanelHandlers): Panel {
   selA.addEventListener('change', () => hd.setA(Number(selA.value)));
   selB.addEventListener('change', () => hd.setB(Number(selB.value)));
   fallback.append(labA, labB);
-  secCmp.append(hCmp, cmpSeg, cmpHint, unitSeg, prepSlot, legend, warn, fallback);
+  secCmp.append(hCmp, cmpSeg, cmpHint, unitSeg, drangeSeg, prepSlot, legend, warn, fallback);
 
   // display
   const secDisp = h('section', 'v-sec');
@@ -314,7 +331,7 @@ export function createPanel(hd: PanelHandlers): Panel {
   const secOv = h('section', 'v-sec');
   secOv.append(h('h3', 'v-h', 'Overlays'));
   const ovRow = h('div', 'v-checks');
-  const mkOv = (key: 'gaia' | 'wise' | 'masked', text: string) => {
+  const mkOv = (key: 'gaia' | 'wise' | 'masked' | 'adv', text: string) => {
     const lab = h('label', 'v-check');
     const input = h('input');
     input.type = 'checkbox';
@@ -329,6 +346,7 @@ export function createPanel(hd: PanelHandlers): Panel {
   const bGaia = mkOv('gaia', 'Gaia stars');
   const bWise = mkOv('wise', 'WISE sources');
   const bMask = mkOv('masked', 'Masked pixels');
+  const bAdv = mkOv('adv', 'Advisory flags: near a bright star or a streak');
   const ovNote = h('p', 'v-hint', '');
   secOv.append(ovRow, ovNote);
 
@@ -535,6 +553,9 @@ export function createPanel(hd: PanelHandlers): Panel {
     prepResidual.textContent = m.preparedResidual ?? '';
     bGaia.input.checked = m.overlays.gaia;
     bMask.input.checked = m.overlays.masked;
+    bAdv.input.checked = m.overlays.adv;
+    drangeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.dr === m.drange)));
+    drangeSeg.hidden = !m.diff || m.snr;
     bWise.input.checked = m.overlays.wise && m.wiseAvailable;
     bWise.input.disabled = !m.wiseAvailable;
     bWise.text.textContent = m.wiseAvailable ? 'WISE sources' : 'WISE sources, not available yet';

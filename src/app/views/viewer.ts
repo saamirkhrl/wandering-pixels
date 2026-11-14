@@ -5,11 +5,12 @@ import {
   buildMovie,
   difference,
   gaiaCone,
+  FLAG_BITS,
   gridToWorld,
   isSimulated,
   listCached,
   liveIsMock,
-  saturatedSources,
+  positionAt,
   spectrumAt,
   wiseAvailable,
   wiseCone,
@@ -45,14 +46,15 @@ import type { DetInfo, LiveContext, LiveSearch, LoadResult } from '../viewer/loa
 import {
   HATCH_A,
   asinhNorm,
+  diffRange,
   displayStretch,
   divergingColor,
+  divergingNorm,
   greyColor,
   renderDiverging,
   renderPixels,
-  robustStats,
 } from '../viewer/render';
-import type { Contrast, Rgb, Stretch } from '../viewer/render';
+import type { Contrast, DiffRange, Rgb, Stretch } from '../viewer/render';
 import { toRGBA, upsampleSmooth } from '../viewer/smooth';
 import { createStage, formatDecDeg, formatRaDeg } from '../viewer/stage';
 import { hasTarget, readParams, writeParams } from '../viewer/state';
@@ -61,9 +63,11 @@ import { createQualityPanel } from '../viewer/quality';
 import {
   describeSource,
   drawMask,
-  drawSaturated,
+  drawMaskOutline,
   drawSources,
   hitTest,
+  MASK_ADVISORY_BITS,
+  MASK_BAD_BITS,
   maskFor,
   projectSources,
   sourcesFromGaia,
@@ -75,6 +79,7 @@ interface DiffEntry {
   key: string;
   d: DifferenceImage;
   range: number;
+  soft: number;
 }
 
 interface Loaded {
@@ -85,7 +90,7 @@ interface Loaded {
   cached: boolean;
 }
 
-type Layer = 'gaia' | 'wise' | 'masked';
+type Layer = 'gaia' | 'wise' | 'masked' | 'adv';
 
 const SIGMA_RANGE = 5;
 const OVERLAY_LIMIT = 40;
@@ -135,6 +140,7 @@ export const mount: Mount = (root, ctx) => {
   const imgCache = new WeakMap<object, Map<string, Uint8ClampedArray>>();
   let smooth = !params.trueSharp;
   let contrast: Contrast = 'normal';
+  let drange: DiffRange = params.drange;
   let current: { kind: 'frame'; pixels: Float32Array; w: number } | { kind: 'diff'; d: DifferenceImage } | null = null;
 
   // live state
@@ -155,6 +161,7 @@ export const mount: Mount = (root, ctx) => {
     gaia: params.overlays.includes('gaia'),
     wise: params.overlays.includes('wise'),
     masked: params.overlays.includes('masked'),
+    adv: params.overlays.includes('adv'),
   };
   const ovSources: { gaia: OverlaySource[] | null; wise: OverlaySource[] | null } = { gaia: null, wise: null };
   let ovLoading = '';
@@ -165,7 +172,9 @@ export const mount: Mount = (root, ctx) => {
   let drawWise: ProjectedSource[] = [];
   let drawMaskArr: Uint8Array | null = null;
   let drawMaskW = 0;
-  let drawSat: { x: number; y: number }[] = [];
+  let satMaskArr: Uint8Array | null = null;
+  let advMaskArr: Uint8Array | null = null;
+  let hasSat = false;
   let qualityKey: { movie: Movie | null; frame: unknown; n: number; diff: string } = { movie: null, frame: null, n: 0, diff: '' };
 
   const rootEl = document.createElement('div');
@@ -224,6 +233,11 @@ export const mount: Mount = (root, ctx) => {
       player.stop();
       player.setIndex(0);
       rebuild();
+      persist();
+    },
+    setDrange: (r) => {
+      drange = r;
+      render();
       persist();
     },
     setSmooth: (on) => {
@@ -343,7 +357,7 @@ export const mount: Mount = (root, ctx) => {
 
   function persist(): void {
     if (disposed || player.mode !== 'stopped') return;
-    const layers = (['gaia', 'wise', 'masked'] as Layer[]).filter((k) => ov[k]);
+    const layers = (['gaia', 'wise', 'masked', 'adv'] as Layer[]).filter((k) => ov[k]);
     writeParams({
       mode: mode === 'single' ? 'single' : null,
       det: det !== null ? String(det) : null,
@@ -355,6 +369,7 @@ export const mount: Mount = (root, ctx) => {
       size: size !== DEFAULT_SIZE ? String(size) : null,
       overlays: layers.length > 0 ? layers.join(',') : null,
       px: smooth ? null : '1',
+      drange: drange === 'faint' ? 'f' : drange === 'bright' ? 'h' : null,
     });
   }
 
@@ -437,14 +452,12 @@ export const mount: Mount = (root, ctx) => {
   function getDiff(m: Movie, a: number, b: number): DiffEntry | null {
     const fa = m.frames[a];
     const fb = m.frames[b];
-    const key = `${mode}|${m.detector}|${fa?.exposureIds.join(',')}|${fb?.exposureIds.join(',')}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
+    const key = `${drange}|${mode}|${m.detector}|${fa?.exposureIds.join(',')}|${fb?.exposureIds.join(',')}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
     if (diffCache && diffCache.key === key) return diffCache;
     try {
       const d = difference(m.frames[a], m.frames[b]);
-      const smax = Math.max(Math.abs(d.stretch.lo), Math.abs(d.stretch.hi));
-      const sigma = robustStats([d.pixels]).sigma;
-      const range = sigma > 0 ? Math.min(SIGMA_RANGE * sigma, smax > 0 ? smax : Infinity) : smax;
-      diffCache = { key, d, range: range > 0 ? range : 1 };
+      const dr = diffRange(d.pixels, drange);
+      diffCache = { key, d, range: dr.range, soft: dr.soft };
       return diffCache;
     } catch {
       return null;
@@ -532,11 +545,12 @@ export const mount: Mount = (root, ctx) => {
     const k = smoothK(d.w, d.h);
     const src = snr ? d.snr : d.pixels;
     const range = snr ? SIGMA_RANGE : dr.range;
-    const rgba = cached(src, `${k}|${range}`, () => {
-      if (k === 1) return renderDiverging(src, d.w, d.h, range);
+    const soft = snr ? 0 : dr.soft;
+    const rgba = cached(src, `${k}|${range}|${soft}`, () => {
+      if (k === 1) return renderDiverging(src, d.w, d.h, range, soft);
       const norm = new Float32Array(src.length);
       // upsampleSmooth works in 0..1, so carry the signed -1..1 value as 0.5 + v / 2.
-      for (let i = 0; i < norm.length; i++) norm[i] = 0.5 + Math.max(-1, Math.min(1, src[i] / range)) / 2;
+      for (let i = 0; i < norm.length; i++) norm[i] = 0.5 + divergingNorm(src[i], range, soft) / 2;
       return smoothRgba(norm, d.w, d.h, k, (v) => divergingColor(v * 2 - 1));
     });
     return { rgba, k };
@@ -571,7 +585,7 @@ export const mount: Mount = (root, ctx) => {
     return {
       rangeText: snr
         ? `Range -${SIGMA_RANGE} to +${SIGMA_RANGE} sigma`
-        : `Range -${sig2(dr.range)} to +${sig2(dr.range)} MJy/sr, about five times the background noise`,
+        : `Range -${sig2(dr.range)} to +${sig2(dr.range)} MJy/sr. Faint values are stretched so small residuals show.`,
       unit: snr ? 'sigma' : 'MJy/sr',
       warning: d.wavelengthMatched
         ? null
@@ -580,12 +594,38 @@ export const mount: Mount = (root, ctx) => {
     };
   }
 
+  function readingLine(m: Movie, a: number, b: number): string {
+    let text = 'Orange: brighter in B. Blue: brighter in A.';
+    const t = loaded?.target;
+    const fa = m.frames[a];
+    const fb = m.frames[b];
+    if (t && fa && fb && Number.isFinite(t.pmra) && Number.isFinite(t.pmdec) && (t.pmra !== 0 || t.pmdec !== 0)) {
+      try {
+        const pa = positionAt(t, fa.mjd);
+        const pb = positionAt(t, fb.mjd);
+        const cosd = Math.cos(((pa.dec + pb.dec) / 2) * (Math.PI / 180));
+        const east = (pb.ra - pa.ra) * cosd * 3600;
+        const north = (pb.dec - pa.dec) * 3600;
+        const arcsec = Math.hypot(east, north);
+        if (arcsec / m.grid.scaleArcsec > 0.5) {
+          const names = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+          const ang = (Math.atan2(east, north) * 180) / Math.PI;
+          const dir = names[Math.round((((ang % 360) + 360) % 360) / 45) % 8];
+          text += ` ${t.name ?? 'The target'} moved ${arcsec.toFixed(1)} arcsec ${dir} between these images.`;
+        }
+      } catch {
+        // position not available
+      }
+    }
+    return text;
+  }
+
   function detectorList(): PanelModel['detectorList'] {
     const avail = loaded ? loaded.available : [];
     return DETECTORS.map((d) => {
       const info = avail.find((x) => x.detector === d);
       const [lo, hi] = DET_BANDS[d];
-      const band = `Detector ${d}, ${lo.toFixed(2)} to ${hi.toFixed(2)} um`;
+      const band = `Detector ${d}, about ${lo.toFixed(1)} to ${hi.toFixed(1)} um`;
       if (!info || info.count === 0) return { detector: d, label: `${band}, no images here`, enabled: false };
       return {
         detector: d,
@@ -612,7 +652,7 @@ export const mount: Mount = (root, ctx) => {
         const d = dr.d;
         const img = diffImage(dr);
         showFrame = m.frames[b];
-        prepareOverlays(m, showFrame);
+        prepareOverlays(m, showFrame, [m.frames[a], m.frames[b]]);
         stage.setImage(img.rgba, d.w, d.h, img.k);
         stage.setOverlay(m.grid, showFrame.targetXY);
         current = { kind: 'diff', d };
@@ -628,6 +668,18 @@ export const mount: Mount = (root, ctx) => {
       qualityKey = { movie: m, frame: showFrame, n: loaded?.frames.length ?? 0, diff: diffOn ? `${a}|${b}` : '' };
       quality.show(m, showFrame, loaded ? loaded.frames : [], diffOn && a !== b ? { a: m.frames[a], b: m.frames[b] } : null);
     }
+
+    const unitRange = diffOn && current && current.kind === 'diff' && diffCache ? diffCache.range : 0;
+    stage.setKey({
+      ramp:
+        diffOn && current && current.kind === 'diff'
+          ? snr
+            ? { lo: `-${SIGMA_RANGE}`, hi: `+${SIGMA_RANGE}`, unit: 'sigma' }
+            : { lo: `-${sig2(unitRange)}`, hi: `+${sig2(unitRange)}`, unit: 'MJy/sr' }
+          : null,
+      saturated: hasSat,
+    });
+    stage.setReading(diffOn && current && current.kind === 'diff' ? readingLine(m, a, b) : null);
 
     const cached = loaded ? loaded.cached : false;
     const model: PanelModel = {
@@ -650,7 +702,8 @@ export const mount: Mount = (root, ctx) => {
       smooth,
       contrast,
       preparedResidual: null,
-      overlays: { gaia: ov.gaia, wise: ov.wise, masked: ov.masked },
+      overlays: { gaia: ov.gaia, wise: ov.wise, masked: ov.masked, adv: ov.adv },
+      drange,
       wiseAvailable,
       overlayNote:
         ovLoading ||
@@ -665,7 +718,7 @@ export const mount: Mount = (root, ctx) => {
     panel.update(model);
   }
 
-  function prepareOverlays(m: Movie, f: Movie['frames'][number]): void {
+  function prepareOverlays(m: Movie, f: Movie['frames'][number], fs: Movie['frames'][number][] = [f]): void {
     const pick40 = (src: OverlaySource[] | null, on: boolean): { pts: ProjectedSource[]; total: number } => {
       if (!on || !src) return { pts: [], total: 0 };
       const inside = projectSources(src, m.grid, f.mjd).filter(
@@ -680,23 +733,21 @@ export const mount: Mount = (root, ctx) => {
     drawWise = w.pts;
     gaiaTotal = g.total;
     wiseTotal = w.total;
-    if (ov.masked && loaded) {
-      drawMaskArr = maskFor(f, loaded.frames);
-      drawMaskW = f.w;
-      const ids = new Set(f.exposureIds);
-      drawSat = [];
-      for (const fr of loaded.frames) {
-        if (!ids.has(fr.exposure.id)) continue;
-        try {
-          for (const s of saturatedSources(fr)) drawSat.push({ x: s.x, y: s.y });
-        } catch {
-          // no saturation info for this frame
-        }
+    const fl = loaded ? loaded.frames : [];
+    const union = (bits: number): Uint8Array => {
+      const out = new Uint8Array(f.w * f.h);
+      for (const fr of fs) {
+        const mm = maskFor(fr, fl, bits);
+        const n = Math.min(out.length, mm.length);
+        for (let i = 0; i < n; i++) if (mm[i]) out[i] = 1;
       }
-    } else {
-      drawMaskArr = null;
-      drawSat = [];
-    }
+      return out;
+    };
+    satMaskArr = union(FLAG_BITS.SATURATED);
+    hasSat = satMaskArr.some((x) => x !== 0);
+    drawMaskArr = ov.masked ? union(MASK_BAD_BITS) : null;
+    advMaskArr = ov.adv ? union(MASK_ADVISORY_BITS) : null;
+    drawMaskW = f.w;
   }
 
   function paintFrame(m: Movie, f: Movie['frames'][number]): void {
@@ -711,7 +762,12 @@ export const mount: Mount = (root, ctx) => {
 
   stage.setExtraDraw((c, toCanvas, scale, dpr) => {
     if (drawMaskArr) drawMask(c, drawMaskArr, drawMaskW, toCanvas, scale);
-    if (drawSat.length > 0) drawSaturated(c, drawSat, toCanvas, scale, dpr);
+    if (advMaskArr) {
+      drawMaskOutline(c, advMaskArr, drawMaskW, toCanvas, scale, dpr, { colour: '#ffd27a', alpha: 0.5 });
+    }
+    if (satMaskArr && hasSat) {
+      drawMaskOutline(c, satMaskArr, drawMaskW, toCanvas, scale, dpr, { colour: '#e4e9f1', alpha: 0.5, edgeOnly: true });
+    }
     if (drawGaia.length > 0) drawSources(c, drawGaia, toCanvas, scale, dpr);
     if (drawWise.length > 0) drawSources(c, drawWise, toCanvas, scale, dpr);
   });
@@ -721,15 +777,19 @@ export const mount: Mount = (root, ctx) => {
     return hit ? describeSource(hit.src) : null;
   });
 
+  function nanText(i: number): string {
+    return satMaskArr && satMaskArr[i] ? 'Saturated: no data here' : 'No data here';
+  }
+
   stage.setValueProvider((x, y) => {
     if (!current) return '';
     if (current.kind === 'frame') {
       const v = current.pixels[y * current.w + x];
-      return Number.isNaN(v) ? 'No data here' : `${v.toFixed(2)} MJy/sr`;
+      return Number.isNaN(v) ? nanText(y * current.w + x) : `${v.toFixed(2)} MJy/sr`;
     }
     const d = current.d;
     const v = snr ? d.snr[y * d.w + x] : d.pixels[y * d.w + x];
-    if (Number.isNaN(v)) return 'No data here';
+    if (Number.isNaN(v)) return nanText(y * d.w + x);
     return snr ? `${v >= 0 ? '+' : ''}${v.toFixed(1)} sigma` : `${v >= 0 ? '+' : ''}${v.toFixed(2)} MJy/sr`;
   });
 
@@ -838,7 +898,7 @@ export const mount: Mount = (root, ctx) => {
       normalizeName(`${target.name ?? ''} ${params.q ?? ''}`).includes('wise0855');
     panel.setTitleNote(
       isWise
-        ? 'WISE 0855 is one of the faintest known brown dwarfs and may not be visible in any single SPHEREx image; we mark where it should be.'
+        ? 'WISE 0855 is one of the faintest known brown dwarfs and may not be visible in any single SPHEREx image; we mark where it should be. A faint dot near the marker at short wavelengths is probably a background source, not the brown dwarf.'
         : null,
     );
     panel.setHeader(

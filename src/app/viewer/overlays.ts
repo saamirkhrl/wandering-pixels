@@ -2,7 +2,7 @@ import { ADVISORY_MASK, BAD_DATA_MASK, worldToGrid } from '../data';
 import type { Frame, GaiaStar, Grid, MovieFrame, WiseSource } from '../data';
 import '../../ui/viewer-parts.css';
 
-export type OverlayLayer = 'gaia' | 'wise' | 'masked';
+export type OverlayLayer = 'gaia' | 'wise' | 'masked' | 'adv';
 
 export interface OverlaySource {
   kind: 'gaia' | 'wise';
@@ -203,5 +203,53 @@ export function drawMask(
     const [px, py] = toCanvas(x - 0.5, y - 0.5);
     ctx.fillRect(px, py, scale, scale);
   }
+  ctx.restore();
+}
+
+// Thin outline of the cells set in the mask (not a fill). Used for advisory flags and
+// saturated cores.
+export function drawMaskOutline(
+  ctx: CanvasRenderingContext2D,
+  mask: Uint8Array,
+  w: number,
+  toCanvas: (gx: number, gy: number) => [number, number],
+  scale: number,
+  dpr: number,
+  style: { colour: string; alpha: number; edgeOnly?: boolean },
+): void {
+  const h = Math.floor(mask.length / w);
+  const on = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && mask[y * w + x] !== 0;
+  ctx.save();
+  ctx.strokeStyle = style.colour;
+  ctx.globalAlpha = style.alpha;
+  ctx.lineWidth = Math.max(1, Math.round(1 * dpr));
+  ctx.beginPath();
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!mask[y * w + x]) continue;
+      const [px, py] = toCanvas(x - 0.5, y - 0.5);
+      if (!style.edgeOnly) {
+        ctx.rect(px + 0.5, py + 0.5, scale - 1, scale - 1);
+        continue;
+      }
+      if (!on(x, y - 1)) {
+        ctx.moveTo(px, py + 0.5);
+        ctx.lineTo(px + scale, py + 0.5);
+      }
+      if (!on(x, y + 1)) {
+        ctx.moveTo(px, py + scale - 0.5);
+        ctx.lineTo(px + scale, py + scale - 0.5);
+      }
+      if (!on(x - 1, y)) {
+        ctx.moveTo(px + 0.5, py);
+        ctx.lineTo(px + 0.5, py + scale);
+      }
+      if (!on(x + 1, y)) {
+        ctx.moveTo(px + scale - 0.5, py);
+        ctx.lineTo(px + scale - 0.5, py + scale);
+      }
+    }
+  }
+  ctx.stroke();
   ctx.restore();
 }

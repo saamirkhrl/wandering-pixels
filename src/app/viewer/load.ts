@@ -222,7 +222,7 @@ export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: Ab
     const c = await loadCached(slug, { signal });
     if (signal.aborted) throw abortedError();
     const available = availableOf(c.exposures);
-    const det = chooseDetector(available, req.det);
+    const det = chooseDetector(available, req.det ?? (slug === 'wise-0855' ? 6 : null));
     return {
       live: null,
       search: null,

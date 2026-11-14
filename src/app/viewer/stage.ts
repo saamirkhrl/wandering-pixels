@@ -1,6 +1,6 @@
 import { gridToWorld } from '../data';
 import type { Grid } from '../data';
-import { integerScale } from './render';
+import { divergingColor, HATCH_A, integerScale } from './render';
 
 export function formatRa(deg: number): string {
   const h = (((deg % 360) + 360) % 360) / 15;
@@ -50,6 +50,11 @@ export type ExtraDraw = (
   dpr: number,
 ) => void;
 
+export interface StageKey {
+  ramp: { lo: string; hi: string; unit: string } | null;
+  saturated: boolean;
+}
+
 export interface Stage {
   el: HTMLElement;
   setImage: (rgba: Uint8ClampedArray, w: number, h: number, k?: number) => void;
@@ -61,6 +66,8 @@ export interface Stage {
   setExtraDraw: (fn: ExtraDraw | null) => void;
   setHover: (fn: ((gx: number, gy: number) => string | null) | null) => void;
   setPick: (pos: [number, number] | null) => void;
+  setReading: (text: string | null) => void;
+  setKey: (key: StageKey | null) => void;
   onPick: (fn: ((gx: number, gy: number) => void) | null) => void;
   redraw: () => void;
   dispose: () => void;
@@ -87,13 +94,16 @@ export function createStage(): Stage {
   note.hidden = true;
   box.append(base, over, note);
 
+  const reading = document.createElement('p');
+  reading.className = 'v-reading';
+  reading.hidden = true;
   const readout = document.createElement('div');
   readout.className = 'v-readout';
   const line1 = document.createElement('p');
   const line2 = document.createElement('p');
   readout.append(line1, line2);
   readout.hidden = true;
-  el.append(box, readout);
+  el.append(box, reading, readout);
 
   const off = document.createElement('canvas');
   let imgK = 1;
@@ -105,6 +115,7 @@ export function createStage(): Stage {
   let targetXY: [number, number] | null = null;
   let valueFn: ((x: number, y: number) => string) | null = null;
   let extra: ExtraDraw | null = null;
+  let keyInfo: StageKey | null = null;
   let hoverFn: ((gx: number, gy: number) => string | null) | null = null;
   let pickPos: [number, number] | null = null;
   let pickFn: ((gx: number, gy: number) => void) | null = null;
@@ -245,6 +256,8 @@ export function createStage(): Stage {
       halo(cross, '#ffffff', lw);
     }
 
+    if (keyInfo && (keyInfo.ramp || keyInfo.saturated)) drawKey(ctx, right, bottom);
+
     // target marker: two short ticks, north (above) and east (left), clear of the star
     if (targetXY) {
       const mx = Math.round(ox + (targetXY[0] + 0.5) * scale);
@@ -262,6 +275,55 @@ export function createStage(): Stage {
       halo(ticks, cSky, lw + 2 * dpr);
       halo(ticks, cSignal, lw + Math.round(dpr * 0.5));
     }
+  }
+
+  function drawKey(ctx: CanvasRenderingContext2D, right: number, bottom: number): void {
+    if (!keyInfo) return;
+    const pad = 12 * dpr;
+    const rampW = Math.round(110 * dpr);
+    const rampH = Math.round(7 * dpr);
+    let y = bottom - pad;
+    ctx.save();
+    ctx.font = `${Math.round(11 * dpr)}px ${FONT}`;
+    ctx.textBaseline = 'alphabetic';
+    ctx.lineJoin = 'round';
+    const label = (t: string, x: number, yy: number, align: CanvasTextAlign) => {
+      ctx.textAlign = align;
+      ctx.strokeStyle = 'rgba(4,6,13,0.85)';
+      ctx.lineWidth = 3 * dpr;
+      ctx.strokeText(t, x, yy);
+      ctx.fillStyle = cPaper;
+      ctx.fillText(t, x, yy);
+    };
+    if (keyInfo.saturated) {
+      const sw = Math.round(9 * dpr);
+      const sx = right - pad - sw;
+      ctx.fillStyle = `rgb(${HATCH_A[0]},${HATCH_A[1]},${HATCH_A[2]})`;
+      ctx.fillRect(sx, y - sw, sw, sw);
+      ctx.strokeStyle = cPaper;
+      ctx.globalAlpha = 0.6;
+      ctx.lineWidth = Math.max(1, Math.round(dpr));
+      ctx.strokeRect(sx + 0.5, y - sw + 0.5, sw - 1, sw - 1);
+      ctx.globalAlpha = 1;
+      label('saturated', sx - 6 * dpr, y - 1 * dpr, 'right');
+      y -= sw + 8 * dpr;
+    }
+    if (keyInfo.ramp) {
+      const x0 = right - pad - rampW;
+      for (let i = 0; i < rampW; i++) {
+        const c = divergingColor((i / (rampW - 1)) * 2 - 1);
+        ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+        ctx.fillRect(x0 + i, y - rampH, 1, rampH);
+      }
+      ctx.strokeStyle = cPaper;
+      ctx.globalAlpha = 0.6;
+      ctx.lineWidth = Math.max(1, Math.round(dpr));
+      ctx.strokeRect(x0 + 0.5, y - rampH + 0.5, rampW - 1, rampH - 1);
+      ctx.globalAlpha = 1;
+      label(keyInfo.ramp.lo, x0, y - rampH - 4 * dpr, 'left');
+      label(`${keyInfo.ramp.hi} ${keyInfo.ramp.unit}`, x0 + rampW, y - rampH - 4 * dpr, 'right');
+    }
+    ctx.restore();
   }
 
   function setImage(rgba: Uint8ClampedArray, w: number, h: number, k = 1): void {
@@ -355,6 +417,14 @@ export function createStage(): Stage {
     },
     setHover: (fn) => {
       hoverFn = fn;
+    },
+    setReading: (text) => {
+      reading.hidden = text === null;
+      reading.textContent = text ?? '';
+    },
+    setKey: (k) => {
+      keyInfo = k;
+      drawOverlay();
     },
     setPick: (pos) => {
       pickPos = pos;

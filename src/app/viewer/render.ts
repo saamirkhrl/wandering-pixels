@@ -7,8 +7,8 @@ export interface Stretch {
 export type Rgb = readonly [number, number, number];
 
 // Missing data: one flat tone, slightly lighter than the near-black sky. No texture.
-export const HATCH_A: Rgb = [18, 21, 29];
-export const HATCH_B: Rgb = [18, 21, 29];
+export const HATCH_A: Rgb = [28, 32, 43];
+export const HATCH_B: Rgb = [28, 32, 43];
 export const ZERO_RGB: Rgb = [6, 8, 14];
 
 export function asinhNorm(x: number, lo: number, hi: number, scale?: number): number {
@@ -67,14 +67,51 @@ export function divergingColor(t: number): Rgb {
   return soft < 0.65 ? mix(ZERO_RGB, mid, soft / 0.65) : mix(mid, hi, (soft - 0.65) / 0.35);
 }
 
-export function renderDiverging(pixels: Float32Array, w: number, h: number, range: number): Uint8ClampedArray {
+// Signed value to -1..1 with an asinh compression, so faint residuals and a bright dipole both read.
+export function divergingNorm(v: number, range: number, soft?: number): number {
+  if (Number.isNaN(v)) return NaN;
+  if (!(soft && soft > 0)) return v / range;
+  const t = Math.asinh(v / soft) / Math.asinh(range / soft);
+  return t > 1 ? 1 : t < -1 ? -1 : t;
+}
+
+export type DiffRange = 'faint' | 'balanced' | 'bright';
+
+// p-th percentile (0..1) of the absolute value of the finite entries.
+export function absPercentile(values: ArrayLike<number>, p: number): number {
+  const vals: number[] = [];
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i];
+    if (Number.isFinite(v)) vals.push(Math.abs(v));
+  }
+  if (vals.length === 0) return 0;
+  const sorted = Float64Array.from(vals).sort();
+  return sorted[Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1)))];
+}
+
+export function diffRange(pixels: ArrayLike<number>, mode: DiffRange): { range: number; soft: number } {
+  const sigma = robustSigma(pixels);
+  const five = 5 * sigma;
+  let range = five;
+  if (mode === 'balanced') range = Math.max(five, absPercentile(pixels, 0.995));
+  else if (mode === 'bright') range = Math.max(five, absPercentile(pixels, 0.999));
+  return { range: range > 0 ? range : 1, soft: sigma > 0 ? 3 * sigma : 0 };
+}
+
+export function renderDiverging(
+  pixels: Float32Array,
+  w: number,
+  h: number,
+  range: number,
+  soft?: number,
+): Uint8ClampedArray {
   const out = new Uint8ClampedArray(w * h * 4);
   const r = range > 0 ? range : 1;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       const p = pixels[i];
-      const c = Number.isNaN(p) ? hatchColor(x, y) : divergingColor(p / r);
+      const c = Number.isNaN(p) ? hatchColor(x, y) : divergingColor(divergingNorm(p, r, soft));
       out[i * 4] = c[0];
       out[i * 4 + 1] = c[1];
       out[i * 4 + 2] = c[2];

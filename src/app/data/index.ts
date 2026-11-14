@@ -26,6 +26,10 @@ type Lib = Pick<
   | 'worldToGrid'
   | 'gridToWorld'
   | 'summarize'
+  | 'parallaxOffset'
+  | 'positionAtDistance'
+  | 'gridAt'
+  | 'trackingTolerance'
 >;
 type CacheLib = Pick<typeof real, 'loadCached' | 'listCached'>;
 
@@ -58,6 +62,10 @@ export const wiseCone = live.wiseCone;
 export const worldToGrid = live.worldToGrid;
 export const gridToWorld = live.gridToWorld;
 export const summarize = live.summarize;
+export const parallaxOffset = live.parallaxOffset;
+export const positionAtDistance = live.positionAtDistance;
+export const gridAt = live.gridAt;
+export const trackingTolerance = live.trackingTolerance;
 const fromMock = new WeakSet<object>();
 
 // Real prepared sets when present; any failure (missing files, bad data) falls back to the mock

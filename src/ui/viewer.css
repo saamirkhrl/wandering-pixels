@@ -679,3 +679,9 @@
 .v-check input:disabled ~ .v-check-text {
   color: #5a6485;
 }
+
+.v-reading {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--paper);
+}

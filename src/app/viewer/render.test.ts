@@ -6,7 +6,10 @@ import {
   HATCH_B,
   hatchColor,
   integerScale,
+  absPercentile,
   displayStretch,
+  divergingNorm,
+  diffRange,
   robustSigma,
   robustStats,
   renderDiverging,
@@ -166,5 +169,42 @@ describe('displayStretch', () => {
   it('falls back to the base stretch with no noise estimate', () => {
     const st = displayStretch([new Float32Array([NaN, NaN])], { lo: 0, hi: 2 });
     expect(st).toEqual({ lo: 0, hi: 2 });
+  });
+});
+
+describe('difference range', () => {
+  const field = (): Float32Array => {
+    const a = new Float32Array(4000);
+    let s = 13;
+    for (let i = 0; i < a.length; i++) {
+      s = (s * 16807) % 2147483647;
+      a[i] = (s / 2147483647 - 0.5) * 0.1;
+    }
+    for (let i = 0; i < 60; i++) a[i] = i % 2 ? 5 : -5;
+    return a;
+  };
+
+  it('orders faint, balanced and bright', () => {
+    const f = field();
+    const a = diffRange(f, 'faint').range;
+    const b = diffRange(f, 'balanced').range;
+    const c = diffRange(f, 'bright').range;
+    expect(b).toBeGreaterThanOrEqual(a);
+    expect(c).toBeGreaterThanOrEqual(b);
+  });
+
+  it('compresses with asinh: monotonic, symmetric, clamped', () => {
+    const r = 5;
+    const soft = 0.1;
+    expect(divergingNorm(0, r, soft)).toBe(0);
+    expect(divergingNorm(1, r, soft)).toBeGreaterThan(divergingNorm(0.2, r, soft));
+    expect(divergingNorm(-1, r, soft)).toBeCloseTo(-divergingNorm(1, r, soft), 10);
+    expect(divergingNorm(50, r, soft)).toBe(1);
+    expect(Number.isNaN(divergingNorm(NaN, r, soft))).toBe(true);
+    expect(divergingNorm(0.5, r, soft)).toBeGreaterThan(0.5 / r);
+  });
+
+  it('absPercentile ignores NaN', () => {
+    expect(absPercentile(new Float32Array([NaN, -2, 1, 3]), 1)).toBe(3);
   });
 });

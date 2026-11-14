@@ -1,4 +1,5 @@
 import { FLAG_BITS, SpherexError } from './types';
+import { gridAt, positionAtDistance } from '../../lib/spherex/parallax';
 import type {
   CachedSlug,
   CachedTarget,
@@ -257,6 +258,7 @@ interface Scene {
   stars: Star[];
   exposures: Exposure[];
   amp: (wl: number, visit: number, jitter: number) => number;
+  fake: { ra: number; dec: number } | null;
   gaiaTarget: GaiaStar | null;
   wiseTarget: WiseSource | null;
 }
@@ -628,6 +630,7 @@ function base(slug: CachedSlug): Base {
     target,
     ref,
     stars: genStars(def.seed, ref),
+    fake: null,
     exposures: sched.exposures,
     amp: (wl, visit, jitter) =>
       Math.max(0, interp(def.spectrum, wl) * (def.visitMult[visit] ?? 1) * (1 + 0.03 * jitter)),
@@ -669,6 +672,13 @@ function posKey(ra: number, dec: number): string {
   return `${ra.toFixed(3)},${dec.toFixed(3)}`;
 }
 
+// A faint source that sits where a body at 500 au would appear on every date, anchored at the
+// heliocentric direction of the grid centre. Live fields only.
+function fakeBody(target: Target, exposures: Exposure[]): { ra: number; dec: number } {
+  const mean = exposures.reduce((s, e) => s + e.mjd, 0) / exposures.length;
+  return positionAt(target, mean);
+}
+
 function brightenFirst(stars: Star[]): Star[] {
   stars[0] = { ...stars[0], gmag: 10.5, peak1: 900 * Math.pow(10, -0.4 * (10.5 - 11)) };
   return stars;
@@ -699,6 +709,7 @@ function sceneForPosition(ra: number, dec: number): Scene {
     target,
     ref: { ra, dec },
     stars: brightenFirst(genStars(seed, { ra, dec })),
+    fake: fakeBody(target, sched.exposures),
     exposures: sched.exposures,
     amp: (wl, visit, jitter) => Math.max(0, (120 / wl) * mult[visit % 4] * (1 + 0.03 * jitter)),
     gaiaTarget: {
@@ -785,11 +796,11 @@ function renderFrame(
   const n = w * h;
   const rng = makeRng(hashStr(exp.id) ^ 0x9e3779b9);
   const sigmaSky = 0.06 + 0.12 * rng.u();
-  const psf = psfSigma(wl);
+  const psfWl = psfSigma(wl);
   const signal = new Float32Array(n);
 
   const sat: [number, number][] = [];
-  const addSource = (x0: number, y0: number, amp: number) => {
+  const addSource = (x0: number, y0: number, amp: number, psf = psfWl) => {
     if (amp < 0.01) return;
     if (amp > SATURATION_PEAK) sat.push([Math.round(x0), Math.round(y0)]);
     const r = Math.ceil(4 * psf);
@@ -815,6 +826,11 @@ function renderFrame(
   const tp = positionAt(scene.target, exp.mjd);
   const [tx, ty] = worldToGrid(grid, tp.ra, tp.dec);
   addSource(tx, ty, scene.amp(wl, exp.visitIndex, rng.n()));
+  if (scene.fake) {
+    const fp = positionAtDistance(scene.fake.ra, scene.fake.dec, exp.mjd, 500);
+    const [fx, fy] = worldToGrid(grid, fp.ra, fp.dec);
+    if (fx > -6 && fx < w + 5 && fy > -6 && fy < h + 5) addSource(fx, fy, 3 * sigmaSky, 0.8);
+  }
 
   const pixels = new Float32Array(n);
   const variance = new Float32Array(n);
@@ -1054,7 +1070,12 @@ export async function loadFrame(exposure: Exposure, grid: Grid, opts: FrameOptio
   const range = DETECTOR_RANGE[exposure.detector];
   const wl = r?.wl ?? exposure.wavelengthAtTarget ?? (range[0] + range[1]) / 2;
   const bw = r?.bw ?? exposure.bandwidthAtTarget ?? wl / (exposure.detector <= 4 ? 40 : 120);
-  return renderFrame(scene, exposure, wl, bw, grid, opts.background ?? 'zodi', opts.wavelengthMap === true);
+  const dist = opts.distanceAu;
+  const tracked = typeof dist === 'number' && Number.isFinite(dist) && dist > 0;
+  const g = tracked ? gridAt(grid, exposure.mjd, dist, opts.referenceMjd) : grid;
+  const frame = renderFrame(scene, exposure, wl, bw, g, opts.background ?? 'zodi', opts.wavelengthMap === true);
+  if (tracked) frame.trackingDistanceAu = dist;
+  return frame;
 }
 
 export async function loadFrames(
@@ -1231,6 +1252,13 @@ export function buildMovie(frames: Frame[], mode: MovieMode, detector: Detector,
     groups.sort((a, b) => a[0].exposure.mjd - b[0].exposure.mjd);
   }
 
+  const trackedD = sel[0]?.trackingDistanceAu;
+  for (const f of sel) {
+    if (f.trackingDistanceAu !== trackedD || f.w !== sel[0].w || f.h !== sel[0].h) {
+      throw new SpherexError('BAD_INPUT', 'These frames were made with different tracking settings or sizes.');
+    }
+  }
+
   const grid: Grid = (frames[0] ?? sel[0])?.grid ?? {
     ra0: 0,
     dec0: 0,
@@ -1246,7 +1274,9 @@ export function buildMovie(frames: Frame[], mode: MovieMode, detector: Detector,
     const mjd = members.reduce((s, m) => s + m.exposure.mjd, 0) / members.length;
     const g = members[0].grid;
     let targetXY: [number, number] | null = null;
-    if (target) {
+    if (trackedD !== undefined) {
+      targetXY = [(members[0].w - 1) / 2, (members[0].h - 1) / 2];
+    } else if (target) {
       const p = positionAt(target, mjd);
       targetXY = worldToGrid(g, p.ra, p.dec);
     }
@@ -1280,7 +1310,9 @@ export function buildMovie(frames: Frame[], mode: MovieMode, detector: Detector,
   let hi = percentile(all, 0.997);
   if (!(hi > lo)) hi = lo + 1;
 
-  return { mode, detector, grid, frames: movieFrames, stretch: { lo, hi } };
+  const movie: Movie = { mode, detector, grid, frames: movieFrames, stretch: { lo, hi } };
+  if (trackedD !== undefined) movie.trackingDistanceAu = trackedD;
+  return movie;
 }
 
 export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
@@ -1495,3 +1527,5 @@ export async function loadBestPair(
   if (res.failed.length > 0) throw res.failed[0].error;
   return { frames: res.frames, matched: true, detector };
 }
+
+export { parallaxOffset, positionAtDistance, gridAt, trackingTolerance } from '../../lib/spherex/parallax';

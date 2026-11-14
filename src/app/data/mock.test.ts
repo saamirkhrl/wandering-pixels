@@ -7,6 +7,7 @@ import {
   findExposures,
   gaiaCone,
   gridToWorld,
+  positionAtDistance,
   loadFirstLook,
   saturatedSources,
   loadFrame,
@@ -323,6 +324,60 @@ describe('live path', () => {
   it('gives R Dra about sixteen visits', async () => {
     const c = await loadCached('r-dra');
     expect(summarize(c.exposures)[1].visits.length).toBe(16);
+  });
+
+  it('tracks a body at an assumed distance', async () => {
+    const t = await resolveTarget('150 20');
+    const ex = await findExposures(t.ra, t.dec);
+    const g = makeGrid(t, ex);
+    const det2 = ex.filter((e) => e.detector === 2);
+    const early = det2[0];
+    const late = det2.find((e) => e.mjd - early.mjd > 170 && e.mjd - early.mjd < 200) ?? det2[det2.length - 1];
+    const track = async (d: number) =>
+      (await loadFrames([early, late], g, { distanceAu: d })).frames;
+    const f500 = await track(500);
+    expect(f500).toHaveLength(2);
+    expect(f500[0].trackingDistanceAu).toBe(500);
+    expect(f500[0].grid.ra0).not.toBeCloseTo(f500[1].grid.ra0, 4);
+    expect(f500[0].grid.epochMjd).toBeCloseTo(early.mjd, 6);
+
+    const body = (frame: (typeof f500)[0]) => {
+      const p = positionAtDistance(g.ra0, g.dec0, frame.exposure.mjd, 500);
+      return worldToGrid(frame.grid, p.ra, p.dec);
+    };
+    const a = body(f500[0]);
+    const b = body(f500[1]);
+    expect(Math.hypot(a[0] - b[0], a[1] - b[1])).toBeLessThan(0.5);
+    expect(a[0]).toBeCloseTo((g.w - 1) / 2, 1);
+
+    const f300 = await track(300);
+    const c = body(f300[0]);
+    const d = body(f300[1]);
+    expect(Math.hypot(c[0] - d[0], c[1] - d[1])).toBeGreaterThan(3);
+
+    // the faint source is really painted: its centre pixel is positive on average at 500 au
+    const sample = det2.filter((_, i) => i % 7 === 0).slice(0, 14);
+    const res = await loadFrames(sample, g, { distanceAu: 500 });
+    let sum = 0;
+    let n = 0;
+    for (const f of res.frames) {
+      const [x, y] = body(f);
+      const v = f.pixels[Math.round(y) * f.w + Math.round(x)];
+      if (Number.isFinite(v)) {
+        sum += v;
+        n++;
+      }
+    }
+    expect(n).toBeGreaterThan(5);
+    expect(sum / n).toBeGreaterThan(0.12);
+
+    const movie = buildMovie(f500, 'single', 2, t);
+    expect(movie.trackingDistanceAu).toBe(500);
+    expect(movie.frames[0].targetXY).toEqual([(g.w - 1) / 2, (g.h - 1) / 2]);
+    const plain = (await loadFrames([early], g)).frames;
+    expect(() => buildMovie([...f500, ...plain], 'single', 2)).toThrowError(expect.objectContaining({ code: 'BAD_INPUT' }));
+    const other = (await loadFrames([late], g, { distanceAu: 300 })).frames;
+    expect(() => buildMovie([f500[0], ...other], 'single', 2)).toThrowError(expect.objectContaining({ code: 'BAD_INPUT' }));
   });
 
   it('returns cone searches', async () => {

@@ -7,6 +7,7 @@ export interface SpectrumPanel {
     points: SpectrumPoint[],
     where: { ra: number; dec: number },
     visitLabel: (visitIndex: number) => string,
+    visitNo?: (visitIndex: number) => number,
   ): void;
   clear(): void;
   dispose(): void;
@@ -148,11 +149,27 @@ function fileNum(v: number): string {
   return v.toFixed(5);
 }
 
+// Reserved block, below the spectrum: for each visit pair, the plain comparison and the
+// colour-matched comparison side by side as numbers with error bars. No computation yet; the
+// block renders only when this flag is switched on, and sits in the place described here so
+// nothing above it moves when it arrives.
+export const CHANGE_BLOCK_ENABLED = false;
+
+function changeBlock(): HTMLElement {
+  const box = el('div', 'v-changeblock');
+  box.appendChild(el('h4', 'v-subhead', 'Has it changed between visits?'));
+  const rows = el('div', 'v-changerows');
+  rows.append(el('div', 'v-changerow', 'Plain comparison'), el('div', 'v-changerow', 'Colour-matched comparison'));
+  box.appendChild(rows);
+  return box;
+}
+
 export function createSpectrumPanel(): SpectrumPanel {
   const root = el('section', 'v-sec v-spec');
   root.appendChild(el('h3', 'v-h', 'Spectrum here'));
   const body = el('div', 'v-spec-body');
   root.appendChild(body);
+  if (CHANGE_BLOCK_ENABLED) root.appendChild(changeBlock());
   let urlToRevoke: string | null = null;
   let timer: number | null = null;
 

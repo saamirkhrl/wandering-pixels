@@ -1,10 +1,11 @@
+import { DIFF_SOURCES, STACK_NOISE, STACK_WARN } from './stack-copy';
+import type { DiffSource } from './stack-copy';
 import type { Detector, MovieMode, Progress, SpherexErrorCode } from '../data';
 import { divergingColor } from './render';
 import type { PlayMode } from './player';
 import { STAGE_WORDS } from './load';
 import { createTimeline } from './timeline';
 
-export const PREPARED_DIFF_ENABLED = false;
 
 export interface FrameInfo {
   caption: string;
@@ -45,8 +46,9 @@ export interface PanelModel {
   overlayNote: string;
   smooth: boolean;
   contrast: 'soft' | 'normal' | 'hard';
-  preparedResidual: string | null;
   compare: CompareInfo | null;
+  // Difference source control: null when there is no choice to make
+  diffSource: { current: DiffSource; available: Record<DiffSource, boolean> } | null;
 }
 
 export interface PanelHandlers {
@@ -71,6 +73,7 @@ export interface PanelHandlers {
   setContrast: (c: 'soft' | 'normal' | 'hard') => void;
   toggleOverlay: (k: 'gaia' | 'wise' | 'masked' | 'adv') => void;
   setDrange: (r: 'faint' | 'balanced' | 'bright') => void;
+  setDiffSource: (s: DiffSource) => void;
   goBack: () => void;
   openPrepared: () => void;
 }
@@ -85,11 +88,14 @@ export interface Panel {
   setMockLine: (on: boolean) => void;
   setBack: (label: string | null) => void;
   setSkyEntry: (name: string | null) => void;
-  attach: (spectrum: HTMLElement, quality: HTMLElement) => void;
+  attach: (spectrum: HTMLElement, quality: HTMLElement, planet?: HTMLElement) => void;
+  setPairMarks: (indices: number[]) => void;
   toggleHelp: () => void;
   closeHelp: () => boolean;
   showEmpty: (targets: { slug: string; name: string; blurb: string }[]) => void;
   showControls: (on: boolean) => void;
+  // Section headings with every control disabled, shown while data downloads.
+  showSkeleton: () => void;
   setHeader: (name: string, meta: string) => void;
   setTitleNote: (text: string | null) => void;
   setMatchNote: (text: string | null) => void;
@@ -206,15 +212,25 @@ export function createPanel(hd: PanelHandlers): Panel {
   const bCmpDiff = btn('Difference', 'v-seg-btn', () => hd.setDiff(true));
   cmpSeg.append(bCmpBlink, bCmpDiff);
   const cmpHint = h('p', 'v-hint', 'Blink flips between A and B. Difference shows B minus A.');
+  const srcWrap = h('div', 'v-diffsrc');
+  const srcSeg = h('div', 'v-seg v-unitseg');
+  srcSeg.setAttribute('role', 'group');
+  srcSeg.setAttribute('aria-label', 'What to subtract');
+  const srcBtns = DIFF_SOURCES.map((s) => {
+    const b = btn(s.label, 'v-seg-btn', () => hd.setDiffSource(s.key));
+    b.dataset.src = s.key;
+    srcSeg.append(b);
+    return b;
+  });
+  const srcNote = h('p', 'v-hint', STACK_NOISE);
+  srcWrap.append(srcSeg, srcNote);
+  srcWrap.hidden = true;
   const unitSeg = h('div', 'v-seg v-unitseg');
   unitSeg.setAttribute('role', 'group');
   unitSeg.setAttribute('aria-label', 'Difference units');
   const bUnitFlux = btn('MJy/sr', 'v-seg-btn', () => hd.setSnr(false));
   const bUnitSig = btn('Sigma', 'v-seg-btn', () => hd.setSnr(true));
   unitSeg.append(bUnitFlux, bUnitSig);
-  // Prepared difference slot. It sits between the units control and the legend. While
-  // PREPARED_DIFF_ENABLED is false nothing is rendered; when it is switched on, the Plain /
-  // Colour-matched control and its residual line appear here, so no other control moves.
   const drangeSeg = h('div', 'v-seg v-unitseg');
   drangeSeg.setAttribute('role', 'group');
   drangeSeg.setAttribute('aria-label', 'Difference brightness range');
@@ -230,19 +246,6 @@ export function createPanel(hd: PanelHandlers): Panel {
     drangeSeg.append(b);
     return b;
   });
-  const prepSlot = h('div', 'v-prepslot');
-  const prepResidual = h('p', 'v-detail', '');
-  if (PREPARED_DIFF_ENABLED) {
-    const prepSeg = h('div', 'v-seg');
-    prepSeg.setAttribute('role', 'group');
-    prepSeg.setAttribute('aria-label', 'Difference kind');
-    const bPlain = btn('Plain', 'v-seg-btn', () => undefined);
-    bPlain.setAttribute('aria-pressed', 'true');
-    const bColour = btn('Colour-matched', 'v-seg-btn', () => undefined);
-    bColour.disabled = true;
-    prepSeg.append(bPlain, bColour);
-    prepSlot.append(prepSeg, h('p', 'v-hint', 'Prepared for the five targets'), prepResidual);
-  }
   const legend = h('div', 'v-legend');
   legend.hidden = true;
   const ramp = h('canvas', 'v-ramp');
@@ -279,7 +282,7 @@ export function createPanel(hd: PanelHandlers): Panel {
   selA.addEventListener('change', () => hd.setA(Number(selA.value)));
   selB.addEventListener('change', () => hd.setB(Number(selB.value)));
   fallback.append(labA, labB);
-  secCmp.append(hCmp, cmpSeg, cmpHint, unitSeg, drangeSeg, prepSlot, legend, warn, fallback);
+  secCmp.append(hCmp, cmpSeg, cmpHint, srcWrap, unitSeg, drangeSeg, legend, warn, fallback);
 
   // display
   const secDisp = h('section', 'v-sec');
@@ -350,6 +353,7 @@ export function createPanel(hd: PanelHandlers): Panel {
   const ovNote = h('p', 'v-hint', '');
   secOv.append(ovRow, ovNote);
 
+  const slotPlanet = h('div', 'v-slot');
   const slotSpec = h('div', 'v-slot');
   const slotQual = h('div', 'v-slot');
 
@@ -426,7 +430,7 @@ export function createPanel(hd: PanelHandlers): Panel {
     return true;
   }
 
-  controls.append(secPlay, secTl, secCmp, secDisp, secOv, slotSpec, slotQual, secShare);
+  controls.append(secPlay, secTl, secCmp, slotPlanet, secDisp, secOv, slotSpec, slotQual, secShare);
   const restBox = h('div', 'v-rest');
   restBox.hidden = true;
   const mockLine = h('p', 'v-mock', 'Simulated data. Real SPHEREx images are being connected.');
@@ -506,7 +510,10 @@ export function createPanel(hd: PanelHandlers): Panel {
       m.b,
     );
     timeline.setPickEnabled(n >= 2);
-    caveat.textContent = m.diff
+    const stackWarn = m.diff && m.diffSource !== null && m.diffSource.current === 'stack';
+    caveat.textContent = stackWarn
+      ? STACK_WARN
+      : m.diff
       ? 'Brightness needs care: each image is taken at a slightly different infrared colour, so a star can flicker without having changed. Bright stars also leave marks in a subtraction even when nothing moved.'
       : 'Brightness needs care: each image is taken at a slightly different infrared colour, so a star can flicker without having changed.';
 
@@ -514,6 +521,16 @@ export function createPanel(hd: PanelHandlers): Panel {
     bCmpDiff.setAttribute('aria-pressed', String(m.diff));
     bCmpDiff.disabled = few;
     unitSeg.hidden = !m.diff;
+    srcWrap.hidden = !(m.diff && m.diffSource !== null);
+    if (m.diffSource) {
+      const ds = m.diffSource;
+      srcBtns.forEach((b) => {
+        const k = b.dataset.src as DiffSource;
+        b.setAttribute('aria-pressed', String(k === ds.current));
+        b.disabled = !ds.available[k];
+      });
+      srcNote.hidden = ds.current !== 'stack';
+    }
     bUnitFlux.setAttribute('aria-pressed', String(!m.snr));
     bUnitSig.setAttribute('aria-pressed', String(m.snr));
     legend.hidden = !(m.diff && m.compare);
@@ -550,7 +567,6 @@ export function createPanel(hd: PanelHandlers): Panel {
     bSmooth.setAttribute('aria-pressed', String(m.smooth));
     bTrue.setAttribute('aria-pressed', String(!m.smooth));
     contrastBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.contrast === m.contrast)));
-    prepResidual.textContent = m.preparedResidual ?? '';
     bGaia.input.checked = m.overlays.gaia;
     bMask.input.checked = m.overlays.masked;
     bAdv.input.checked = m.overlays.adv;
@@ -748,13 +764,24 @@ export function createPanel(hd: PanelHandlers): Panel {
         skyRow.append(h('span', '', `This is ${name}. `), btn('Open the prepared set', 'v-linkbtn', hd.openPrepared));
       }
     },
-    attach: (spectrum, quality) => {
+    setPairMarks: (indices) => timeline.setPairMarks(indices),
+    attach: (spectrum, quality, planet) => {
+      if (planet) slotPlanet.replaceChildren(planet);
       slotSpec.replaceChildren(spectrum);
       slotQual.replaceChildren(quality);
     },
     toggleHelp,
     closeHelp,
+    showSkeleton: () => {
+      controls.hidden = false;
+      controls.inert = true;
+      controls.classList.add('v-skeleton');
+      controls.setAttribute('aria-busy', 'true');
+    },
     showControls: (on) => {
+      controls.inert = false;
+      controls.classList.remove('v-skeleton');
+      controls.removeAttribute('aria-busy');
       controls.hidden = !on;
       if (on) {
         empty.hidden = true;

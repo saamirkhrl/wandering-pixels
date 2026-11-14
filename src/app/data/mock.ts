@@ -1,11 +1,14 @@
 import { FLAG_BITS, SpherexError } from './types';
 import { gridAt, positionAtDistance } from '../../lib/spherex/parallax';
 import type {
+  CachedDetectorData,
+  CachedPreview,
   CachedSlug,
   CachedTarget,
   CallOptions,
   Detector,
   DifferenceImage,
+  DifferenceImageM,
   Exposure,
   FirstLook,
   Frame,
@@ -14,6 +17,9 @@ import type {
   Grid,
   Movie,
   MovieFrame,
+  PairComparison,
+  PairedDifference,
+  PairPick,
   MovieMode,
   Progress,
   SaturatedSource,
@@ -1236,6 +1242,20 @@ function stackFrames(members: Frame[]): { pixels: Float32Array; variance: Float3
   return { pixels, variance };
 }
 
+function mergeSaturated(list: SaturatedSource[]): SaturatedSource[] {
+  const out: { x: number; y: number; npix: number; n: number }[] = [];
+  for (const s of list) {
+    const hit = out.find((o) => Math.hypot(o.x - s.x, o.y - s.y) <= 2);
+    if (hit) {
+      hit.x = (hit.x * hit.n + s.x) / (hit.n + 1);
+      hit.y = (hit.y * hit.n + s.y) / (hit.n + 1);
+      hit.npix = Math.max(hit.npix, s.npix);
+      hit.n++;
+    } else out.push({ ...s, n: 1 });
+  }
+  return out.map(({ x, y, npix }) => ({ x, y, npix }));
+}
+
 export function buildMovie(frames: Frame[], mode: MovieMode, detector: Detector, target?: Target): Movie {
   const sel = frames.filter((f) => f.exposure.detector === detector).sort((a, b) => a.exposure.mjd - b.exposure.mjd);
   const groups: Frame[][] = [];
@@ -1297,6 +1317,7 @@ export function buildMovie(frames: Frame[], mode: MovieMode, detector: Detector,
       exposureIds: members.map((m) => m.exposure.id),
       targetXY,
       backgroundLevel: 0,
+      saturated: mergeSaturated(members.flatMap((m) => saturatedSources(m))),
     };
   });
 
@@ -1342,6 +1363,7 @@ export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
     wavelengthA: a.wavelength,
     wavelengthB: b.wavelength,
     wavelengthMatched: Math.abs(a.wavelength - b.wavelength) <= bw,
+    method: a.nExposures === 1 && b.nExposures === 1 ? 'single' : 'naive-stack',
     stretch: { lo: -m, hi: m },
   };
 }
@@ -1439,6 +1461,184 @@ export function pickBlinkPair(exposures: Exposure[], detector?: Detector): [Expo
   return pair[0].mjd <= pair[1].mjd ? pair : [pair[1], pair[0]];
 }
 
+// Systematic floor on every flux (calibration and aperture centring), as a fraction of flux.
+const FLUX_FLOOR = 0.05;
+
+interface VisitFit {
+  n: number;
+  lo: number;
+  hi: number;
+  meanWl: number;
+  predict: (wl: number) => { flux: number; se: number };
+}
+
+function fitVisit(pts: SpectrumPoint[]): VisitFit {
+  const n = pts.length;
+  const wls = pts.map((p) => p.wavelength);
+  const lo = Math.min(...wls);
+  const hi = Math.max(...wls);
+  const meanWl = wls.reduce((a, b) => a + b, 0) / n;
+  const meanFlux = pts.reduce((a, p) => a + p.flux, 0) / n;
+  const floor = FLUX_FLOOR * Math.abs(meanFlux);
+  if (n >= 3) {
+    let sxx = 0;
+    let sxy = 0;
+    for (const p of pts) {
+      sxx += (p.wavelength - meanWl) ** 2;
+      sxy += (p.wavelength - meanWl) * (p.flux - meanFlux);
+    }
+    const slope = sxx > 0 ? sxy / sxx : 0;
+    let ss = 0;
+    for (const p of pts) ss += (p.flux - (meanFlux + slope * (p.wavelength - meanWl))) ** 2;
+    const s = Math.max(1.5 * Math.sqrt(ss / (n - 2)), floor);
+    return {
+      n,
+      lo,
+      hi,
+      meanWl,
+      predict: (wl) => ({
+        flux: meanFlux + slope * (wl - meanWl),
+        se: s * Math.sqrt(1 / n + (sxx > 0 ? (wl - meanWl) ** 2 / sxx : 0)),
+      }),
+    };
+  }
+  const errMean = Math.sqrt(pts.reduce((a, p) => a + p.fluxErr ** 2, 0)) / n;
+  const se = Math.max(floor, errMean) / Math.sqrt(n);
+  return { n, lo, hi, meanWl, predict: () => ({ flux: meanFlux, se }) };
+}
+
+function nearestMedian(pts: SpectrumPoint[]): SpectrumPoint {
+  const med = median(pts.map((p) => p.wavelength));
+  return pts.reduce((best, p) => (Math.abs(p.wavelength - med) < Math.abs(best.wavelength - med) ? p : best));
+}
+
+function pairedStack(pa: SpectrumPoint[], pb: SpectrumPoint[]): PairComparison['paired'] {
+  const cands: { a: SpectrumPoint; b: SpectrumPoint; gap: number; dm: number }[] = [];
+  for (const a of pa) {
+    for (const b of pb) {
+      const gap = Math.abs(a.wavelength - b.wavelength);
+      if (gap <= 0.5 * (a.bandwidth + b.bandwidth)) cands.push({ a, b, gap, dm: Math.abs(a.mjd - b.mjd) });
+    }
+  }
+  cands.sort((x, y) => x.gap - y.gap || x.dm - y.dm || (x.a.exposureId < y.a.exposureId ? -1 : 1));
+  const usedA = new Set<string>();
+  const usedB = new Set<string>();
+  let sw = 0;
+  let sd = 0;
+  let sf = 0;
+  let n = 0;
+  for (const c of cands) {
+    if (usedA.has(c.a.exposureId) || usedB.has(c.b.exposureId)) continue;
+    usedA.add(c.a.exposureId);
+    usedB.add(c.b.exposureId);
+    const v = c.a.fluxErr ** 2 + (FLUX_FLOOR * c.a.flux) ** 2 + c.b.fluxErr ** 2 + (FLUX_FLOOR * c.b.flux) ** 2;
+    if (!(v > 0)) continue;
+    const w = 1 / v;
+    sw += w;
+    sd += w * (c.b.flux - c.a.flux);
+    sf += w * 0.5 * (c.a.flux + c.b.flux);
+    n++;
+  }
+  if (n === 0) return { deltaMjy: 0, percent: 0, sigma: 0, z: 0, nPairs: 0 };
+  const delta = sd / sw;
+  const sigma = Math.sqrt(1 / sw);
+  const fbar = sf / sw;
+  return { deltaMjy: delta, percent: fbar !== 0 ? (100 * delta) / fbar : 0, sigma, z: delta / sigma, nPairs: n };
+}
+
+export function compareVisits(frames: Frame[], ra: number, dec: number): PairComparison[] {
+  const satExposures = new Set<string>();
+  for (const f of frames) {
+    const [x, y] = worldToGrid(f.grid, ra, dec);
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const xi = Math.round(x) + dx;
+        const yi = Math.round(y) + dy;
+        if (xi >= 0 && yi >= 0 && xi < f.w && yi < f.h && f.flags[yi * f.w + xi] & FLAG_BITS.SATURATED) {
+          satExposures.add(f.exposure.id);
+        }
+      }
+    }
+  }
+  // exposures with a masked pixel in the aperture are dropped, as in the real readout;
+  // saturated ones stay so the pair can carry the saturated flag
+  const points = spectrumAt(frames, ra, dec).filter((p) => !p.flagged || satExposures.has(p.exposureId));
+  const byVisit = new Map<number, SpectrumPoint[]>();
+  for (const p of points) {
+    const g = byVisit.get(p.visitIndex);
+    if (g) g.push(p);
+    else byVisit.set(p.visitIndex, [p]);
+  }
+  const saturatedVisits = new Set<number>();
+  for (const f of frames) {
+    const [x, y] = worldToGrid(f.grid, ra, dec);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const xi = Math.round(x) + dx;
+        const yi = Math.round(y) + dy;
+        if (xi < 0 || yi < 0 || xi >= f.w || yi >= f.h) continue;
+        const i = yi * f.w + xi;
+        if (f.flags[i] & FLAG_BITS.SATURATED && Math.hypot(xi - x, yi - y) <= 1.5) saturatedVisits.add(f.exposure.visitIndex);
+      }
+    }
+  }
+  const visits = [...byVisit.keys()].sort((a, b) => a - b);
+  const out: PairComparison[] = [];
+  for (let i = 0; i < visits.length; i++) {
+    for (let j = i + 1; j < visits.length; j++) {
+      const pa = byVisit.get(visits[i]) as SpectrumPoint[];
+      const pb = byVisit.get(visits[j]) as SpectrumPoint[];
+      const a = nearestMedian(pa);
+      const b = nearestMedian(pb);
+      const pd = b.flux - a.flux;
+      const ps = Math.sqrt(a.fluxErr ** 2 + b.fluxErr ** 2);
+      const flags: PairComparison['flags'] = [];
+      const fa = fitVisit(pa);
+      const fb = fitVisit(pb);
+      let wc: number;
+      const olo = Math.max(fa.lo, fb.lo);
+      const ohi = Math.min(fa.hi, fb.hi);
+      if (olo <= ohi) wc = (olo + ohi) / 2;
+      else {
+        wc = (fa.meanWl + fb.meanWl) / 2;
+        flags.push('no_bracket');
+      }
+      if (fa.n < 3 || fb.n < 3) flags.push('too_few_samples');
+      if (fa.n < 8 || fb.n < 8) flags.push('partial_visit');
+      if (saturatedVisits.has(visits[i]) || saturatedVisits.has(visits[j])) flags.push('saturated');
+      const qa = fa.predict(wc);
+      const qb = fb.predict(wc);
+      const md = qb.flux - qa.flux;
+      const ms = Math.sqrt(qa.se ** 2 + qb.se ** 2);
+      out.push({
+        visitA: visits[i],
+        visitB: visits[j],
+        plain: {
+          deltaMjy: pd,
+          percent: a.flux !== 0 ? (100 * pd) / a.flux : 0,
+          sigma: ps,
+          z: ps > 0 ? pd / ps : 0,
+          wavelengthA: a.wavelength,
+          wavelengthB: b.wavelength,
+          gapChannels: Math.round((Math.abs(a.wavelength - b.wavelength) / (a.wavelength / 40)) * 10) / 10,
+        },
+        paired: pairedStack(pa, pb),
+        matched: {
+          deltaMjy: md,
+          percent: qa.flux !== 0 ? (100 * md) / qa.flux : 0,
+          sigma: ms,
+          z: ms > 0 ? md / ms : 0,
+          commonWavelength: wc,
+          pointsA: fa.n,
+          pointsB: fb.n,
+        },
+        flags,
+      });
+    }
+  }
+  return out;
+}
+
 export function summarize(exposures: Exposure[]): { detector: Detector; visits: number[]; count: number; outOfStack: number }[] {
   return DETECTORS.map((detector) => {
     const mine = exposures.filter((e) => e.detector === detector);
@@ -1528,4 +1728,263 @@ export async function loadBestPair(
   return { frames: res.frames, matched: true, detector };
 }
 
-export { parallaxOffset, positionAtDistance, gridAt, trackingTolerance } from '../../lib/spherex/parallax';
+// --------------------------------------------- paired differences and preview
+
+export function asSingle(d: DifferenceImage): DifferenceImageM {
+  return { ...d, method: 'single' };
+}
+
+export function asNaiveStack(d: DifferenceImage): DifferenceImageM {
+  return { ...d, method: 'naive-stack' };
+}
+
+function frameMedian(f: Frame): number {
+  const v: number[] = [];
+  for (let i = 0; i < f.pixels.length; i++) if (Number.isFinite(f.pixels[i])) v.push(f.pixels[i]);
+  return median(v);
+}
+
+export function pairedDifference(
+  framesA: Frame[],
+  framesB: Frame[],
+  opts: { toleranceChannels?: number; errorFloor?: number; background?: 'median' | 'none' } = {},
+): PairedDifference {
+  if (!framesA.length || !framesB.length) {
+    throw new SpherexError('BAD_INPUT', 'Both visits need at least one exposure.');
+  }
+  const { w, h } = framesA[0];
+  for (const f of [...framesA, ...framesB]) {
+    if (f.w !== w || f.h !== h) throw new SpherexError('BAD_INPUT', 'These frames are not on the same grid.');
+  }
+  const tol = opts.toleranceChannels ?? 1;
+  const floor = opts.errorFloor ?? 0;
+  const useBg = (opts.background ?? 'median') === 'median';
+  const wlOf = (f: Frame) => f.exposure.wavelengthAtTarget ?? 0;
+  const bwOf = (f: Frame) => f.exposure.bandwidthAtTarget ?? bandwidthOf(f.exposure.detector, wlOf(f));
+
+  const cands: { a: Frame; b: Frame; gap: number; dm: number; chan: number }[] = [];
+  for (const a of framesA) {
+    for (const b of framesB) {
+      const gap = Math.abs(wlOf(a) - wlOf(b));
+      const chan = 0.5 * (bwOf(a) + bwOf(b));
+      if (gap <= tol * chan) cands.push({ a, b, gap, dm: Math.abs(a.exposure.mjd - b.exposure.mjd), chan });
+    }
+  }
+  cands.sort(
+    (x, y) =>
+      x.gap - y.gap ||
+      x.dm - y.dm ||
+      (x.a.exposure.obsId < y.a.exposure.obsId ? -1 : x.a.exposure.obsId > y.a.exposure.obsId ? 1 : 0),
+  );
+  const usedA = new Set<string>();
+  const usedB = new Set<string>();
+  const accepted: typeof cands = [];
+  for (const c of cands) {
+    if (usedA.has(c.a.exposure.id) || usedB.has(c.b.exposure.id)) continue;
+    usedA.add(c.a.exposure.id);
+    usedB.add(c.b.exposure.id);
+    accepted.push(c);
+  }
+
+  const n = w * h;
+  const pixels = new Float32Array(n);
+  const variance = new Float32Array(n);
+  const snr = new Float32Array(n);
+  const num = new Float64Array(n);
+  const den = new Float64Array(n);
+  for (const c of accepted) {
+    const ba = useBg ? frameMedian(c.a) : 0;
+    const bb = useBg ? frameMedian(c.b) : 0;
+    for (let i = 0; i < n; i++) {
+      const d = c.b.pixels[i] - bb - (c.a.pixels[i] - ba);
+      const v = c.a.variance[i] + c.b.variance[i] + floor * floor;
+      if (Number.isFinite(d) && v > 0) {
+        num[i] += d / v;
+        den[i] += 1 / v;
+      }
+    }
+  }
+  const mags: number[] = [];
+  for (let i = 0; i < n; i++) {
+    if (den[i] > 0) {
+      pixels[i] = num[i] / den[i];
+      variance[i] = 1 / den[i];
+      snr[i] = pixels[i] / Math.sqrt(variance[i]);
+      mags.push(Math.abs(pixels[i]));
+    } else {
+      pixels[i] = NaN;
+      variance[i] = NaN;
+      snr[i] = NaN;
+    }
+  }
+  const m = Math.max(0.05, percentile(Float32Array.from(mags).sort(), 0.995));
+  const mean = (fs: Frame[]) => fs.reduce((s, f) => s + wlOf(f), 0) / fs.length;
+  const usedFramesA = accepted.length ? accepted.map((c) => c.a) : framesA;
+  const usedFramesB = accepted.length ? accepted.map((c) => c.b) : framesB;
+  return {
+    grid: framesA[0].grid,
+    pixels,
+    variance,
+    snr,
+    w,
+    h,
+    wavelengthA: mean(usedFramesA),
+    wavelengthB: mean(usedFramesB),
+    wavelengthMatched: accepted.length > 0,
+    stretch: { lo: -m, hi: m },
+    method: 'paired-stack',
+    nPairs: accepted.length,
+    nUnpairedA: framesA.length - accepted.length,
+    nUnpairedB: framesB.length - accepted.length,
+    pairs: accepted.map((c) => ({
+      a: c.a.exposure.id,
+      b: c.b.exposure.id,
+      wavelengthGapUm: c.gap,
+      gapChannels: c.chan > 0 ? c.gap / c.chan : 0,
+    })),
+  };
+}
+
+export function visitDifference(
+  frames: Frame[],
+  detector: Detector,
+  visitA: number,
+  visitB: number,
+  opts: { toleranceChannels?: number; errorFloor?: number; background?: 'median' | 'none' } = {},
+): PairedDifference {
+  const pick = (v: number) => frames.filter((f) => f.exposure.detector === detector && f.exposure.visitIndex === v);
+  return pairedDifference(pick(visitA), pick(visitB), opts);
+}
+
+const PREVIEW_BYTES = 250_000;
+const DETECTOR_BYTES = 850_000;
+const GAP_YEAR: [number, number] = [330, 400];
+const GAP_HALF_YEAR: [number, number] = [150, 215];
+
+function pickByGap(exposures: Exposure[], detector: Detector, range: [number, number]): [Exposure, Exposure] | null {
+  const c = exposures.filter((e) => e.detector === detector && e.wavelengthAtTarget !== null);
+  let best: [Exposure, Exposure] | null = null;
+  let bestGap = Infinity;
+  let bestDays = -1;
+  for (let i = 0; i < c.length; i++) {
+    for (let j = i + 1; j < c.length; j++) {
+      if (c[i].visitIndex === c[j].visitIndex) continue;
+      const days = Math.abs(c[i].mjd - c[j].mjd);
+      if (days < range[0] || days > range[1]) continue;
+      const g = Math.abs((c[i].wavelengthAtTarget as number) - (c[j].wavelengthAtTarget as number));
+      if (g < bestGap - 1e-9 || (Math.abs(g - bestGap) <= 1e-9 && days > bestDays)) {
+        best = c[i].mjd <= c[j].mjd ? [c[i], c[j]] : [c[j], c[i]];
+        bestGap = g;
+        bestDays = days;
+      }
+    }
+  }
+  return best;
+}
+
+const previews = new WeakMap<CachedTarget, CachedPreview>();
+
+export function buildPreview(c: CachedTarget): CachedPreview {
+  const hit = previews.get(c);
+  if (hit) return hit;
+  const sum = summarize(c.exposures);
+  const withData = sum.filter((d) => d.count > 0);
+  const preferred: Detector = c.slug === 'wise-0855' ? 6 : 2;
+  const defaultDetector: Detector = sum.find((d) => d.detector === preferred)?.count
+    ? preferred
+    : (withData.sort((a, b) => b.count - a.count)[0]?.detector ?? preferred);
+  const detFrames = c.frames.filter((f) => f.exposure.detector === defaultDetector);
+  const movie = buildMovie(detFrames, 'visit-stack', defaultDetector, c.target);
+  const byId = new Map(detFrames.map((f) => [f.exposure.id, f]));
+
+  const pairPick = (range: [number, number]): PairPick | null => {
+    const pair = pickByGap(c.exposures, defaultDetector, range);
+    if (!pair) return null;
+    const fa = byId.get(pair[0].id);
+    const fb = byId.get(pair[1].id);
+    if (!fa || !fb) return null;
+    const wa = pair[0].wavelengthAtTarget as number;
+    const wb = pair[1].wavelengthAtTarget as number;
+    const bw = Math.max(
+      pair[0].bandwidthAtTarget ?? bandwidthOf(defaultDetector, wa),
+      pair[1].bandwidthAtTarget ?? bandwidthOf(defaultDetector, wb),
+    );
+    return { frames: [fa, fb], matched: Math.abs(wa - wb) <= bw, gapDays: Math.abs(pair[1].mjd - pair[0].mjd) };
+  };
+
+  const vs = movie.frames;
+  const cand: { a: number; b: number; score: number }[] = [];
+  for (let i = 0; i < vs.length; i++) {
+    for (let j = i + 1; j < vs.length; j++) {
+      const days = vs[j].mjd - vs[i].mjd;
+      if (days < 90) continue;
+      cand.push({ a: vs[i].visitIndex, b: vs[j].visitIndex, score: Math.min(Math.abs(days - 365), Math.abs(days - 182)) });
+    }
+  }
+  cand.sort((x, y) => x.score - y.score);
+  const differences = cand
+    .slice(0, 6)
+    .sort((x, y) => x.a - y.a || x.b - y.b)
+    .map((p) => ({ visitA: p.a, visitB: p.b, image: visitDifference(detFrames, defaultDetector, p.a, p.b) as DifferenceImageM }));
+
+  const preview: CachedPreview = {
+    target: c.target,
+    grid: c.grid,
+    defaultDetector,
+    movie,
+    pairs: { year: pairPick(GAP_YEAR), halfYear: pairPick(GAP_HALF_YEAR) },
+    differences,
+    visits: vs.map((f) => ({ visitIndex: f.visitIndex, mjd: f.mjd, time: f.time, nExposures: f.nExposures })),
+    gaia: c.gaia,
+    wise: c.wise,
+    detectors: sum.map((d) => ({ ...d, bytes: d.count > 0 ? DETECTOR_BYTES : 0 })),
+    totalBytes: sum.reduce((s, d) => s + (d.count > 0 ? DETECTOR_BYTES : 0), 0),
+  };
+  previews.set(c, preview);
+  return preview;
+}
+
+async function simulateBytes(opts: CallOptions, bytes: number, ms: number, message: string): Promise<void> {
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    throwIfAborted(opts.signal);
+    emit(opts, { stage: 'pixels', done: i, total: steps, message, bytes: Math.round((bytes * i) / steps) });
+    if (i < steps) await wait(ms / steps, opts.signal);
+  }
+}
+
+/** Preview from an already loaded prepared set (real or mock), with simulated transfer progress. */
+export async function previewFromCached(c: CachedTarget, opts: CallOptions = {}): Promise<CachedPreview> {
+  throwIfAborted(opts.signal);
+  await simulateBytes(opts, PREVIEW_BYTES, 300, 'Loading the first look');
+  return buildPreview(c);
+}
+
+/** One detector's exposures and frames from an already loaded prepared set, with simulated progress. */
+export async function detectorFromCached(
+  c: CachedTarget,
+  detector: Detector,
+  opts: CallOptions = {},
+): Promise<CachedDetectorData> {
+  throwIfAborted(opts.signal);
+  await simulateBytes(opts, DETECTOR_BYTES, 400, 'Loading this detector');
+  return {
+    exposures: c.exposures.filter((e) => e.detector === detector),
+    frames: c.frames.filter((f) => f.exposure.detector === detector),
+  };
+}
+
+export async function loadCachedPreview(slug: CachedSlug, opts: CallOptions = {}): Promise<CachedPreview> {
+  return previewFromCached(await loadCached(slug, opts), opts);
+}
+
+export async function loadCachedDetector(
+  slug: CachedSlug,
+  detector: Detector,
+  opts: CallOptions = {},
+): Promise<CachedDetectorData> {
+  return detectorFromCached(await loadCached(slug, opts), detector, opts);
+}
+
+export { parallaxOffset, positionAtDistance, gridAt, trackingTolerance, motionFromPair } from '../../lib/spherex/parallax';
+export { listPairs } from '../../lib/spherex/movie';

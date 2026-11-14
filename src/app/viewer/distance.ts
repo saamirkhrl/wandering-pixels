@@ -66,11 +66,13 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 
 let uid = 0;
 
-export function createDistanceControl(h: { onChange(distanceAu: number | null): void }): DistanceControl {
+export function createDistanceControl(
+  h: { onChange(distanceAu: number | null): void },
+  opts: { bare?: boolean } = {},
+): DistanceControl {
   const id = `dist-${++uid}`;
   const root = el('section', 'v-sec dist');
-  root.appendChild(el('h3', 'v-h', COPY.title));
-  root.appendChild(el('p', 'dist-p', COPY.intro));
+  if (!opts.bare) root.appendChild(el('h3', 'v-h', COPY.title));
 
   const reason = el('p', 'dist-reason');
   reason.hidden = true;
@@ -130,9 +132,11 @@ export function createDistanceControl(h: { onChange(distanceAu: number | null): 
   loading.hidden = true;
   root.appendChild(loading);
 
-  root.appendChild(el('p', 'dist-p', COPY.brightness));
-  root.appendChild(el('p', 'dist-hint', COPY.sources));
-  root.appendChild(el('p', 'dist-p', COPY.deeper));
+  if (!opts.bare) {
+    root.appendChild(el('p', 'dist-p', COPY.brightness));
+    root.appendChild(el('p', 'dist-hint', COPY.sources));
+    root.appendChild(el('p', 'dist-p', COPY.deeper));
+  }
 
   let value: number | null = null;
   let available = true;
@@ -151,7 +155,7 @@ export function createDistanceControl(h: { onChange(distanceAu: number | null): 
     if (value === null) return;
     const r = lastReadout;
     if (r && r.pxPerPercent !== null && Number.isFinite(r.pxPerPercent)) {
-      readout.appendChild(el('p', 'dist-p', fill(COPY.tolerance, { px: r.pxPerPercent.toFixed(1) })));
+      readout.appendChild(el('p', 'dist-p', fill(COPY.fine, { px: r.pxPerPercent.toFixed(1) })));
     }
     if (r && r.jumpArcsec !== null && r.jumpPx !== null && Number.isFinite(r.jumpArcsec) && Number.isFinite(r.jumpPx)) {
       readout.appendChild(
@@ -159,7 +163,6 @@ export function createDistanceControl(h: { onChange(distanceAu: number | null): 
       );
     }
     readout.appendChild(el('p', 'dist-p', COPY.orbital));
-    readout.appendChild(el('p', 'dist-p', COPY.why));
   };
 
   const draw = (): void => {

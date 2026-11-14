@@ -8,7 +8,13 @@ import {
   FLAG_BITS,
   gridToWorld,
   isSimulated,
+  HALF_YEAR_PAIR_DAYS,
+  YEAR_PAIR_DAYS,
   listCached,
+  listPairs,
+  loadFrames,
+  parallaxOffset,
+  trackingTolerance,
   liveIsMock,
   positionAt,
   spectrumAt,
@@ -21,6 +27,7 @@ import type {
   Detector,
   Exposure,
   Frame,
+  Grid,
   Movie,
   MovieMode,
   Progress,
@@ -59,6 +66,13 @@ import { toRGBA, upsampleSmooth } from '../viewer/smooth';
 import { createStage, formatDecDeg, formatRaDeg } from '../viewer/stage';
 import { hasTarget, readParams, writeParams } from '../viewer/state';
 import { createSpectrumPanel } from '../viewer/spectrum';
+import { createPlanetSection } from '../viewer/planet';
+import { bytesFromProgress, loadingLine } from '../viewer/loading';
+import type { LoadingBytes } from '../viewer/loading';
+import { STACK_WARN } from '../viewer/stack-copy';
+import type { DiffSource } from '../viewer/stack-copy';
+import { COPY, fill } from '../viewer/distance-copy';
+import { ringRadiusPx } from '../viewer/distance';
 import { createQualityPanel } from '../viewer/quality';
 import {
   describeSource,
@@ -141,6 +155,17 @@ export const mount: Mount = (root, ctx) => {
   let smooth = !params.trueSharp;
   let contrast: Contrast = 'normal';
   let drange: DiffRange = params.drange;
+  let planetStep: 0 | 1 | 2 = params.planet;
+  let ringsOn = true;
+  let trackD: number | null = params.dist;
+  let trackRef: number | null = params.ref;
+  let trackedFrames: Frame[] | null = null;
+  let trackCtrl: AbortController | null = null;
+  let modeBeforeTrack: MovieMode | null = null;
+  let lastPick: [number, number] | null = null;
+  let cursor: [number, number] | null = null;
+  let shownGrid: Grid | null = null;
+  let restoredTrack = false;
   let current: { kind: 'frame'; pixels: Float32Array; w: number } | { kind: 'diff'; d: DifferenceImage } | null = null;
 
   // live state
@@ -189,6 +214,22 @@ export const mount: Mount = (root, ctx) => {
   const stage = createStage();
   const spectrum = createSpectrumPanel();
   const quality = createQualityPanel();
+  const planet = createPlanetSection({
+    onStep: (s) => setPlanetStep(s),
+    onRings: (on) => {
+      ringsOn = on;
+      stage.redraw();
+    },
+    onDistance: (d) => {
+      if (d === null) {
+        stopTracking();
+        return;
+      }
+      startTracked(d, trackRef ?? (movie ? (movie.frames[Math.min(player.index, movie.frames.length - 1)]?.mjd ?? 0) : 0));
+    },
+    onLoadRest: () => loadTrackRest(),
+    onExample: () => ctx.go('viewer', { ra: '150.1', dec: '2.2', mock: '1', planet: '2', dist: '500' }),
+  });
 
   const panel = createPanel({
     blink: () => {
@@ -229,6 +270,7 @@ export const mount: Mount = (root, ctx) => {
         return;
       }
       det = d;
+      resetTracking();
       resetChoices();
       player.stop();
       player.setIndex(0);
@@ -255,6 +297,7 @@ export const mount: Mount = (root, ctx) => {
       switchLive(det, n);
     },
     setDiff: (on) => setDiff(on),
+    setDiffSource: (s) => setDiffSource(s),
     setSnr: (on) => {
       snr = on;
       render();
@@ -289,7 +332,7 @@ export const mount: Mount = (root, ctx) => {
       if (skyName) ctx.go('viewer', { q: skyName });
     },
   });
-  panel.attach(spectrum.el, quality.el);
+  panel.attach(spectrum.el, quality.el, planet.el);
   panel.setBack(params.from === 'sky' ? 'Back to the sky' : params.from === 'globe' ? 'Back to the globe' : null);
 
   rootEl.append(stage.el, panel.el);
@@ -311,7 +354,7 @@ export const mount: Mount = (root, ctx) => {
 
   function defaultPair(m: Movie): [number, number] {
     const n = m.frames.length;
-    const key = `${m.mode}|${m.detector}|${n}|${loaded?.frames.length ?? 0}`;
+    const key = `${m.mode}|${m.detector}|${n}|${activeFrames().length}|${trackD ?? 0}`;
     if (pairCache && pairCache.key === key) return pairCache.pair;
     let pair: [number, number] = [0, Math.max(0, n - 1)];
     const cands: [number, number, number][] = [];
@@ -348,7 +391,76 @@ export const mount: Mount = (root, ctx) => {
     if (player.mode === 'blink' && player.index !== a && player.index !== b) player.setIndex(a);
   }
 
+  // Difference source: a wavelength-matched single-exposure pair, or whole-visit stacks.
+  let stackPinned = false;
+  let matchedMemo: { key: string; pair: Pair | null } | null = null;
+
+  function matchedPairFor(): Pair | null {
+    const ex = loadedExposures();
+    const key = `${det}|${ex.length}|${ex[0]?.id ?? ''}|${ex[ex.length - 1]?.id ?? ''}`;
+    if (matchedMemo && matchedMemo.key === key) return matchedMemo.pair;
+    let pair: Pair | null = null;
+    if (det !== null && ex.length >= 2) {
+      try {
+        pair = listPairs(ex, det).find((p) => p.wavelengthGapChannels <= 1) ?? null;
+      } catch {
+        pair = null;
+      }
+    }
+    matchedMemo = { key, pair };
+    return pair;
+  }
+
+  function stackOption(): boolean {
+    return !!loaded && trackedFrames === null && visitsWithTwo(loaded.frames) >= 2;
+  }
+
+  function useMatched(): boolean {
+    const p = matchedPairFor();
+    if (!p || !loaded) return false;
+    const prev = mode;
+    mode = 'single';
+    modeUser = true;
+    resetChoices();
+    player.stop();
+    rebuild();
+    const i = frameIndexOf(p.a);
+    const j = frameIndexOf(p.b);
+    if (i < 0 || j < 0 || i === j) {
+      mode = prev;
+      resetChoices();
+      rebuild();
+      return false;
+    }
+    setPair(Math.min(i, j), Math.max(i, j));
+    showRest();
+    return true;
+  }
+
+  function useStack(): void {
+    mode = 'visit-stack';
+    modeUser = true;
+    resetChoices();
+    player.stop();
+    player.setIndex(0);
+    rebuild();
+    showRest();
+  }
+
+  function setDiffSource(s: DiffSource): void {
+    if (s === 'matched') {
+      stackPinned = false;
+      if (!useMatched()) return;
+    } else {
+      stackPinned = true;
+      useStack();
+    }
+    render();
+    persist();
+  }
+
   function setDiff(on: boolean): void {
+    if (on && !diffOn && mode === 'visit-stack' && !stackPinned && stackOption()) useMatched();
     diffOn = on;
     if (on) player.stop();
     render();
@@ -370,18 +482,306 @@ export const mount: Mount = (root, ctx) => {
       overlays: layers.length > 0 ? layers.join(',') : null,
       px: smooth ? null : '1',
       drange: drange === 'faint' ? 'f' : drange === 'bright' ? 'h' : null,
+      planet: planetStep ? String(planetStep) : null,
+      dist: trackedFrames && trackD !== null ? String(trackD) : null,
+      ref: trackedFrames && trackRef !== null ? trackRef.toFixed(3) : null,
     });
   }
 
   // ---- movie
 
+  // ---- distant bodies: step 1 (compare a year apart) and step 2 (follow at a distance)
+
+  let trackToken = 0;
+  let trackAutoPick = false;
+  let trackPickAB: [number, number] | null = null;
+  let trackPickFrame: number | null = null;
+
+  function shownMjd(): number {
+    if (!movie) return 0;
+    return movie.frames[Math.min(player.index, movie.frames.length - 1)]?.mjd ?? 0;
+  }
+
+  function setPair(i: number, j: number): void {
+    if (!movie) return;
+    aUser = i;
+    bUser = j;
+    aMjd = movie.frames[i].mjd;
+    bMjd = movie.frames[j].mjd;
+    abTouched = true;
+    syncAB();
+  }
+
+  function gapDays(a: number, b: number): number {
+    return Math.round(Math.abs(b - a));
+  }
+
+  function loadedExposures(): Exposure[] {
+    if (!loaded || det === null) return [];
+    return loaded.frames.filter((f) => f.exposure.detector === det).map((f) => f.exposure);
+  }
+
+  type Pair = ReturnType<typeof listPairs>[number];
+  let pairMemo: { key: string; year: Pair[]; half: Pair[] } | null = null;
+  let yearInfo: Pair | null = null;
+  let trackPairEx: Exposure[] = [];
+
+  function pairs(): { year: Pair[]; half: Pair[] } {
+    const t = loaded?.target;
+    const ex = loadedExposures();
+    const key = `${det}|${ex.length}|${ex[0]?.id ?? ''}|${ex[ex.length - 1]?.id ?? ''}|${trackD ?? 500}`;
+    if (pairMemo && pairMemo.key === key) return pairMemo;
+    let year: Pair[] = [];
+    let half: Pair[] = [];
+    if (t && det !== null && ex.length >= 2) {
+      try {
+        year = listPairs(ex, det, { gapDays: YEAR_PAIR_DAYS });
+        half = listPairs(ex, det, { gapDays: HALF_YEAR_PAIR_DAYS, distanceAu: trackD ?? 500, ra: t.ra, dec: t.dec });
+      } catch {
+        year = [];
+        half = [];
+      }
+    }
+    pairMemo = { key, year, half };
+    return pairMemo;
+  }
+
+  function frameIndexOf(e: Exposure): number {
+    if (!movie) return -1;
+    let i = movie.frames.findIndex((f) => f.exposureIds.includes(e.id));
+    if (i < 0) i = movie.frames.findIndex((f) => f.visitIndex === e.visitIndex);
+    return i;
+  }
+
+  function applyYearPair(): void {
+    if (!movie) return;
+    const best = pairs().year[0];
+    if (!best) return;
+    const i = frameIndexOf(best.a);
+    const j = frameIndexOf(best.b);
+    if (i < 0 || j < 0 || i === j) return;
+    player.stop();
+    setPair(Math.min(i, j), Math.max(i, j));
+    yearInfo = best;
+    diffOn = true;
+  }
+
+  function pxPer(Dau: number, mjdA: number, mjdB: number): number {
+    const t = loaded?.target;
+    if (!t) return 0;
+    try {
+      return trackingTolerance(Dau, mjdA, mjdB, t.ra, t.dec).pxPerPercent;
+    } catch {
+      return 0;
+    }
+  }
+
+  function bestHalfPair(): Pair | null {
+    let best: Pair | null = null;
+    for (const p of pairs().half) if (!best || (p.pxPerPercent ?? 0) > (best.pxPerPercent ?? 0)) best = p;
+    return best;
+  }
+
+  function autoPickTracked(): void {
+    if (!movie || trackPairEx.length < 2) return;
+    const i = frameIndexOf(trackPairEx[0]);
+    const j = frameIndexOf(trackPairEx[1]);
+    if (i >= 0 && j >= 0 && i !== j) setPair(Math.min(i, j), Math.max(i, j));
+  }
+
+  // Step 2 first loads only the two exposures of the chosen half-year pair. The rest of those two
+  // visits is an opt-in (trackFull).
+  let trackFull = false;
+
+  function pairVisitExposures(): Exposure[] {
+    if (!loaded || det === null || trackPairEx.length < 2) return [];
+    const visits = new Set(trackPairEx.map((e) => e.visitIndex));
+    const pool = live ? live.detExposures : loadedExposures();
+    return pool.filter((e) => e.detector === det && visits.has(e.visitIndex));
+  }
+
+  function restOffer(): { n: number; mb: number } | null {
+    if (trackedFrames === null || trackFull || trackCtrl !== null) return null;
+    const all = pairVisitExposures();
+    const have = new Set(trackedFrames.map((f) => f.exposure.id));
+    const n = all.filter((e) => !have.has(e.id)).length;
+    if (n === 0) return null;
+    const withBytes = trackedFrames.filter((f) => f.bytes > 0);
+    const per = withBytes.length > 0 ? bytesOf(withBytes) / withBytes.length / 1e6 : FRAME_MB_ESTIMATE;
+    return { n, mb: Math.max(1, Math.round(n * per)) };
+  }
+
+  function loadTrackRest(): void {
+    if (trackD === null || trackRef === null) return;
+    trackFull = true;
+    trackPickAB = trackedFrames && movie ? [ab()[0], ab()[1]] : null;
+    startTracked(trackD, trackRef);
+    render();
+  }
+
+  function trackExposures(): Exposure[] {
+    if (!loaded || det === null) return [];
+    if (trackPairEx.length === 2) {
+      const src = trackFull ? pairVisitExposures().concat(trackPairEx) : trackPairEx;
+      return Array.from(new Map(src.map((e) => [e.id, e])).values()).sort((x, y) => x.mjd - y.mjd);
+    }
+    const byVisit = new Map<number, Exposure[]>();
+    for (const f of loaded.frames) {
+      if (f.exposure.detector !== det) continue;
+      const list = byVisit.get(f.exposure.visitIndex) ?? [];
+      list.push(f.exposure);
+      byVisit.set(f.exposure.visitIndex, list);
+    }
+    const out: Exposure[] = [];
+    byVisit.forEach((list) => {
+      const sorted = list.slice().sort((x, y) => x.mjd - y.mjd);
+      const n = Math.min(4, sorted.length);
+      for (let k = 0; k < n; k++) out.push(sorted[n === 1 ? 0 : Math.round((k * (sorted.length - 1)) / (n - 1))]);
+    });
+    for (const e of trackPairEx) out.push(e);
+    return Array.from(new Map(out.map((e) => [e.id, e])).values()).sort((x, y) => x.mjd - y.mjd);
+  }
+
+  function resetTracking(): void {
+    trackToken++;
+    trackCtrl?.abort();
+    trackCtrl = null;
+    trackedFrames = null;
+    trackFull = false;
+    trackD = null;
+    trackRef = null;
+    planet.control.setValue(null);
+    planet.control.setLoading(null);
+    if (modeBeforeTrack !== null && !modeUser) mode = modeBeforeTrack;
+    modeBeforeTrack = null;
+  }
+
+  function stopTracking(): void {
+    resetTracking();
+    diffCache = null;
+    rebuild();
+    persist();
+  }
+
+  function startTracked(D: number, ref: number): void {
+    if (!loaded || det === null) return;
+    const grid = live ? live.grid : cachedData ? cachedData.grid : null;
+    if (!grid) return;
+    trackCtrl?.abort();
+    const rc = new AbortController();
+    trackCtrl = rc;
+    const mine = ++trackToken;
+    trackD = D;
+    trackRef = ref;
+    const exposures = trackExposures();
+    if (exposures.length < 2) return;
+    planet.control.setLoading({ done: 0, total: exposures.length });
+    const t0 = performance.now();
+    const log: string[] = [];
+    loadFrames(exposures, grid, {
+      distanceAu: D,
+      referenceMjd: ref,
+      signal: rc.signal,
+      onProgress: (p) => {
+        log.push(`${Math.round(performance.now() - t0)}ms ${p.stage} ${p.done}/${p.total} ${p.bytes ?? ''}`);
+        if (!disposed && mine === trackToken) planet.control.setLoading({ done: p.done, total: p.total, bytes: p.bytes });
+      },
+    })
+      .then((r) => {
+        if (disposed || mine !== trackToken) return;
+        planet.control.setLoading(null);
+        trackCtrl = null;
+        if (r.frames.length < 2) {
+          panel.setNotice('Too few images could be re-centred. Try again.');
+          return;
+        }
+        console.info(`[track] ${exposures.length} exposures in ${Math.round(performance.now() - t0)} ms`, log.join(' | '));
+        trackedFrames = r.frames.slice().sort((x, y) => x.exposure.mjd - y.exposure.mjd);
+        if (modeBeforeTrack === null) modeBeforeTrack = mode;
+        if (!modeUser) mode = 'single';
+        diffCache = null;
+        pairCache = null;
+        rebuild();
+        if (trackAutoPick) {
+          trackAutoPick = false;
+          autoPickTracked();
+        } else if (trackPickAB && movie) {
+          const last = movie.frames.length - 1;
+          setPair(Math.min(trackPickAB[0], last), Math.min(trackPickAB[1], last));
+        }
+        if (trackPickFrame !== null && movie) player.setIndex(Math.min(trackPickFrame, movie.frames.length - 1));
+        trackPickAB = null;
+        trackPickFrame = null;
+        render();
+        persist();
+      })
+      .catch((e: unknown) => {
+        if (disposed || mine !== trackToken) return;
+        planet.control.setLoading(null);
+        if ((e as { code?: string } | null)?.code !== 'ABORTED') {
+          panel.setNotice('The images could not be re-centred. The distance setting was not applied.');
+        }
+      });
+  }
+
+  function setPlanetStep(s: 0 | 1 | 2): void {
+    planetStep = s;
+    if (s === 0) {
+      stopTracking();
+    } else if (s === 1) {
+      resetTracking();
+      rebuild();
+      applyYearPair();
+    } else {
+      diffOn = false;
+      player.stop();
+      const half = bestHalfPair();
+      trackPairEx = half ? [half.a, half.b] : [];
+      trackAutoPick = true;
+      const ref = shownMjd();
+      planet.control.setValue(500);
+      startTracked(500, ref);
+    }
+    render();
+    persist();
+  }
+
+  function restorePlanet(): void {
+    if (planetStep === 0 || restoredTrack || !movie) return;
+    restoredTrack = true;
+    planet.setOpen(true);
+    if (planetStep === 1) {
+      if (params.a === null && params.b === null) applyYearPair();
+    } else if (params.dist !== null) {
+      planet.control.setValue(params.dist);
+      trackAutoPick = params.a === null && params.b === null;
+      if (params.a !== null && params.b !== null) trackPickAB = [params.a, params.b];
+      trackPickFrame = params.frame;
+      const half = bestHalfPair();
+      trackPairEx = half ? [half.a, half.b] : [];
+      startTracked(params.dist, params.ref ?? shownMjd());
+    }
+  }
+
+  function activeFrames(): Frame[] {
+    return trackedFrames ?? (loaded ? loaded.frames : []);
+  }
+
   function rebuild(): void {
     if (!loaded || det === null) return;
     const prevMjd = movie && player.mode === 'stopped' ? (movie.frames[player.index]?.mjd ?? null) : null;
     try {
-      movie = buildMovie(loaded.frames, mode, det, loaded.target);
+      movie = buildMovie(activeFrames(), mode, det, loaded.target);
     } catch {
       movie = null;
+      if (trackedFrames && mode !== 'single') {
+        try {
+          mode = 'single';
+          movie = buildMovie(trackedFrames, mode, det, loaded.target);
+        } catch {
+          movie = null;
+        }
+      }
     }
     if (!movie || movie.frames.length === 0) {
       movie = null;
@@ -452,7 +852,7 @@ export const mount: Mount = (root, ctx) => {
   function getDiff(m: Movie, a: number, b: number): DiffEntry | null {
     const fa = m.frames[a];
     const fb = m.frames[b];
-    const key = `${drange}|${mode}|${m.detector}|${fa?.exposureIds.join(',')}|${fb?.exposureIds.join(',')}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
+    const key = `${trackedFrames ? trackD : 0}|${drange}|${mode}|${m.detector}|${fa?.exposureIds.join(',')}|${fb?.exposureIds.join(',')}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
     if (diffCache && diffCache.key === key) return diffCache;
     try {
       const d = difference(m.frames[a], m.frames[b]);
@@ -596,6 +996,7 @@ export const mount: Mount = (root, ctx) => {
 
   function readingLine(m: Movie, a: number, b: number): string {
     let text = 'Orange: brighter in B. Blue: brighter in A.';
+    if (m.mode === 'visit-stack') text += ` ${STACK_WARN}`;
     const t = loaded?.target;
     const fa = m.frames[a];
     const fb = m.frames[b];
@@ -618,6 +1019,11 @@ export const mount: Mount = (root, ctx) => {
       }
     }
     return text;
+  }
+
+  function diffSourceModel(): PanelModel['diffSource'] {
+    if (!diffOn || !stackOption()) return null;
+    return { current: mode === 'visit-stack' ? 'stack' : 'matched', available: { matched: matchedPairFor() !== null, stack: true } };
   }
 
   function detectorList(): PanelModel['detectorList'] {
@@ -652,6 +1058,7 @@ export const mount: Mount = (root, ctx) => {
         const d = dr.d;
         const img = diffImage(dr);
         showFrame = m.frames[b];
+        shownGrid = showFrame.grid;
         prepareOverlays(m, showFrame, [m.frames[a], m.frames[b]]);
         stage.setImage(img.rgba, d.w, d.h, img.k);
         stage.setOverlay(m.grid, showFrame.targetXY);
@@ -664,9 +1071,9 @@ export const mount: Mount = (root, ctx) => {
       paintFrame(m, showFrame);
     }
 
-    if (qualityKey.movie !== m || qualityKey.frame !== showFrame || qualityKey.diff !== (diffOn ? `${a}|${b}` : '') || qualityKey.n !== (loaded?.frames.length ?? 0)) {
-      qualityKey = { movie: m, frame: showFrame, n: loaded?.frames.length ?? 0, diff: diffOn ? `${a}|${b}` : '' };
-      quality.show(m, showFrame, loaded ? loaded.frames : [], diffOn && a !== b ? { a: m.frames[a], b: m.frames[b] } : null);
+    if (qualityKey.movie !== m || qualityKey.frame !== showFrame || qualityKey.diff !== (diffOn ? `${a}|${b}` : '') || qualityKey.n !== activeFrames().length) {
+      qualityKey = { movie: m, frame: showFrame, n: activeFrames().length, diff: diffOn ? `${a}|${b}` : '' };
+      quality.show(m, showFrame, activeFrames(), diffOn && a !== b ? { a: m.frames[a], b: m.frames[b] } : null);
     }
 
     const unitRange = diffOn && current && current.kind === 'diff' && diffCache ? diffCache.range : 0;
@@ -680,6 +1087,69 @@ export const mount: Mount = (root, ctx) => {
       saturated: hasSat,
     });
     stage.setReading(diffOn && current && current.kind === 'diff' ? readingLine(m, a, b) : null);
+
+    const tr = trackedFrames !== null && trackD !== null;
+    let lowTol = false;
+    const fa = m.frames[a];
+    const fb = m.frames[b];
+    ringState = null;
+    if (planetStep === 1 && ringsOn && shownGrid) ringState = { kind: 'year', scaleArcsec: shownGrid.scaleArcsec };
+    if (tr && planetStep === 2 && fa && fb && shownGrid) {
+      const D = trackD as number;
+      const t = loaded?.target;
+      const tol = pxPer(D, fa.mjd, fb.mjd);
+      let jumpArcsec: number | null = null;
+      let jumpPx: number | null = null;
+      if (t) {
+        try {
+          const pa = parallaxOffset(t.ra, t.dec, fa.mjd, D);
+          const pb = parallaxOffset(t.ra, t.dec, fb.mjd, D);
+          jumpArcsec = Math.hypot((pb.dRa - pa.dRa) * 3600, (pb.dDec - pa.dDec) * 3600);
+          jumpPx = jumpArcsec / shownGrid.scaleArcsec;
+        } catch {
+          jumpArcsec = null;
+        }
+      }
+      const span = Math.abs(fb.mjd - fa.mjd);
+      planet.control.setReadout({ pxPerPercent: tol, jumpArcsec, jumpPx, spanDays: span });
+      lowTol = tol < 0.3;
+      ringState = { kind: 'orbit', radiusPx: ringRadiusPx(D, span, shownGrid.scaleArcsec) };
+      panel.setPairMarks(
+        m.frames.map((f, i) => (i !== a && pxPer(D, fa.mjd, f.mjd) >= 0.8 ? i : -1)).filter((i) => i >= 0),
+      );
+    } else {
+      panel.setPairMarks([]);
+    }
+    let gapText: string | null = null;
+    if (fa && fb && a !== b) {
+      const n = gapDays(fa.mjd, fb.mjd);
+      const um = Math.abs(fb.wavelength - fa.wavelength);
+      const same =
+        yearInfo &&
+        Math.abs(Math.abs(yearInfo.b.mjd - yearInfo.a.mjd) - Math.abs(fb.mjd - fa.mjd)) < 20 &&
+        (m.mode === 'single' || fa.exposureIds.includes(yearInfo.a.id) || fa.exposureIds.includes(yearInfo.b.id));
+      gapText =
+        same && yearInfo
+          ? fill(COPY.gapFull, {
+              n: Math.round(yearInfo.gapDays),
+              um: yearInfo.wavelengthGapUm.toFixed(3),
+              ch: yearInfo.wavelengthGapChannels.toFixed(1),
+            })
+          : fill(COPY.gapShort, { n, um: um.toFixed(3) });
+    }
+    const pr = pairs();
+    planet.set({
+      step: planetStep,
+      ringsOn,
+      gapDays: fa && fb && a !== b ? gapDays(fa.mjd, fb.mjd) : null,
+      gapText,
+      visits: loaded ? (loaded.available.find((x) => x.detector === m.detector)?.visits ?? 0) : 0,
+      hasYear: pr.year.length > 0,
+      hasHalf: pr.half.length > 0,
+      lowTolerance: lowTol,
+      restOffer: restOffer(),
+    });
+    stage.redraw();
 
     const cached = loaded ? loaded.cached : false;
     const model: PanelModel = {
@@ -701,7 +1171,6 @@ export const mount: Mount = (root, ctx) => {
         : `Bigger patches mean more to download. The pair is about ${Math.round((2 * FRAME_MB_ESTIMATE * size) / DEFAULT_SIZE)} MB at ${size} arcsec.`,
       smooth,
       contrast,
-      preparedResidual: null,
       overlays: { gaia: ov.gaia, wise: ov.wise, masked: ov.masked, adv: ov.adv },
       drange,
       wiseAvailable,
@@ -714,6 +1183,7 @@ export const mount: Mount = (root, ctx) => {
           .filter(Boolean)
           .join(' '),
       compare,
+      diffSource: diffSourceModel(),
     };
     panel.update(model);
   }
@@ -721,8 +1191,8 @@ export const mount: Mount = (root, ctx) => {
   function prepareOverlays(m: Movie, f: Movie['frames'][number], fs: Movie['frames'][number][] = [f]): void {
     const pick40 = (src: OverlaySource[] | null, on: boolean): { pts: ProjectedSource[]; total: number } => {
       if (!on || !src) return { pts: [], total: 0 };
-      const inside = projectSources(src, m.grid, f.mjd).filter(
-        (p) => p.x >= -0.5 && p.y >= -0.5 && p.x <= m.grid.w - 0.5 && p.y <= m.grid.h - 0.5,
+      const inside = projectSources(src, f.grid, f.mjd).filter(
+        (p) => p.x >= -0.5 && p.y >= -0.5 && p.x <= f.grid.w - 0.5 && p.y <= f.grid.h - 0.5,
       );
       inside.sort((p, q) => (p.src.mag ?? Infinity) - (q.src.mag ?? Infinity));
       return { pts: inside.slice(0, OVERLAY_LIMIT), total: inside.length };
@@ -733,7 +1203,7 @@ export const mount: Mount = (root, ctx) => {
     drawWise = w.pts;
     gaiaTotal = g.total;
     wiseTotal = w.total;
-    const fl = loaded ? loaded.frames : [];
+    const fl = activeFrames();
     const union = (bits: number): Uint8Array => {
       const out = new Uint8Array(f.w * f.h);
       for (const fr of fs) {
@@ -751,6 +1221,7 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function paintFrame(m: Movie, f: Movie['frames'][number]): void {
+    shownGrid = f.grid;
     prepareOverlays(m, f);
     const img = frameImage(m, f);
     stage.setImage(img.rgba, f.w, f.h, img.k);
@@ -761,6 +1232,7 @@ export const mount: Mount = (root, ctx) => {
   stage.onLayout(() => render());
 
   stage.setExtraDraw((c, toCanvas, scale, dpr) => {
+    if (ringState && shownGrid) drawRings(c, toCanvas, scale, dpr, ringState, shownGrid);
     if (drawMaskArr) drawMask(c, drawMaskArr, drawMaskW, toCanvas, scale);
     if (advMaskArr) {
       drawMaskOutline(c, advMaskArr, drawMaskW, toCanvas, scale, dpr, { colour: '#ffd27a', alpha: 0.5 });
@@ -773,9 +1245,56 @@ export const mount: Mount = (root, ctx) => {
   });
 
   stage.setHover((gx, gy) => {
+    cursor = [gx, gy];
+    if (ringState) stage.redraw();
     const hit = hitTest(drawGaia, gx, gy, 1.5) ?? hitTest(drawWise, gx, gy, 1.5);
     return hit ? describeSource(hit.src) : null;
   });
+
+  type RingState = { kind: 'year'; scaleArcsec: number } | { kind: 'orbit'; radiusPx: number };
+  let ringState: RingState | null = null;
+
+  function drawRings(
+    c: CanvasRenderingContext2D,
+    toCanvas: (gx: number, gy: number) => [number, number],
+    scale: number,
+    dpr: number,
+    st: RingState,
+    g: Grid,
+  ): void {
+    const centre: [number, number] =
+      st.kind === 'year' ? (lastPick ?? cursor ?? [(g.w - 1) / 2, (g.h - 1) / 2]) : [(g.w - 1) / 2, (g.h - 1) / 2];
+    const [cx, cy] = toCanvas(centre[0], centre[1]);
+    const rings: { r: number; label: string }[] =
+      st.kind === 'year'
+        ? [
+            { r: 7 * (6.15 / st.scaleArcsec), label: COPY.ring1000 },
+            { r: 41 * (6.15 / st.scaleArcsec), label: COPY.ring300 },
+          ]
+        : [{ r: st.radiusPx, label: COPY.ringLabel }];
+    c.save();
+    c.font = `${Math.round(11 * dpr)}px 'Atkinson Hyperlegible Next', system-ui, sans-serif`;
+    c.lineWidth = Math.max(1, Math.round(dpr));
+    c.setLineDash([6 * dpr, 4 * dpr]);
+    for (const ring of rings) {
+      const rr = ring.r * scale;
+      c.strokeStyle = 'rgba(228, 233, 241, 0.6)';
+      c.beginPath();
+      c.arc(cx, cy, rr, 0, Math.PI * 2);
+      c.stroke();
+      c.setLineDash([]);
+      c.textAlign = 'left';
+      c.lineJoin = 'round';
+      c.lineWidth = 3 * dpr;
+      c.strokeStyle = 'rgba(4,6,13,0.85)';
+      c.strokeText(ring.label, cx + rr + 4 * dpr, cy - 4 * dpr);
+      c.fillStyle = 'rgba(228, 233, 241, 0.9)';
+      c.fillText(ring.label, cx + rr + 4 * dpr, cy - 4 * dpr);
+      c.lineWidth = Math.max(1, Math.round(dpr));
+      c.setLineDash([6 * dpr, 4 * dpr]);
+    }
+    c.restore();
+  }
 
   function nanText(i: number): string {
     return satMaskArr && satMaskArr[i] ? 'Saturated: no data here' : 'No data here';
@@ -795,7 +1314,7 @@ export const mount: Mount = (root, ctx) => {
 
   stage.onPick((fx, fy) => {
     if (!loaded || !movie) return;
-    const w = gridToWorld(movie.grid, fx, fy);
+    const w = gridToWorld(shownGrid ?? movie.grid, fx, fy);
     let pts;
     try {
       pts = spectrumAt(loaded.frames, w.ra, w.dec);
@@ -807,7 +1326,9 @@ export const mount: Mount = (root, ctx) => {
       const prev = dates.get(f.exposure.visitIndex);
       if (prev === undefined || f.exposure.mjd < prev) dates.set(f.exposure.visitIndex, f.exposure.mjd);
     }
+    lastPick = [fx, fy];
     stage.setPick([fx, fy]);
+    stage.redraw();
     spectrum.show(pts, w, (v) => {
       const mjd = dates.get(v);
       return `Visit ${v + 1}${mjd !== undefined ? ', ' + formatDate(mjd) : ''}`;
@@ -815,6 +1336,7 @@ export const mount: Mount = (root, ctx) => {
   });
 
   function clearPick(): void {
+    lastPick = null;
     stage.setPick(null);
     spectrum.clear();
   }
@@ -1032,6 +1554,23 @@ export const mount: Mount = (root, ctx) => {
       });
   }
 
+  let loadBytes: LoadingBytes = { bytes: null, total: null };
+
+  function loadName(): string {
+    return skyName ?? params.q ?? (params.ra !== null && params.dec !== null ? `${params.ra}, ${params.dec}` : '');
+  }
+
+  function showLoadingNote(): void {
+    stage.setNote(loadingLine(loadName(), loadBytes));
+  }
+
+  function onLoadProgress(p: Progress): void {
+    const b = bytesFromProgress(p);
+    if (b.bytes !== null) loadBytes = b;
+    showLoadingNote();
+    panel.setProgress(p);
+  }
+
   function resetForLoad(): void {
     ctrl?.abort();
     restCtrl?.abort();
@@ -1046,6 +1585,7 @@ export const mount: Mount = (root, ctx) => {
     pairCache = null;
     qualityKey = { movie: null, frame: null, n: 0, diff: '' };
     player.stop();
+    resetTracking();
     clearPick();
     resetOverlayData();
     rootEl.dataset.state = 'loading';
@@ -1053,9 +1593,10 @@ export const mount: Mount = (root, ctx) => {
     panel.setRest(null);
     panel.setMatchNote(null);
     panel.setMockLine(false);
-    panel.showControls(false);
+    panel.showSkeleton();
     headerFor(null);
-    stage.setNote('Loading');
+    loadBytes = { bytes: null, total: null };
+    showLoadingNote();
   }
 
   function handleResult(res: LoadResult): void {
@@ -1094,6 +1635,7 @@ export const mount: Mount = (root, ctx) => {
     }
     ensureOverlayData();
     render();
+    restorePlanet();
     if (live) startRefine(res);
   }
 
@@ -1134,6 +1676,7 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function handleError(e: unknown): void {
+    panel.showControls(false);
     const code = (e as { code?: string } | null)?.code;
     if (code === 'ABORTED') {
       panel.setStopped('Loading stopped.', true);
@@ -1177,7 +1720,7 @@ export const mount: Mount = (root, ctx) => {
       { q: params.q, ra: params.ra, dec: params.dec, det: params.det, size: params.size },
       {
         onStage: (p: Progress) => {
-          if (isCurrent()) panel.setProgress(p);
+          if (isCurrent()) onLoadProgress(p);
         },
       },
       signal,
@@ -1278,6 +1821,8 @@ export const mount: Mount = (root, ctx) => {
     token++;
     ctrl?.abort();
     restCtrl?.abort();
+    trackCtrl?.abort();
+    planet.dispose();
     player.dispose();
     document.removeEventListener('keydown', onKey);
     stage.dispose();

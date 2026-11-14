@@ -13,6 +13,9 @@ export interface ViewerParams {
   frame: number | null;
   size: number | null;
   trueSharp: boolean;
+  planet: 0 | 1 | 2;
+  dist: number | null;
+  ref: number | null;
   drange: 'faint' | 'balanced' | 'bright';
   overlays: string[];
   from: 'sky' | 'globe' | null;
@@ -56,6 +59,9 @@ export function readParams(): ViewerParams {
     snr: sp.get('snr') === '1',
     frame: int(sp.get('frame')),
     trueSharp: sp.get('px') === '1',
+    planet: sp.get('planet') === '1' ? 1 : sp.get('planet') === '2' ? 2 : 0,
+    dist: num(sp.get('dist')),
+    ref: num(sp.get('ref')),
     drange: sp.get('drange') === 'f' ? 'faint' : sp.get('drange') === 'h' ? 'bright' : 'balanced',
     size: [200, 400, 800].includes(int(sp.get('size')) ?? 0) ? int(sp.get('size')) : null,
     overlays: (sp.get('overlays') ?? '')

@@ -1,5 +1,6 @@
 import * as mock from './mock';
 import * as real from '../../lib/spherex';
+import type { CachedDetectorData, CachedPreview, CachedSlug, CallOptions, Detector } from './types';
 
 // Flip each half to the real library in one line.
 const LIVE_REAL = true;
@@ -30,6 +31,8 @@ type Lib = Pick<
   | 'positionAtDistance'
   | 'gridAt'
   | 'trackingTolerance'
+  | 'listPairs'
+  | 'motionFromPair'
 >;
 type CacheLib = Pick<typeof real, 'loadCached' | 'listCached'>;
 
@@ -66,11 +69,14 @@ export const parallaxOffset = live.parallaxOffset;
 export const positionAtDistance = live.positionAtDistance;
 export const gridAt = live.gridAt;
 export const trackingTolerance = live.trackingTolerance;
+export const listPairs = live.listPairs;
+export const motionFromPair = live.motionFromPair;
+export { YEAR_PAIR_DAYS, HALF_YEAR_PAIR_DAYS } from '../../lib/spherex';
 const fromMock = new WeakSet<object>();
 
 // Real prepared sets when present; any failure (missing files, bad data) falls back to the mock
 // for that target, and isSimulated() then reports it so the viewer can say so.
-export const loadCached: CacheLib['loadCached'] = async (slug, opts) => {
+export const loadCached: CacheLib['loadCached'] = async (slug: CachedSlug, opts?: CallOptions) => {
   if (cache === (mock as unknown)) {
     const c = await mock.loadCached(slug, opts);
     fromMock.add(c);
@@ -87,8 +93,33 @@ export const loadCached: CacheLib['loadCached'] = async (slug, opts) => {
 };
 export const listCached = cache.listCached;
 
+// Provisional: previews, per detector loads and paired differences come from the mock helpers,
+// built from whatever loadCached returned (real pixels when the real cache loaded). To switch to
+// the library once it lands, replace these four lines with `real.` versions.
+export const loadCachedPreview = async (
+  slug: CachedSlug,
+  opts?: CallOptions,
+): Promise<CachedPreview> => {
+  const c = await loadCached(slug, opts);
+  const preview = await mock.previewFromCached(c, opts);
+  if (fromMock.has(c)) fromMock.add(preview);
+  return preview;
+};
+export const loadCachedDetector = async (
+  slug: CachedSlug,
+  detector: Detector,
+  opts?: CallOptions,
+): Promise<CachedDetectorData> => mock.detectorFromCached(await loadCached(slug, opts), detector, opts);
+export const visitDifference = mock.visitDifference;
+export const pairedDifference = mock.pairedDifference;
+export const asSingle = mock.asSingle;
+export const asNaiveStack = mock.asNaiveStack;
+
 export function isSimulated(c: object): boolean {
   return fromMock.has(c);
 }
 // wiseCone is real (CatWISE2020, radius capped at 300 arcsec).
 export const wiseAvailable = true;
+
+// Provisional: the data seat will land the real function; until then the mock is used everywhere.
+export const compareVisits = mock.compareVisits;

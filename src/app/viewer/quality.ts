@@ -1,4 +1,5 @@
 import { saturatedSources } from '../data';
+import { QUALITY_LINE } from './stack-copy';
 import type { Frame, Movie, MovieFrame } from '../data';
 import { maskFor } from './overlays';
 import '../../ui/viewer-parts.css';
@@ -75,7 +76,7 @@ export function createQualityPanel(): QualityPanel {
             : `Background removed: ${bg(current)} MJy/sr.`,
         ),
       );
-      body.appendChild(el('p', undefined, 'Frames are aligned to about 0.05 pixel (measured on Gaia stars).'));
+      body.appendChild(el('p', undefined, QUALITY_LINE));
       const stray = new Set<string>();
       for (const f of frames) {
         const ex = f.exposure as typeof f.exposure & { inStack?: boolean };
@@ -125,7 +126,7 @@ export function createQualityPanel(): QualityPanel {
         const hi = Math.max(...fs.map((f) => f.wavelengthMax));
         const cov = fs.reduce((s, f) => s + finiteFraction(f.pixels), 0) / fs.length;
         const tr = el('tr');
-        tr.appendChild(el('td', undefined, `${v + 1}, ${dateOf(fs[0].time)}`));
+        tr.appendChild(el('td', undefined, `${visits.indexOf(v) + 1}, ${dateOf(fs[0].time)}`));
         tr.appendChild(el('td', undefined, String(count)));
         tr.appendChild(el('td', undefined, range(lo, hi)));
         tr.appendChild(el('td', undefined, `${Math.round(cov * 100)} percent`));

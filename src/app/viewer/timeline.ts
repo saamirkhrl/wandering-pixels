@@ -12,6 +12,7 @@ export interface Timeline {
   el: HTMLElement;
   set(frames: TimelineFrame[], current: number, a: number | null, b: number | null): void;
   setPickEnabled(on: boolean): void;
+  setPairMarks(indices: number[]): void;
   dispose(): void;
 }
 
@@ -132,6 +133,7 @@ export function createTimeline(h: TimelineHandlers): Timeline {
   let a: number | null = null;
   let b: number | null = null;
   let pickOn = true;
+  let good = new Set<number>();
   let hot: number | null = null;
   let rove = 0;
   let buttons: HTMLButtonElement[] = [];
@@ -189,6 +191,7 @@ export function createTimeline(h: TimelineHandlers): Timeline {
     rove = n ? clamp(rove) : 0;
     buttons.forEach((btn, i) => {
       btn.classList.toggle('tl-current', i === cur);
+      btn.classList.toggle('tl-pairok', good.has(i));
       if (i === cur) btn.setAttribute('aria-current', 'true');
       else btn.removeAttribute('aria-current');
       btn.tabIndex = i === rove ? 0 : -1;
@@ -423,6 +426,10 @@ export function createTimeline(h: TimelineHandlers): Timeline {
       } else if (!track.contains(document.activeElement)) {
         rove = next.length ? Math.max(0, Math.min(next.length - 1, current)) : 0;
       }
+      refresh();
+    },
+    setPairMarks(indices): void {
+      good = new Set(indices);
       refresh();
     },
     setPickEnabled(on): void {

@@ -429,6 +429,8 @@
 
 @media (max-width: 899px) {
   .viewer {
+    --stage-h: 45vh;
+    --stage-h: 45dvh;
     display: block;
     overflow-x: hidden;
     overflow-y: auto;
@@ -436,27 +438,76 @@
     background: var(--paper);
   }
 
+  /* The image stays pinned under the top bar while the logbook scrolls beneath it. */
   .v-stage {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    height: var(--stage-h);
+    padding: 8px var(--gutter) 6px;
+    gap: 4px;
     background: var(--sky);
-    padding: 12px var(--gutter) 8px;
+    border-bottom: 1px solid var(--chrome-rule, rgba(228, 233, 241, 0.22));
   }
 
   .v-plate {
-    flex: none;
+    flex: 1;
+    min-height: 0;
     width: 100%;
-    aspect-ratio: 1 / 1;
+  }
+
+  .v-reading {
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .v-readout {
+    min-height: 0;
+    font-size: 0.75rem;
+    line-height: 1.25;
   }
 
   .v-panel {
     overflow: visible;
     padding: 0 var(--gutter) 40px;
     border-left: 0;
-    border-top: 1px solid var(--ink);
+    border-top: 0;
+  }
+
+  .viewer :is(button, select, input, summary, a, [tabindex]) {
+    scroll-margin-top: calc(var(--stage-h) + 12px);
   }
 
   .viewer[data-state='empty'] .v-stage,
   .viewer[data-state='error'] .v-stage {
     display: none;
+  }
+}
+
+/* Landscape phone: the image beside a narrow, independently scrolling column. */
+@media (max-width: 899px) and (orientation: landscape) and (max-height: 520px) {
+  .viewer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(280px, 40vw, 340px);
+    overflow: hidden;
+  }
+
+  .v-stage {
+    position: static;
+    height: auto;
+    padding: 8px 12px;
+    border-bottom: 0;
+  }
+
+  .v-panel {
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0 14px 32px;
+    border-left: 1px solid var(--ink);
+  }
+
+  .viewer :is(button, select, input, summary, a, [tabindex]) {
+    scroll-margin-top: 12px;
   }
 }
 
@@ -684,4 +735,92 @@
   margin: 0;
   font-size: 0.875rem;
   color: var(--paper);
+}
+
+.v-changerows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-height: 96px;
+}
+
+.v-planet-summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  cursor: pointer;
+  list-style: none;
+}
+
+.v-planet-summary::-webkit-details-marker {
+  display: none;
+}
+
+.v-planet-summary h3 {
+  margin: 0;
+}
+
+.v-planet-summary::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-right: 10px;
+  border-right: 1.6px solid var(--ink);
+  border-bottom: 1.6px solid var(--ink);
+  transform: rotate(-45deg);
+}
+
+.v-planet[open] > .v-planet-summary::before {
+  transform: rotate(45deg);
+}
+
+.v-planet-seg {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin: 6px 0 10px;
+}
+
+.v-planet-seg .v-seg-btn {
+  margin-left: 0;
+  margin-top: -1px;
+  text-align: left;
+  border-radius: 0;
+}
+
+.v-planet-step[hidden],
+.v-planet-limits[hidden] {
+  display: none;
+}
+
+.v-planet-step {
+  padding-top: 4px;
+}
+
+.v-planet-limits {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+
+.v-planet-science {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+
+.v-planet-control.v-sec {
+  padding: 8px 0;
+  border-top: 0;
+}
+
+/* Skeleton while a data set downloads: headings visible, controls inert. */
+.v-controls.v-skeleton {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.v-diffsrc {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
 }

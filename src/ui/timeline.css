@@ -186,3 +186,8 @@
 .tl-hint[hidden] {
   display: none;
 }
+
+.tl-pairok .tl-dot {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}

@@ -6,7 +6,16 @@ import {
   difference,
   findExposures,
   gaiaCone,
+  compareVisits,
+  asNaiveStack,
+  asSingle,
+  detectorFromCached,
   gridToWorld,
+  loadCachedDetector,
+  loadCachedPreview,
+  pairedDifference,
+  previewFromCached,
+  visitDifference,
   positionAtDistance,
   loadFirstLook,
   saturatedSources,
@@ -25,7 +34,7 @@ import {
   wiseCone,
   worldToGrid,
 } from './mock';
-import type { Grid, Progress } from './types';
+import type { Grid, PairComparison, Progress } from './types';
 
 const grid: Grid = { ra0: 269.4, dec0: 4.7, w: 65, h: 65, scaleArcsec: 6.15, epochMjd: 60900 };
 
@@ -378,6 +387,130 @@ describe('live path', () => {
     expect(() => buildMovie([...f500, ...plain], 'single', 2)).toThrowError(expect.objectContaining({ code: 'BAD_INPUT' }));
     const other = (await loadFrames([late], g, { distanceAu: 300 })).frames;
     expect(() => buildMovie([f500[0], ...other], 'single', 2)).toThrowError(expect.objectContaining({ code: 'BAD_INPUT' }));
+  });
+
+  it('compares visit pairs', async () => {
+    const det2 = async (slug: 'eps-indi-b' | 'wise-0855' | 'rw-aur' | 'barnards-star' | 'r-dra') => {
+      const c = await loadCached(slug);
+      const fr = c.frames.filter((f) => f.exposure.detector === 2);
+      const visits = new Set(spectrumAt(fr, c.grid.ra0, c.grid.dec0).map((p) => p.visitIndex)).size;
+      return { out: compareVisits(fr, c.grid.ra0, c.grid.dec0), visits };
+    };
+    const steady = await det2('eps-indi-b');
+    expect(steady.out).toHaveLength((steady.visits * (steady.visits - 1)) / 2);
+    const first = steady.out[0];
+    expect(first.visitA).toBeLessThan(first.visitB);
+    expect(Object.keys(first).sort()).toEqual(['flags', 'matched', 'paired', 'plain', 'visitA', 'visitB']);
+    expect(first.plain.gapChannels).toBeGreaterThanOrEqual(0);
+    // pairs flagged no_bracket have no common wavelength and are not expected to agree
+    const bracketed = (o: PairComparison[]) => o.filter((p) => !p.flags.includes('no_bracket'));
+    expect(bracketed(steady.out).length).toBeGreaterThan(0);
+    for (const p of bracketed(steady.out)) expect(Math.abs(p.matched.z)).toBeLessThan(3);
+    const wise = await det2('wise-0855');
+    expect(bracketed(wise.out).length).toBeGreaterThan(0);
+    for (const p of bracketed(wise.out)) expect(Math.abs(p.matched.z)).toBeLessThan(3);
+
+    const variable = await det2('rw-aur');
+    expect(variable.out.some((p) => Math.abs(p.matched.z) >= 5)).toBe(true);
+    const mira = await det2('r-dra');
+    expect(mira.out).toHaveLength((mira.visits * (mira.visits - 1)) / 2);
+    expect(mira.out.some((p) => Math.abs(p.matched.z) >= 5)).toBe(true);
+
+    expect(steady.out.some((p) => p.flags.includes('too_few_samples'))).toBe(true);
+    expect(mira.out.every((p) => p.flags.includes('too_few_samples'))).toBe(true);
+    expect(steady.out.every((p) => p.flags.includes('partial_visit'))).toBe(true);
+    expect(variable.out.some((p) => p.paired.nPairs > 0 && Math.abs(p.paired.z) >= 5)).toBe(true);
+    for (const p of steady.out) {
+      expect(Number.isInteger(p.paired.nPairs)).toBe(true);
+      if (p.paired.nPairs > 0) expect(Math.abs(p.paired.z)).toBeLessThan(3);
+    }
+    expect(steady.out.some((p) => p.paired.nPairs > 0)).toBe(true);
+    expect((await det2('barnards-star')).out.some((p) => p.flags.includes('saturated'))).toBe(true);
+  });
+
+  it('builds a cached preview', async () => {
+    for (const t of listCached()) {
+      const pv = await loadCachedPreview(t.slug);
+      expect(pv.defaultDetector).toBe(t.slug === 'wise-0855' ? 6 : 2);
+      expect(pv.movie.detector).toBe(pv.defaultDetector);
+      expect(pv.movie.frames.length).toBeGreaterThanOrEqual(3);
+      expect(pv.visits).toHaveLength(pv.movie.frames.length);
+      expect(pv.detectors).toHaveLength(6);
+      expect(pv.totalBytes).toBe(pv.detectors.reduce((s, d) => s + d.bytes, 0));
+      expect(pv.differences.length).toBeGreaterThan(0);
+      for (const d of pv.differences) {
+        expect(d.visitA).toBeLessThan(d.visitB);
+        expect(d.image.method).toBe('paired-stack');
+        expect(typeof d.image.nPairs).toBe('number');
+      }
+      for (const pick of [pv.pairs.year, pv.pairs.halfYear]) {
+        if (pick) {
+          expect(pick.frames).toHaveLength(2);
+          expect(pick.frames[0].exposure.mjd).toBeLessThanOrEqual(pick.frames[1].exposure.mjd);
+          expect(pick.gapDays).toBeGreaterThan(100);
+        }
+      }
+    }
+    const b = await loadCachedPreview('barnards-star');
+    expect(b.pairs.year?.matched).toBe(true);
+    expect(b.pairs.halfYear?.matched).toBe(false);
+    expect(b.movie.frames.some((f) => (f.saturated?.length ?? 0) > 0)).toBe(true);
+    expect(b.detectors[5].bytes).toBe(0);
+    expect(b.detectors[1].bytes).toBeGreaterThan(0);
+  });
+
+  it('simulates transfer bytes for previews and detectors', async () => {
+    const c = await loadCached('rw-aur');
+    const prog: Progress[] = [];
+    const pv = await previewFromCached(c, { onProgress: (p) => prog.push(p) });
+    expect(pv.target).toBe(c.target);
+    expect(prog[prog.length - 1].bytes).toBe(250_000);
+    const prog2: Progress[] = [];
+    const det = await detectorFromCached(c, 3, { onProgress: (p) => prog2.push(p) });
+    expect(prog2[prog2.length - 1].bytes).toBe(850_000);
+    expect(det.frames.every((f) => f.exposure.detector === 3)).toBe(true);
+    expect(det.exposures).toHaveLength(det.frames.length);
+    const viaSlug = await loadCachedDetector('rw-aur', 4);
+    expect(viaSlug.exposures.every((e) => e.detector === 4)).toBe(true);
+  });
+
+  it('pairs exposures by smallest wavelength gap, each used once', async () => {
+    const c = await loadCached('barnards-star');
+    const year = visitDifference(c.frames, 2, 0, 2);
+    expect(year.method).toBe('paired-stack');
+    expect(year.nPairs).toBeGreaterThan(0);
+    expect(year.wavelengthMatched).toBe(true);
+    const ids = new Set<string>();
+    const idsB = new Set<string>();
+    const byId = new Map(c.frames.map((f) => [f.exposure.id, f.exposure]));
+    for (const p of year.pairs) {
+      expect(ids.has(p.a)).toBe(false);
+      expect(idsB.has(p.b)).toBe(false);
+      ids.add(p.a);
+      idsB.add(p.b);
+      const a = byId.get(p.a)!;
+      const b = byId.get(p.b)!;
+      const gap = Math.abs((a.wavelengthAtTarget as number) - (b.wavelengthAtTarget as number));
+      expect(gap).toBeLessThanOrEqual(0.5 * ((a.bandwidthAtTarget as number) + (b.bandwidthAtTarget as number)) + 1e-12);
+      expect(p.wavelengthGapUm).toBeCloseTo(gap, 9);
+    }
+    const sorted = year.pairs.map((p) => p.wavelengthGapUm);
+    expect(sorted).toEqual([...sorted].sort((x, y) => x - y));
+    expect(year.nUnpairedA + year.nPairs).toBe(c.frames.filter((f) => f.exposure.detector === 2 && f.exposure.visitIndex === 0).length);
+
+    const half = visitDifference(c.frames, 2, 0, 1);
+    expect(half.nPairs).toBe(0);
+    expect(half.wavelengthMatched).toBe(false);
+    expect(half.pairs).toHaveLength(0);
+
+    const a = c.frames.filter((f) => f.exposure.detector === 2 && f.exposure.visitIndex === 0);
+    expect(() => pairedDifference([], a)).toThrowError(expect.objectContaining({ code: 'BAD_INPUT' }));
+
+    const m = buildMovie(c.frames, 'visit-stack', 2, c.target);
+    const naive = asNaiveStack(difference(m.frames[0], m.frames[2]));
+    expect(naive.method).toBe('naive-stack');
+    expect(asSingle(difference(m.frames[0], m.frames[2])).method).toBe('single');
+    expect(difference(m.frames[0], m.frames[2]).method).toBeDefined();
   });
 
   it('returns cone searches', async () => {

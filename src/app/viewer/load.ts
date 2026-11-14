@@ -219,7 +219,7 @@ export async function loadFrameSet(
 export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: AbortSignal): Promise<LoadResult> {
   const slug = req.q ? matchCachedName(req.q) : null;
   if (slug) {
-    const c = await loadCached(slug, { signal });
+    const c = await loadCached(slug, { signal, onProgress: cb.onStage });
     if (signal.aborted) throw abortedError();
     const available = availableOf(c.exposures);
     const det = chooseDetector(available, req.det ?? (slug === 'wise-0855' ? 6 : null));

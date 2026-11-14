@@ -104,7 +104,7 @@ VARIANCE prediction, probably from Eps Indi A's halo; not investigated.
 
 Results: to be written (phase B).
 
-### Choices fixed before any phase B result was computed (2026-11-14, 10:00 CST)
+### Choices fixed before any phase B result was computed (2026-11-14, 09:52 CST; see git history)
 
 These are written down first so that the comparison wavelength and the star sample cannot be
 chosen after seeing which makes the matched method look best.
@@ -138,7 +138,7 @@ chosen after seeing which makes the matched method look best.
    bandwidth b0, take that visit's samples with wavelength within w0 +/- 2.5 b0; require at least
    3 samples, with at least one on each side of w0 (otherwise no value: no extrapolation);
    variance-weighted straight-line fit in wavelength, drop the single worst sample if it lies
-   beyond 4 sigma and refit (amended 10:20 CST before any result: a full clipping pass from a fit
+   beyond 4 sigma and refit (amended 09:54 CST before any result: a full clipping pass from a fit
    pulled by one outlier rejected every sample in a unit test), evaluate at w0 with its
    propagated variance. Two modes: "six" (samples from all detectors) and "one"
    (only detector d).

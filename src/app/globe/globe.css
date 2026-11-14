@@ -30,8 +30,8 @@
   max-width: 36ch;
   margin: 0;
   color: var(--paper-dim);
-  font-size: 0.9375rem;
-  line-height: 1.45;
+  font-size: 1.1875rem;
+  line-height: 1.4;
   pointer-events: none;
 }
 
@@ -76,10 +76,6 @@
   bottom: 16px;
   width: min(22rem, calc(100% - 32px));
   padding: 16px;
-  background: var(--paper);
-  color: var(--ink);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
 }
 
 .globe-panel[hidden] {
@@ -116,49 +112,41 @@
 .globe-msg:not(:first-child) {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--chrome-rule);
 }
 
 .globe-msg[hidden] {
   display: none;
 }
 
-.globe-btn {
-  min-height: var(--control-height);
-  min-width: var(--control-height);
-  padding: 0 16px;
-  font: inherit;
-  color: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
 .globe-btn-primary {
   margin-top: 12px;
   width: 100%;
-  color: var(--paper);
-  background: var(--ink);
 }
 
-.globe-panel .globe-btn:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-
-.globe-btn-locate {
+.globe-actions {
   position: absolute;
   top: 16px;
   right: 16px;
+  display: flex;
+  gap: 8px;
 }
 
-.globe-btn-locate:disabled {
+.globe-actions .chrome-btn {
+  background: var(--chrome-bg);
+}
+
+.globe-select {
+  max-width: 18rem;
+  text-overflow: ellipsis;
+}
+
+.globe-actions button:disabled {
   cursor: progress;
 }
 
 .globe-view.is-flying .globe-intro,
-.globe-view.is-flying .globe-btn-locate {
+.globe-view.is-flying .globe-actions {
   visibility: hidden;
 }
 
@@ -175,13 +163,18 @@
     left: 16px;
     right: 16px;
     width: auto;
-    bottom: 72px;
+    bottom: 120px;
   }
 
-  .globe-btn-locate {
+  .globe-actions {
     top: auto;
-    right: 16px;
     left: 16px;
+    right: 16px;
     bottom: 16px;
+    flex-direction: column;
+  }
+
+  .globe-select {
+    max-width: none;
   }
 }

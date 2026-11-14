@@ -14,6 +14,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three';
+import { prefersReducedMotion } from '../motion';
 import { buildTilePatch, cellBounds } from './healpix';
 
 export const HIPS_BASE = 'https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube';
@@ -44,9 +45,10 @@ export const HIPS_FRAMES: HipsFrame[] = CUBE_UM.map((um, index) => ({ index, um 
   (f) => !MISSING_FRAMES.has(f.index),
 );
 
-// Radius of the tile sphere in the EQJ group's units. The tiles are drawn first (renderOrder
-// below 0) with depthTest and depthWrite off, so they act as a background whatever the radius;
-// the camera far plane must exceed it (and near must be below it).
+// Radius of the tile sphere in the EQJ group's units. Tiles are transparent-pass meshes with
+// renderOrder far below 0, depthTest on and depthWrite off: they draw before every other
+// transparent object, never hide anything, and are hidden by opaque meshes nearer than the
+// radius (the ground). The camera far plane must exceed the radius.
 export const HIPS_RADIUS = 10;
 
 export interface HipsLayer {
@@ -54,41 +56,48 @@ export interface HipsLayer {
   // view adds this to a group whose matrix is eqjToWorld(...).
   object: Group;
   // Call once per frame before render. Picks the order from field of view and viewport height,
-  // culls, loads and evicts tiles. Pass the drawing-buffer height in device pixels for 1:1 tiles.
+  // culls, loads and evicts tiles. Pass the drawing-buffer height in device pixels.
   update(camera: PerspectiveCamera, viewportHeightPx: number): void;
   // Indices not in HIPS_FRAMES are ignored (they have no tiles).
   setFrame(index: number): void;
   readonly frame: number;
-  // Order of the tile drawn where the camera looks, in HiPS orders (512 px tiles): 0 when only the
-  // Norder3 Allsky preview (64 px per order-3 tile, the same pixel scale as order 0) is drawn.
+  // HiPS order (512 px tiles, 0..5) of the level drawn where the camera looks.
   readonly order: number;
+  // True while any tile needed for the current view at the current level is still pending.
+  readonly loading: boolean;
+  // True when the host has failed for the current view: most needed tiles errored (network or
+  // HTTP error other than 404), including the order-0 base tiles.
+  readonly failed: boolean;
   dispose(): void;
 }
 
 const MAX_ORDER = 5;
-const MIN_TILE_ORDER = 1; // below this the Allsky preview has the same resolution
-const ALLSKY_ORDER = 3;
-const ALLSKY_TILE = 64;
-const ALLSKY_COLS = 27;
 const MAX_TEXTURES = 250;
 const MAX_REQUESTS = 8;
 const MAX_UPLOADS_PER_UPDATE = 4;
 const RETRY_MS = 15000;
-const SEGMENTS = [16, 16, 16, 12, 8, 8];
+const FADE_MS = 250;
+const SEGMENTS = [32, 16, 16, 12, 8, 8];
 // Angular size of one pixel of an order-0 tile (an order-9 HEALPix cell), radians.
 const ORDER0_PIXEL = Math.sqrt((4 * Math.PI) / (12 * 4 ** 9));
-const RENDER_ORDER_BASE = -1000;
+// Draw order: order-0 base, then coarser fallbacks, then the shown level, then the fading level.
+const RO_BASE = -1000;
+const RO_SHOWN = -900;
+const RO_FADE = -800;
 
 function tileUrl(order: number, pix: number, frame: number): string {
   const dir = Math.floor(pix / 10000) * 10000;
   return `${HIPS_BASE}/Norder${order}/Dir${dir}/Npix${pix}${frame ? `_${frame}` : ''}.png`;
 }
 
-function allskyUrl(frame: number): string {
-  return `${HIPS_BASE}/Norder${ALLSKY_ORDER}/Allsky${frame ? `_${frame}` : ''}.png`;
+const tileKey = (frame: number, order: number, pix: number) => `${frame}/${order}/${pix}`;
+
+interface Level {
+  frame: number;
+  order: number;
 }
 
-const tileKey = (frame: number, order: number, pix: number) => `${frame}/${order}/${pix}`;
+const sameLevel = (a: Level, b: Level) => a.frame === b.frame && a.order === b.order;
 
 interface TileEntry {
   key: string;
@@ -98,12 +107,6 @@ interface TileEntry {
   lastUsed: number;
 }
 
-interface AllskyEntry {
-  frame: number;
-  mesh: Mesh<BufferGeometry, MeshBasicMaterial> | null;
-  bitmap: ImageBitmap | null;
-}
-
 interface Pending {
   frame: number;
   order: number;
@@ -111,20 +114,21 @@ interface Pending {
   bitmap: ImageBitmap;
 }
 
-function makeTexture(bitmap: ImageBitmap, anisotropy: number, mipmaps: boolean): Texture {
+interface Cell {
+  pix: number;
+  dist: number;
+}
+
+function makeTexture(bitmap: ImageBitmap, anisotropy: number): Texture {
   const tex = new Texture(bitmap);
   tex.flipY = false; // uvs use v = row fraction from the top (see buildTilePatch)
   tex.colorSpace = SRGBColorSpace;
   tex.magFilter = LinearFilter;
-  tex.minFilter = mipmaps ? LinearMipmapLinearFilter : LinearFilter;
-  tex.generateMipmaps = mipmaps;
+  tex.minFilter = LinearMipmapLinearFilter; // tiles are 512 x 512, so mipmaps always build
+  tex.generateMipmaps = true;
   tex.anisotropy = anisotropy;
   tex.needsUpdate = true;
   return tex;
-}
-
-function makeMaterial(map: Texture): MeshBasicMaterial {
-  return new MeshBasicMaterial({ map, side: FrontSide, depthTest: false, depthWrite: false, toneMapped: false });
 }
 
 function makeGeometry(p: { positions: Float32Array; uvs: Float32Array; indices: Uint32Array }): BufferGeometry {
@@ -154,32 +158,27 @@ async function loadBitmap(url: string, signal: AbortSignal): Promise<ImageBitmap
 export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): HipsLayer {
   const object = new Group();
   object.name = 'spherex-hips';
-  const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const anisotropy = renderer.capabilities.getMaxAnisotropy();
 
   let frame = isFrame(initialFrame) ? initialFrame : HIPS_FRAMES[0].index;
   let shownOrder = 0;
+  let isLoading = true;
+  let isFailed = false;
   let orderLevel = -1; // hysteresis state for the target order
   let tick = 0;
   let disposed = false;
 
+  // `shown` is the last level that covered the view completely; it stays on screen until the
+  // target level (current frame, order for this fov) is complete too, which then fades in on top.
+  let shown: Level | null = null;
+  let fade: { level: Level; start: number } | null = null;
+
   const tiles = new Map<string, TileEntry>();
   const missing = new Set<string>(); // 404: never retried
-  const failed = new Map<string, number>(); // network or decode error: retried after RETRY_MS
+  const failed = new Map<string, number>(); // network or HTTP error: retried after RETRY_MS
   const inflight = new Map<string, AbortController>();
   const pending: Pending[] = [];
   const bounds = new Map<number, { cx: number; cy: number; cz: number; radius: number }>();
-
-  // Allsky previews: `allsky` is the current frame's, `allskyPrev` stays drawn until it loads.
-  let allsky: AllskyEntry = { frame, mesh: null, bitmap: null };
-  let allskyPrev: AllskyEntry | null = null;
-  let allskyController: AbortController | null = null;
-  let allskyMissing = false;
-  let allskyFailedAt = -Infinity;
-
-  // Frame whose tiles are used as fallback while the current frame's tiles load: the frame that
-  // last covered the view completely.
-  let prevFrame = frame;
-  let frameComplete = false;
 
   const view = new Vector3();
   const inv = new Matrix4();
@@ -194,75 +193,6 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
     return b;
   }
 
-  function allskyGeometry(): BufferGeometry {
-    const n = 12 * 4 ** ALLSKY_ORDER;
-    const rows = Math.ceil(n / ALLSKY_COLS);
-    const w = ALLSKY_COLS * ALLSKY_TILE;
-    const h = rows * ALLSKY_TILE;
-    const segs = 4;
-    const per = (segs + 1) * (segs + 1);
-    const positions = new Float32Array(n * per * 3);
-    const uvs = new Float32Array(n * per * 2);
-    const indices = new Uint32Array(n * segs * segs * 6);
-    for (let pix = 0; pix < n; pix++) {
-      // Sub-image of tile `pix`: column pix % 27, row floor(pix / 27), same layout as a tile.
-      // Inset by half a texel so linear filtering does not bleed into the neighbour.
-      const c0 = (pix % ALLSKY_COLS) * ALLSKY_TILE;
-      const r0 = Math.floor(pix / ALLSKY_COLS) * ALLSKY_TILE;
-      const p = buildTilePatch(ALLSKY_ORDER, pix, segs, HIPS_RADIUS, (a, b) => [
-        (c0 + 0.5 + a * (ALLSKY_TILE - 1)) / w,
-        (r0 + 0.5 + b * (ALLSKY_TILE - 1)) / h,
-      ]);
-      positions.set(p.positions, pix * per * 3);
-      uvs.set(p.uvs, pix * per * 2);
-      for (let i = 0; i < p.indices.length; i++) indices[pix * p.indices.length + i] = p.indices[i] + pix * per;
-    }
-    return makeGeometry({ positions, uvs, indices });
-  }
-
-  function disposeAllsky(e: AllskyEntry | null): void {
-    if (!e) return;
-    if (e.mesh) disposeMesh(e.mesh);
-    e.bitmap?.close();
-    e.mesh = null;
-    e.bitmap = null;
-  }
-
-  function requestAllsky(): void {
-    allskyController?.abort();
-    allskyMissing = false;
-    const target = frame;
-    const ctrl = new AbortController();
-    allskyController = ctrl;
-    loadBitmap(allskyUrl(target), ctrl.signal).then(
-      (bmp) => {
-        if (ctrl.signal.aborted || disposed || target !== frame) {
-          if (bmp !== 'missing') bmp.close();
-          return;
-        }
-        allskyController = null;
-        if (bmp === 'missing') {
-          allskyMissing = true;
-          return;
-        }
-        const mesh = new Mesh(allskyGeometry(), makeMaterial(makeTexture(bmp, anisotropy, false)));
-        mesh.renderOrder = RENDER_ORDER_BASE;
-        mesh.frustumCulled = false;
-        mesh.name = `allsky-${target}`;
-        object.add(mesh);
-        disposeAllsky(allsky.frame === target ? allsky : null);
-        allsky = { frame: target, mesh, bitmap: bmp };
-        disposeAllsky(allskyPrev);
-        allskyPrev = null;
-      },
-      () => {
-        if (allskyController !== ctrl) return;
-        allskyController = null;
-        allskyFailedAt = performance.now();
-      },
-    );
-  }
-
   function addTile(p: Pending): void {
     const key = tileKey(p.frame, p.order, p.pix);
     if (tiles.has(key)) {
@@ -270,8 +200,15 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
       return;
     }
     const geom = makeGeometry(buildTilePatch(p.order, p.pix, SEGMENTS[p.order], HIPS_RADIUS));
-    const mesh = new Mesh(geom, makeMaterial(makeTexture(p.bitmap, anisotropy, true)));
-    mesh.renderOrder = RENDER_ORDER_BASE + 10 * p.order;
+    const mat = new MeshBasicMaterial({
+      map: makeTexture(p.bitmap, anisotropy),
+      side: FrontSide,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const mesh = new Mesh(geom, mat);
     mesh.visible = false;
     mesh.name = `hips-${key}`;
     object.add(mesh);
@@ -296,6 +233,7 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
     loadBitmap(tileUrl(order, pix, f), ctrl.signal).then(
       (bmp) => {
         if (inflight.get(key) === ctrl) inflight.delete(key);
+        failed.delete(key);
         if (bmp === 'missing') {
           missing.add(key);
           return;
@@ -314,9 +252,9 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
   }
 
   // Visible cells at `order`: descend from the 12 base cells, keeping those whose bounding cone
-  // meets the view cone. Returned with their angular distance from the view centre.
-  function visibleCells(order: number, dir: Vector3, halfAngle: number): { pix: number; dist: number }[] {
-    const out: { pix: number; dist: number }[] = [];
+  // meets the view cone, sorted by angular distance from the view centre.
+  function visibleCells(order: number, dir: Vector3, halfAngle: number): Cell[] {
+    const out: Cell[] = [];
     const visit = (o: number, pix: number) => {
       const b = boundsOf(o, pix);
       const dot = Math.max(-1, Math.min(1, b.cx * dir.x + b.cy * dir.y + b.cz * dir.z));
@@ -329,30 +267,28 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
       for (let c = 0; c < 4; c++) visit(o + 1, pix * 4 + c);
     };
     for (let f = 0; f < 12; f++) visit(0, f);
-    return out;
+    return out.sort((a, b) => a.dist - b.dist);
   }
 
-  function findLoaded(order: number, pix: number): TileEntry | null {
-    const frames = prevFrame !== frame ? [frame, prevFrame] : [frame];
-    for (const f of frames) {
-      const t = tiles.get(tileKey(f, order, pix));
-      if (t) return t;
-    }
-    for (let o = order - 1, p = pix >> 2; o >= MIN_TILE_ORDER; o--, p >>= 2) {
-      for (const f of frames) {
-        const t = tiles.get(tileKey(f, o, p));
-        if (t) return t;
-      }
-    }
-    return null;
-  }
-
+  // Order for the view, with hysteresis. Tile pixels are kept at or below one screen pixel at the
+  // top and bottom edges of the view, where the perspective projection magnifies the sky radially
+  // by 1 / cos^2(fov / 2), so towards the centre they are slightly minified (mipmaps). Coarser
+  // choices show every HEALPix pixel as a shape on screen: near the polar-cap face edges those
+  // cells are up to 2.4 : 1 elongated, which read as streaks across the noise floor.
   function targetOrder(fovDeg: number, heightPx: number): number {
-    const screenPixel = (fovDeg * Math.PI) / 180 / Math.max(1, heightPx);
-    const level = Math.log2(ORDER0_PIXEL / screenPixel);
-    // Hysteresis: keep the current order until the ideal one is 0.6 orders away.
-    if (orderLevel < 0 || Math.abs(level - orderLevel) > 0.6) orderLevel = Math.round(level);
-    return Math.max(0, Math.min(MAX_ORDER, orderLevel));
+    const half = (fovDeg * Math.PI) / 360;
+    const centrePixel = (2 * Math.tan(half)) / Math.max(1, heightPx);
+    const edgePixel = centrePixel * Math.cos(half) ** 2;
+    const ideal = Math.log2(ORDER0_PIXEL / edgePixel) - 0.1;
+    if (orderLevel < 0 || ideal < orderLevel - 1.15 || ideal > orderLevel + 0.15) orderLevel = Math.max(0, Math.ceil(ideal));
+    return Math.min(MAX_ORDER, orderLevel);
+  }
+
+  function show(t: TileEntry, renderOrder: number, opacity: number): void {
+    t.mesh.visible = true;
+    t.mesh.renderOrder = renderOrder;
+    t.mesh.material.opacity = opacity;
+    t.lastUsed = tick;
   }
 
   return {
@@ -360,9 +296,7 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
     update(camera: PerspectiveCamera, viewportHeightPx: number) {
       if (disposed) return;
       tick++;
-      if (!allsky.mesh && !allskyController && !allskyMissing && performance.now() - allskyFailedAt > RETRY_MS)
-        requestAllsky();
-
+      const now = performance.now();
       for (let i = 0; i < MAX_UPLOADS_PER_UPDATE && pending.length; i++) addTile(pending.shift() as Pending);
 
       // View direction and cone in the EQJ frame of `object`.
@@ -374,39 +308,87 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
       const halfV = (camera.fov * Math.PI) / 360;
       const halfAngle = Math.min(Math.PI, Math.atan(Math.tan(halfV) * Math.sqrt(1 + camera.aspect * camera.aspect)) + 0.02);
 
-      const order = targetOrder(camera.fov, viewportHeightPx);
+      // Zooming in more than one order refines one order at a time (each step is a few tiles, so
+      // the view sharpens progressively instead of staying blurred until the deepest level loads).
+      const wantOrder = targetOrder(camera.fov, viewportHeightPx);
+      const stepOrder = shown && shown.frame === frame && wantOrder > shown.order + 1 ? shown.order + 1 : wantOrder;
+      const target: Level = { frame, order: stepOrder };
+      const cellsT = visibleCells(target.order, view, halfAngle);
+      const cells0 = target.order === 0 ? cellsT : visibleCells(0, view, halfAngle);
+
+      // Requests: order-0 base first (cheap, and the fallback under everything), then the
+      // target level nearest the view centre first.
+      const wanted = new Set<string>();
+      const queue: { order: number; pix: number }[] = [];
+      const need = (order: number, pix: number): 'ok' | 'pending' | 'failed' => {
+        const key = tileKey(frame, order, pix);
+        if (tiles.has(key) || missing.has(key)) return 'ok';
+        wanted.add(key);
+        const failedAt = failed.get(key);
+        if (!inflight.has(key) && (failedAt === undefined || now - failedAt > RETRY_MS)) queue.push({ order, pix });
+        return failedAt === undefined ? 'pending' : 'failed';
+      };
+      let baseFailed = 0;
+      for (const c of cells0) if (need(0, c.pix) === 'failed') baseFailed++;
+      let complete = true;
+      let targetFailed = 0;
+      for (const c of cellsT) {
+        const st = need(target.order, c.pix);
+        if (st !== 'ok') complete = false;
+        if (st === 'failed') targetFailed++;
+      }
+      isLoading = !complete || stepOrder !== wantOrder;
+      isFailed = targetFailed * 2 >= cellsT.length && targetFailed > 0 && baseFailed * 2 >= cells0.length;
+
+      // Level switching: never mix two complete levels for long; cross-fade the new one in.
+      if (fade && !sameLevel(fade.level, target)) {
+        if (shown && !sameLevel(shown, target)) shown = fade.level;
+        fade = null;
+      }
+      if (complete && (!shown || !sameLevel(shown, target)) && !fade) {
+        if (!shown || prefersReducedMotion()) shown = target;
+        else fade = { level: target, start: now };
+      }
+      let fadeOpacity = 0;
+      if (fade) {
+        fadeOpacity = Math.min(1, (now - fade.start) / FADE_MS);
+        if (fadeOpacity >= 1) {
+          shown = fade.level;
+          fade = null;
+        }
+      }
+
       for (const t of tiles.values()) t.mesh.visible = false;
 
-      const wanted = new Set<string>();
-      const toLoad: { pix: number; dist: number }[] = [];
+      // Base: order-0 tiles of the current frame, else of the shown frame.
+      for (const c of cells0) {
+        const t = tiles.get(tileKey(frame, 0, c.pix)) ?? (shown ? tiles.get(tileKey(shown.frame, 0, c.pix)) : undefined);
+        if (t) show(t, RO_BASE, 1);
+      }
+
+      // Shown level; cells that panned in and are not loaded yet show their nearest ancestor.
       let centreOrder = 0;
-      let complete = true;
-      if (order >= MIN_TILE_ORDER) {
-        const cells = visibleCells(order, view, halfAngle).sort((a, b) => a.dist - b.dist);
-        let bestDist = Infinity;
-        for (const c of cells) {
-          const key = tileKey(frame, order, c.pix);
-          const own = tiles.get(key);
-          const shown = own ?? findLoaded(order, c.pix);
-          if (shown) {
-            shown.mesh.visible = true;
-            shown.lastUsed = tick;
-          }
-          if (c.dist < bestDist) {
-            bestDist = c.dist;
-            centreOrder = shown ? shown.order : 0;
-          }
-          if (own || missing.has(key)) continue;
-          complete = false;
-          wanted.add(key);
-          const failedAt = failed.get(key);
-          if (failedAt !== undefined && performance.now() - failedAt < RETRY_MS) continue;
-          if (!inflight.has(key)) toLoad.push(c);
+      if (shown) {
+        const lv = shown;
+        const cellsS = lv.order === target.order ? cellsT : visibleCells(lv.order, view, halfAngle);
+        cellsS.forEach((c, i) => {
+          let t = tiles.get(tileKey(lv.frame, lv.order, c.pix));
+          if (t) show(t, RO_SHOWN, 1);
+          else
+            for (let o = lv.order - 1, p = c.pix >> 2; o >= 1 && !t; o--, p >>= 2) {
+              t = tiles.get(tileKey(lv.frame, o, p)) ?? tiles.get(tileKey(frame, o, p));
+              if (t) show(t, RO_BASE + o, 1);
+            }
+          if (i === 0) centreOrder = t ? t.order : 0;
+        });
+      }
+      if (fade) {
+        for (const c of cellsT) {
+          const t = tiles.get(tileKey(fade.level.frame, fade.level.order, c.pix));
+          if (t) show(t, RO_FADE, fadeOpacity);
         }
       }
       shownOrder = centreOrder;
-      frameComplete = complete && (order >= MIN_TILE_ORDER || !!allsky.mesh);
-      if (frameComplete) prevFrame = frame;
 
       // Drop requests for tiles that left the view or belong to another frame or order.
       for (const [key, ctrl] of inflight) {
@@ -415,27 +397,16 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
           inflight.delete(key);
         }
       }
-      for (const c of toLoad) {
-        if (inflight.size + (allskyController ? 1 : 0) >= MAX_REQUESTS) break;
-        startRequest(frame, order, c.pix);
+      for (const q of queue) {
+        if (inflight.size >= MAX_REQUESTS) break;
+        startRequest(frame, q.order, q.pix);
       }
       evict();
     },
     setFrame(index: number) {
       if (disposed || index === frame || !isFrame(index)) return;
-      // Fall back to the frame on screen now: this one if it had loaded, else the earlier one.
-      if (frameComplete) prevFrame = frame;
-      frameComplete = false;
+      // The shown level (old frame) stays until the new frame covers the view, then fades in.
       frame = index;
-      if (allsky.mesh) {
-        disposeAllsky(allskyPrev);
-        allskyPrev = allsky;
-        allsky = { frame, mesh: null, bitmap: null };
-      } else {
-        allsky = { frame, mesh: null, bitmap: null };
-      }
-      requestAllsky();
-      // Tiles of frames other than the two in use are no longer drawn; they age out of the LRU.
     },
     get frame() {
       return frame;
@@ -443,9 +414,14 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
     get order() {
       return shownOrder;
     },
+    get loading() {
+      return isLoading;
+    },
+    get failed() {
+      return isFailed;
+    },
     dispose() {
       disposed = true;
-      allskyController?.abort();
       for (const ctrl of inflight.values()) ctrl.abort();
       inflight.clear();
       for (const p of pending) p.bitmap.close();
@@ -455,9 +431,6 @@ export function createHipsLayer(renderer: WebGLRenderer, initialFrame = 0): Hips
         t.bitmap.close();
       }
       tiles.clear();
-      disposeAllsky(allsky);
-      disposeAllsky(allskyPrev);
-      allskyPrev = null;
       missing.clear();
       failed.clear();
       bounds.clear();

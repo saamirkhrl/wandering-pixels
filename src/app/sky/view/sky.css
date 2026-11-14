@@ -16,6 +16,15 @@
   outline-offset: -4px;
 }
 
+.sky-canvas:focus-visible {
+  outline: 1px dotted var(--paper-dim);
+  outline-offset: -3px;
+}
+
+.short {
+  display: none;
+}
+
 .sky-canvas.hide-cursor {
   cursor: none;
 }
@@ -25,6 +34,7 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  z-index: 1;
 }
 
 .sky-veil {
@@ -50,7 +60,8 @@
   font-size: 12px;
   line-height: 16px;
   color: var(--paper-dim);
-  text-shadow: 0 0 3px var(--sky), 0 0 3px var(--sky);
+  -webkit-text-stroke: 3px var(--sky);
+  paint-order: stroke fill;
   will-change: transform;
 }
 
@@ -71,11 +82,21 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 18px;
-  height: 18px;
-  margin: -9px 0 0 -9px;
-  pointer-events: none;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
   will-change: transform;
+}
+
+.sky-mark svg {
+  pointer-events: none;
 }
 
 .sky-reticle {
@@ -105,237 +126,297 @@
   z-index: 2;
 }
 
-.sky-panel {
+.sky-readout {
   position: absolute;
+  left: 0;
+  top: 0;
+  width: 200px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--paper);
+  -webkit-text-stroke: 3px var(--sky);
+  paint-order: stroke fill;
+  pointer-events: none;
+  z-index: 3;
+  will-change: transform;
+}
+
+.sky-readout .dim {
+  color: var(--paper-dim);
+}
+
+.sky-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 5;
-  background: var(--paper);
-  color: var(--ink);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
-  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.sky-msgs {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0 12px 6px;
+  gap: 2px;
+}
+
+.sky-msg {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--paper-dim);
+  -webkit-text-stroke: 3px var(--sky);
+  paint-order: stroke fill;
+  pointer-events: none;
+}
+
+.sky-msg:empty {
+  display: none;
+}
+
+.sky-msg button {
+  pointer-events: auto;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -14px 0;
+  background: transparent;
+  border: 0;
+  color: var(--paper-dim);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-text-stroke: 0;
+}
+
+.sky-strip {
+  position: relative;
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-height: 60px;
+  padding: 6px 12px;
+  background: var(--chrome-bg);
+  color: var(--paper);
+  border-top: 1px solid var(--chrome-rule);
   font-size: 14px;
-  line-height: 1.4;
-}
-
-.sky-panel p {
-  margin: 0;
-}
-
-.sky-panel h2 {
-  font-size: 1rem;
   line-height: 1.3;
 }
 
-.sky-quiet {
-  font-size: 13px;
-  color: #3d4766;
-}
-
-.sky-btn {
-  min-height: var(--control-height);
-  min-width: var(--control-height);
-  padding: 0 12px;
-  font: inherit;
+.sky-strip .chrome-btn {
+  padding: 0 10px;
   font-size: 14px;
-  color: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
-  cursor: pointer;
+  white-space: nowrap;
 }
 
-.sky-btn.primary {
-  color: var(--paper);
-  background: var(--ink);
+.sky-strip .chrome-field {
+  font-size: 14px;
+  padding-left: 8px;
 }
 
-.sky-btn[disabled] {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.sky-btn[aria-pressed='true'] {
-  color: var(--paper);
-  background: var(--ink);
-}
-
-.sky-info {
-  top: 12px;
-  left: 12px;
-  max-width: 26rem;
+.s-text {
+  flex: 1 1 200px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   align-items: flex-start;
 }
 
-.sky-info summary,
-.sky-dock details > summary {
-  cursor: pointer;
-  min-height: var(--control-height);
-  display: flex;
+.s-text .l1 {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.s-text .l1 small {
+  margin-left: 8px;
+}
+
+.s-time-text {
+  display: inline-flex;
   align-items: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-stretch: 85%;
-  font-size: 1rem;
+  min-height: 28px;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--paper);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dotted var(--rule);
+  cursor: pointer;
+  text-align: left;
+  max-width: 100%;
 }
 
-.sky-info summary {
-  min-height: 32px;
-  font-family: var(--font-body);
-  font-weight: 400;
-  font-size: 13px;
+.s-time-text small {
+  margin-left: 6px;
+  white-space: nowrap;
 }
 
-.sky-note {
-  color: #7a2a14;
-  font-weight: 700;
-}
-
-.sky-readout {
-  top: 12px;
-  right: 12px;
-  min-width: 15rem;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.sky-readout .row {
+.s-group {
   display: flex;
-  gap: 12px;
-  justify-content: space-between;
+  gap: 8px;
 }
 
-.sky-readout .k {
-  color: #3d4766;
+.s-anchor {
+  position: relative;
 }
 
-.sky-dock {
-  display: contents;
-}
-
-.sky-targets {
-  left: 12px;
-  bottom: 12px;
-  width: 22rem;
-  max-height: calc(100% - 200px);
+.sky-pop {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  z-index: 6;
+  padding: 10px 12px;
+  background: var(--sky);
+  border: 1px solid var(--chrome-rule);
+  border-radius: var(--radius);
+  color: var(--paper);
+  font-size: 14px;
+  line-height: 1.4;
+  max-height: 60vh;
   overflow: auto;
 }
 
-.sky-controls {
-  right: 12px;
-  bottom: 12px;
+.sky-pop.open {
+  display: block;
+}
+
+.sky-pop p {
+  margin: 0 0 6px;
+}
+
+.sky-pop p:last-child {
+  margin-bottom: 0;
+}
+
+.sky-pop.right {
+  right: 0;
+}
+
+.pop-targets {
+  width: 23rem;
+}
+
+.pop-about {
   width: 20rem;
 }
 
-.sky-targets ul {
+.pop-time {
+  left: 12px;
+  width: auto;
+  display: none;
+}
+
+.pop-time.open {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.sky-pop h2 {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.pop-targets ul {
   list-style: none;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   padding: 0;
+}
+
+.pop-targets li {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: flex-start;
+  border-top: 1px solid var(--chrome-rule);
+  padding: 2px 0;
 }
 
-.sky-targets li {
-  display: flex;
-  gap: 6px;
-  align-items: stretch;
-  border-top: 1px solid var(--rule);
-  padding-top: 4px;
-}
-
-.sky-targets .go {
-  flex: 1;
+.pop-targets .go {
+  width: 100%;
+  min-height: 44px;
+  padding: 2px 0;
   text-align: left;
-  border-color: transparent;
-  padding: 2px 4px;
+  font: inherit;
+  color: var(--paper);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-.sky-targets .go .n {
-  font-weight: 700;
+.pop-targets .go .n {
+  color: var(--signal);
 }
 
-.sky-targets .go .s {
+.pop-targets .go .s {
   font-size: 13px;
-  color: #3d4766;
+  color: var(--paper-dim);
 }
 
-.sky-targets .jump {
-  font-size: 13px;
-  max-width: 7rem;
-  line-height: 1.2;
-}
-
-.sky-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 8px;
-}
-
-.sky-field label,
-.sky-field .lbl {
-  font-size: 13px;
-  color: #3d4766;
-}
-
-.sky-field input,
-.sky-field select {
-  min-height: var(--control-height);
+.pop-targets .jump {
+  min-height: 32px;
+  padding: 0;
+  margin-bottom: 4px;
   font: inherit;
-  font-size: 14px;
-  color: var(--ink);
-  background: #fff;
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
-  padding: 0 8px;
+  font-size: 13px;
+  color: var(--paper-dim);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dotted var(--rule);
+  cursor: pointer;
 }
 
-.sky-btnrow {
+.s-touch {
+  display: none;
+  flex: 1 1 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.s-touch.on {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+}
+
+.s-touch .chrome-btn {
+  white-space: nowrap;
+}
+
+.s-break,
+.phone-only,
+.s-timebtn {
+  display: none;
 }
 
 .sky-check {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: var(--control-height);
-  margin-top: 4px;
+  min-height: 44px;
+  white-space: nowrap;
 }
 
 .sky-check input {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   margin: 0;
-  accent-color: var(--ink);
-}
-
-.sky-status {
-  margin-top: 8px;
-  font-size: 13px;
-  color: #3d4766;
-  min-height: 1.4em;
-}
-
-.sky-status.err {
-  color: #7a2a14;
-  font-weight: 700;
-}
-
-.sky-open {
-  display: none;
-}
-
-.sky-open.on {
-  display: block;
+  accent-color: var(--paper);
 }
 
 .sky-sr {
@@ -354,61 +435,103 @@
   max-width: 24rem;
 }
 
-.sky-missing .sky-panel {
-  position: static;
+.sky-missing .chrome {
   display: flex;
   flex-direction: column;
   gap: 12px;
   align-items: flex-start;
+  padding: 16px;
 }
 
 @media (max-width: 599px) {
-  .sky-info {
-    right: 12px;
-    max-width: none;
+  .sky-strip {
+    gap: 0 6px;
+    padding: 4px 12px 8px;
+    min-height: 0;
   }
 
-  .sky-dock {
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    z-index: 5;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    pointer-events: none;
+  .s-text {
+    order: 1;
+    flex: 1 1 0;
   }
 
-  .sky-dock > * {
-    pointer-events: auto;
+  .s-text .l1 {
+    white-space: normal;
   }
 
-  .sky-dock .sky-panel {
-    position: static;
-    width: auto;
-    max-height: 46vh;
-    overflow: auto;
+  .s-about {
+    order: 2;
   }
 
-  .sky-readout {
+  .s-break {
+    display: block;
+    order: 3;
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .s-timebtn {
+    display: inline-block;
+    order: 4;
+  }
+
+  .s-wave {
+    order: 5;
+    flex: 1;
     min-width: 0;
-    order: 0;
   }
 
-  .sky-open {
-    order: -1;
-  }
-
-  .sky-open.on {
+  .s-wave select {
     width: 100%;
   }
 
-  .sky-panel {
-    padding: 4px 12px;
+  .s-anchor.s-targets {
+    order: 6;
+    position: static;
   }
 
-  .sky-readout {
-    padding: 6px 12px;
+  .s-anchor.s-about {
+    position: static;
+  }
+
+  .s-back {
+    order: 7;
+  }
+
+  .s-touch {
+    order: 0;
+  }
+
+  .desk-only {
+    display: none;
+  }
+
+  .long {
+    display: none;
+  }
+
+  .short {
+    display: inline;
+  }
+
+  .phone-only {
+    display: inline-block;
+  }
+
+  .sky-pop,
+  .sky-pop.right {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    bottom: 100%;
+    max-height: 55vh;
+  }
+
+  .sky-pop {
+    bottom: calc(100% + 6px);
+  }
+
+  .sky-check {
+    min-height: 44px;
   }
 }

@@ -19,8 +19,9 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { prefersReducedMotion } from '../motion';
 import type { Mount } from '../types';
-import { formatLatLon, nearestPlace } from '../globe/places';
+import { formatLatLon, nearestPlace, PLACES } from '../globe/places';
 import { latLonToVec, localBasis, subsolarPoint, vecToLatLon } from '../globe/geo';
+import '../../ui/entry.css';
 import '../globe/globe.css';
 
 const INTRO =
@@ -67,6 +68,14 @@ void main() {
   #include <colorspace_fragment>
 }
 `;
+
+function browserZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const ease3 = (x: number) => {
@@ -215,14 +224,14 @@ export const mount: Mount = (root, ctx) => {
   const marker = el('div', 'globe-marker');
   marker.hidden = true;
   marker.setAttribute('aria-hidden', 'true');
-  const panel = el('div', 'globe-panel');
+  const panel = el('div', 'globe-panel chrome');
   panel.hidden = true;
   panel.setAttribute('role', 'region');
   panel.setAttribute('aria-label', 'Selected place');
   const near = el('p', 'globe-near');
-  const subline = el('p', 'globe-sub');
+  const subline = el('p', 'globe-sub secondary');
   const coords = el('p', 'globe-coords');
-  const lookBtn = el('button', 'globe-btn globe-btn-primary', 'Look up from here');
+  const lookBtn = el('button', 'chrome-btn primary globe-btn-primary', 'Look up from here');
   lookBtn.type = 'button';
   const msg = el('p', 'globe-msg');
   msg.hidden = true;
@@ -231,23 +240,47 @@ export const mount: Mount = (root, ctx) => {
   selected.hidden = true;
   selected.append(near, subline, coords, lookBtn);
   panel.append(selected, msg);
-  const locateBtn = el('button', 'globe-btn globe-btn-locate', 'Use my location');
+  const locateBtn = el('button', 'chrome-btn', 'Use my location');
   locateBtn.type = 'button';
+  const chooser = el('select', 'chrome-field globe-select');
+  chooser.setAttribute('aria-label', 'Choose a city or observatory');
+  const prompt = el('option', undefined, 'Choose a city or observatory');
+  prompt.value = '';
+  chooser.appendChild(prompt);
+  const groupObs = el('optgroup');
+  groupObs.label = 'Observatories';
+  const groupCity = el('optgroup');
+  groupCity.label = 'Cities';
+  PLACES.forEach((pl, i) => {
+    const o = el('option', undefined, pl.name + ', ' + pl.country);
+    o.value = String(i);
+    (pl.observatory ? groupObs : groupCity).appendChild(o);
+  });
+  chooser.append(groupObs, groupCity);
+  const actions = el('div', 'globe-actions');
+  actions.append(chooser, locateBtn);
   const veil = el('div', 'globe-veil');
-  view.append(intro, marker, panel, locateBtn, veil);
+  view.append(intro, marker, panel, actions, veil);
 
   // ----- selection -----
-  let sel: { lat: number; lon: number } | null = null;
+  let sel: { lat: number; lon: number; place?: string; tz?: string } | null = null;
   const selDir = new Vector3();
 
   const refreshPanel = () => {
     panel.hidden = flight !== null || (!sel && msg.hidden);
   };
 
-  const select = (lat: number, lon: number) => {
+  const select = (lat: number, lon: number, mine = false) => {
     sel = { lat, lon };
     latLonToVec(lat, lon, selDir);
     const { place, km } = nearestPlace(lat, lon);
+    if (mine) {
+      sel.place = 'your location';
+      sel.tz = browserZone();
+    } else {
+      if (km <= 50) sel.place = place.name;
+      if (km <= 300) sel.tz = place.tz;
+    }
     const far = km > 600;
     near.textContent = far ? formatLatLon(lat, lon) : 'Near ' + place.name;
     subline.textContent = far
@@ -304,7 +337,7 @@ export const mount: Mount = (root, ctx) => {
     return true;
   };
 
-  let down: { x: number; y: number } | null = null;
+  let down: { x: number; y: number; pos: Vector3; quat: Quaternion } | null = null;
   let ignoreUp = false;
   const onPointerDown = (e: PointerEvent) => {
     stopIdle();
@@ -315,7 +348,7 @@ export const mount: Mount = (root, ctx) => {
     }
     tween = null;
     controls.enabled = true;
-    down = { x: e.clientX, y: e.clientY };
+    down = { x: e.clientX, y: e.clientY, pos: camera.position.clone(), quat: camera.quaternion.clone() };
   };
   const onPointerUp = (e: PointerEvent) => {
     if (ignoreUp) {
@@ -324,12 +357,23 @@ export const mount: Mount = (root, ctx) => {
       return;
     }
     if (!down || e.button !== 0) return;
-    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+    const downState = down;
+    const moved = Math.hypot(e.clientX - downState.x, e.clientY - downState.y);
     down = null;
     if (moved > TAP_SLOP) return;
     const r = canvas.getBoundingClientRect();
+    const keepPos = camera.position.clone();
+    const keepQuat = camera.quaternion.clone();
+    camera.position.copy(downState.pos);
+    camera.quaternion.copy(downState.quat);
+    camera.updateMatrixWorld(true);
     pickAt(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    camera.position.copy(keepPos);
+    camera.quaternion.copy(keepQuat);
+    camera.updateMatrixWorld(true);
   };
+  const onPointerMove = () => stopIdle();
+  canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointerup', onPointerUp);
 
@@ -382,11 +426,18 @@ export const mount: Mount = (root, ctx) => {
   }
   let flight: Flight | null = null;
 
+  const skyParams = (lat: number, lon: number, az: string): Record<string, string> => {
+    const out: Record<string, string> = { lat: lat.toFixed(4), lon: lon.toFixed(4), from: 'globe', az };
+    if (sel?.place) out.place = sel.place;
+    if (sel?.tz) out.tz = sel.tz;
+    return out;
+  };
+
   const startFlight = () => {
     if (!sel || flight) return;
     const { lat, lon } = sel;
     if (prefersReducedMotion()) {
-      ctx.go('sky', { lat: lat.toFixed(4), lon: lon.toFixed(4), from: 'globe', az: '0' });
+      ctx.go('sky', skyParams(lat, lon, '0'));
       return;
     }
     const { up, north } = localBasis(lat, lon);
@@ -461,12 +512,7 @@ export const mount: Mount = (root, ctx) => {
       const lat = f.lat;
       const lon = f.lon;
       flight = null;
-      ctx.go('sky', {
-        lat: lat.toFixed(4),
-        lon: lon.toFixed(4),
-        from: 'globe',
-        az: String(Math.round(az) % 360),
-      });
+      ctx.go('sky', skyParams(lat, lon, String(Math.round(az) % 360)));
     }
   };
 
@@ -488,7 +534,7 @@ export const mount: Mount = (root, ctx) => {
         if (disposed) return;
         locateBtn.disabled = false;
         stopIdle();
-        select(pos.coords.latitude, pos.coords.longitude);
+        select(pos.coords.latitude, pos.coords.longitude, true);
         centreOn(pos.coords.latitude, pos.coords.longitude, false);
       },
       () => {
@@ -501,6 +547,16 @@ export const mount: Mount = (root, ctx) => {
     );
   };
   locateBtn.addEventListener('click', onLocate);
+
+  const onChoose = () => {
+    const pl = PLACES[Number(chooser.value)];
+    chooser.value = '';
+    if (!pl || flight) return;
+    stopIdle();
+    select(pl.lat, pl.lon);
+    centreOn(pl.lat, pl.lon, false);
+  };
+  chooser.addEventListener('change', onChoose);
 
   // ----- sizing -----
   const resize = () => {
@@ -527,6 +583,10 @@ export const mount: Mount = (root, ctx) => {
     if (prefersReducedMotion()) controls.autoRotate = false;
   }
   controls.update();
+
+  if (import.meta.env.DEV) {
+    (window as unknown as { __globeDebug?: unknown }).__globeDebug = { camera, controls, canvas };
+  }
 
   const ndcV = new Vector3();
   renderer.setAnimationLoop(() => {
@@ -570,15 +630,18 @@ export const mount: Mount = (root, ctx) => {
   return () => {
     disposed = true;
     flight = null;
+    if (import.meta.env.DEV) delete (window as unknown as { __globeDebug?: unknown }).__globeDebug;
     renderer.setAnimationLoop(null);
     observer.disconnect();
     window.removeEventListener('resize', resize);
     document.removeEventListener('keydown', onKeyDown);
+    canvas.removeEventListener('pointermove', onPointerMove);
     canvas.removeEventListener('pointerdown', onPointerDown);
     canvas.removeEventListener('pointerup', onPointerUp);
     canvas.removeEventListener('wheel', onWheel);
     lookBtn.removeEventListener('click', startFlight);
     locateBtn.removeEventListener('click', onLocate);
+    chooser.removeEventListener('change', onChoose);
     controls.removeEventListener('start', stopIdle);
     controls.dispose();
     geometry.dispose();

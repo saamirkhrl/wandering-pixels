@@ -65,3 +65,63 @@ export function fromInputValue(v: string): Date | null {
 export function toIso(d: Date): string {
   return d.toISOString().slice(0, 19) + 'Z';
 }
+
+export interface Clock {
+  label: string;
+  offset(d: Date): number;
+  full(d: Date): string;
+  time(d: Date): string;
+  dayNumber(d: Date): number;
+  toInput(d: Date): string;
+  fromInput(v: string): Date | null;
+}
+
+export function makeClock(lon: number, tz: string | null): Clock {
+  let dtf: Intl.DateTimeFormat | null = null;
+  if (tz) {
+    try {
+      dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        hourCycle: 'h23',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+      });
+    } catch {
+      dtf = null;
+    }
+  }
+  const offset = (d: Date): number => {
+    if (!dtf) return (lon / 15) * 3600000;
+    const parts = dtf.formatToParts(d);
+    const g = (t: string): number => Number(parts.find((p) => p.type === t)?.value ?? 0);
+    const wall = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute'), g('second'));
+    return wall - Math.floor(d.getTime() / 1000) * 1000;
+  };
+  const clock = (s: Date): string => {
+    const h = s.getUTCHours();
+    return (h % 12 || 12) + ':' + pad(s.getUTCMinutes()) + ' ' + (h >= 12 ? 'pm' : 'am');
+  };
+  const shift = (d: Date): Date => new Date(d.getTime() + offset(d));
+  return {
+    label: dtf ? 'local' : 'local solar time',
+    offset,
+    full(d) {
+      const s = shift(d);
+      return s.getUTCDate() + ' ' + MONTHS[s.getUTCMonth()] + ' ' + s.getUTCFullYear() + ', ' + clock(s);
+    },
+    time: (d) => clock(shift(d)),
+    dayNumber: (d) => Math.floor((d.getTime() + offset(d)) / 86400000),
+    toInput: (d) => shift(d).toISOString().slice(0, 16),
+    fromInput(v) {
+      if (!v) return null;
+      const t0 = Date.parse(v.length === 16 ? v + ':00Z' : v + 'Z');
+      if (Number.isNaN(t0)) return null;
+      const t1 = t0 - offset(new Date(t0));
+      return new Date(t0 - offset(new Date(t1)));
+    },
+  };
+}

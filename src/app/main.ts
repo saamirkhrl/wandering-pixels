@@ -7,14 +7,13 @@ import '../ui/base.css';
 import { initMotionClass } from './motion';
 import { createShell } from '../ui/shell';
 import type { Mount, Unmount, ViewContext, ViewName, ViewParams } from './types';
-import { mount as mountGlobe } from './views/globe';
-import { mount as mountSky } from './views/sky';
-import { mount as mountViewer } from './views/viewer';
 
-const VIEWS: Record<ViewName, Mount> = {
-  globe: mountGlobe,
-  sky: mountSky,
-  viewer: mountViewer,
+type ViewModule = { mount: Mount };
+
+const VIEWS: Record<ViewName, () => Promise<ViewModule>> = {
+  globe: () => import('./views/globe'),
+  sky: () => import('./views/sky'),
+  viewer: () => import('./views/viewer'),
 };
 
 function isView(v: string | null): v is ViewName {
@@ -28,8 +27,10 @@ if (!app) throw new Error('Missing #app root');
 
 let unmount: Unmount | null = null;
 let current: ViewName | null = null;
+let token = 0;
 
 export function go(view: ViewName, params: ViewParams = {}): void {
+  const mine = ++token;
   unmount?.();
   unmount = null;
   shell.viewRoot.replaceChildren();
@@ -40,7 +41,14 @@ export function go(view: ViewName, params: ViewParams = {}): void {
   current = view;
   shell.setQuery(params.q ?? '');
   const ctx: ViewContext = { params, go };
-  unmount = VIEWS[view](shell.viewRoot, ctx);
+  VIEWS[view]()
+    .then((m) => {
+      if (mine !== token) return;
+      unmount = m.mount(shell.viewRoot, ctx);
+    })
+    .catch((err: unknown) => {
+      console.error(err);
+    });
 }
 
 export function currentView(): ViewName | null {

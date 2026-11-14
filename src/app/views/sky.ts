@@ -1,12 +1,4 @@
-import {
-  DefaultLoadingManager,
-  Group,
-  Matrix4,
-  PerspectiveCamera,
-  Scene,
-  Vector3,
-  WebGLRenderer,
-} from 'three';
+import { Group, Matrix4, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three';
 import { prefersReducedMotion } from '../motion';
 import type { Mount } from '../types';
 import {
@@ -20,33 +12,33 @@ import {
   type RiseInfo,
 } from '../sky/astro';
 import { createHipsLayer, HIPS_FRAMES, type HipsLayer } from '../sky/hips';
+import { loadBrightStars } from '../sky/stars';
 import { TARGETS, type Target } from '../sky/targets';
 import { button, el, markSvg, reticleSvg, setText } from '../sky/view/dom';
 import {
   clamp,
-  fmtClock,
-  fmtDay,
   fmtDeg,
   fmtPlace,
   fmtRa,
   fmtUtcClock,
-  fromInputValue,
-  localDayNumber,
-  toInputValue,
+  makeClock,
   toIso,
   wrap360,
 } from '../sky/view/format';
 import { createBackdrop, createStarLayer, type StarLayer } from '../sky/view/scene';
-import { loadBrightStars } from '../sky/stars';
+import '../../ui/entry.css';
 import '../sky/view/sky.css';
 
 const FOV_MIN = 5;
 const FOV_MAX = 100;
+const FOV_RINGS = 25;
 const ALT_MIN = -10;
 const ALT_MAX = 89.9;
 const PATCH_ARCSEC = 400;
 const WANTED_UM = [0.75, 1.1, 1.6, 2.2, 3.4, 4.6];
 const PLAY_RATE = 1200;
+const NOTE_KEY = 'sky-note-dismissed';
+const NOTE_TEXT = 'First-year SPHEREx map. The date only turns the sky; open a patch to see change.';
 
 function writeParams(values: Record<string, string>): void {
   try {
@@ -73,13 +65,21 @@ function umLabel(um: number): string {
   return um.toFixed(um < 10 ? (Math.abs(um * 10 - Math.round(um * 10)) < 0.05 ? 1 : 2) : 0) + ' um';
 }
 
+function readNoteDismissed(): boolean {
+  try {
+    return sessionStorage.getItem(NOTE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 interface TargetRow {
   target: Target;
   dir: Vector3;
   go: HTMLButtonElement;
   status: HTMLElement;
   jump: HTMLButtonElement;
-  mark: SVGSVGElement;
+  mark: HTMLButtonElement;
   label: HTMLElement;
   info: RiseInfo | null;
 }
@@ -90,6 +90,11 @@ interface NamedLabel {
   shown: boolean;
 }
 
+interface Pop {
+  btns: HTMLButtonElement[];
+  pop: HTMLElement;
+}
+
 export const mount: Mount = (root, ctx) => {
   const lat = parseFloat(ctx.params.lat ?? '');
   const lon = parseFloat(ctx.params.lon ?? '');
@@ -98,11 +103,11 @@ export const mount: Mount = (root, ctx) => {
 
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 360) {
     const box = el('div', 'sky-missing');
-    const p = el('section', 'sky-panel');
+    const p = el('section', 'chrome');
     p.append(
       el('h2', undefined, 'Pick a place first'),
       el('p', undefined, 'The sky depends on where you stand. Choose a place on the globe.'),
-      button('Back to the globe', 'sky-btn primary', () => ctx.go('globe')),
+      button('Back to the globe', 'chrome-btn', () => ctx.go('globe')),
     );
     box.appendChild(p);
     wrap.appendChild(box);
@@ -110,11 +115,36 @@ export const mount: Mount = (root, ctx) => {
   }
 
   const place = { lat, lon };
+  const placeName = (ctx.params.place ?? '').trim();
+  const clock = makeClock(lon, ctx.params.tz ?? null);
   const reduced = prefersReducedMotion();
   const phoneMq = window.matchMedia('(max-width: 599px)');
 
+  function defaultNight(from: Date): Date {
+    if (sunAltitude(place, from) < -12) return from;
+    for (let m = 10; m <= 48 * 60; m += 10) {
+      const d = new Date(from.getTime() + m * 60000);
+      if (sunAltitude(place, d) < -12) {
+        let lo = m - 10;
+        let hi = m;
+        for (let i = 0; i < 8; i++) {
+          const mid = (lo + hi) / 2;
+          if (sunAltitude(place, new Date(from.getTime() + mid * 60000)) < -12) hi = mid;
+          else lo = mid;
+        }
+        return new Date(Math.ceil((from.getTime() + hi * 60000) / 60000) * 60000);
+      }
+    }
+    return from;
+  }
+
   let date = new Date(ctx.params.t ?? '');
-  if (Number.isNaN(date.getTime())) date = new Date();
+  let isTonight = false;
+  if (Number.isNaN(date.getTime())) {
+    const now = new Date();
+    date = defaultNight(now);
+    isTonight = true;
+  }
   date = new Date(Math.floor(date.getTime() / 1000) * 1000);
 
   // ---- renderer, scene, camera
@@ -158,23 +188,30 @@ export const mount: Mount = (root, ctx) => {
 
   let starLayer: StarLayer | null = null;
   let starsOn = true;
+  let ringMode = false;
 
   // ---- view state
-  let az = Number.isFinite(parseFloat(ctx.params.az ?? '')) ? wrap360(parseFloat(ctx.params.az)) : lat >= 0 ? 180 : 0;
-  let alt = 25;
   let fov = phoneMq.matches && window.innerHeight > window.innerWidth ? 60 : 75;
+  function horizonAlt(): number {
+    return (Math.atan(0.56 * Math.tan((fov / 2) * (Math.PI / 180))) * 180) / Math.PI;
+  }
+  let az = lat >= 0 ? 180 : 0;
+  let alt = horizonAlt();
   const arrival = ctx.params.from === 'globe' && !reduced;
-  let intro = arrival ? { start: 0, from: 2, to: 25 } : null;
+  let intro: { start: number; from: number; to: number } | null = arrival ? { start: 0, from: 2, to: alt } : null;
   if (arrival) alt = 2;
 
   let width = 1;
   let height = 1;
+  let stripH = 60;
   let rect = canvas.getBoundingClientRect();
   const camDir = new Vector3();
 
   // ---- overlay DOM
   const overlay = el('div', 'sky-overlay');
   wrap.appendChild(overlay);
+  const namesLayer = el('div');
+  overlay.appendChild(namesLayer);
 
   const cardinals = [
     { t: 'N', az: 0 },
@@ -188,16 +225,17 @@ export const mount: Mount = (root, ctx) => {
   });
 
   const rows: TargetRow[] = TARGETS.map((target) => {
-    const mark = markSvg();
-    mark.classList.add('sky-mark');
+    const mark = button('', 'sky-mark', () => ctx.go('viewer', { q: target.name }));
+    mark.setAttribute('aria-label', 'Open ' + target.name + ' in the viewer');
+    mark.appendChild(markSvg());
     const label = el('span', 'sky-label target', target.name);
-    overlay.append(mark, label);
+    overlay.append(label, mark);
     return {
       target,
       dir: radecToVec(target.ra, target.dec),
-      go: button('', 'sky-btn go'),
+      go: button('', 'go'),
       status: el('span', 's'),
-      jump: button('', 'sky-btn jump'),
+      jump: button('', 'jump'),
       mark,
       label,
       info: null,
@@ -209,7 +247,14 @@ export const mount: Mount = (root, ctx) => {
   const reticle = el('div', 'sky-reticle');
   reticle.appendChild(reticleSvg());
   reticle.style.display = 'none';
-  overlay.append(footprint, reticle);
+  const readout = el('div', 'sky-readout');
+  readout.style.display = 'none';
+  const roRa = el('div');
+  const roDec = el('div');
+  const roAlt = el('div');
+  const roNote = el('div', 'dim');
+  readout.append(roRa, roDec, roAlt, roNote);
+  overlay.append(footprint, reticle, readout);
 
   let veil: HTMLElement | null = null;
   if (arrival) {
@@ -218,95 +263,77 @@ export const mount: Mount = (root, ctx) => {
     requestAnimationFrame(() => requestAnimationFrame(() => veil?.classList.add('gone')));
   }
 
-  // ---- panels
-  const info = el('section', 'sky-panel sky-info');
-  const placeLine = el('p');
-  const sunLine = el('p', 'sky-note');
-  const about = el('details');
-  about.open = !phoneMq.matches;
-  about.append(
-    el('summary', undefined, 'About this map'),
-    el(
-      'p',
-      'sky-quiet',
-      "This is SPHEREx's first-year all-sky map. It does not change with the date; the date only turns the sky. Open a patch to see changes between visits.",
-    ),
-  );
-  const tileStatus = el('p', 'sky-quiet');
-  tileStatus.setAttribute('role', 'status');
-  const backBtn = button('Back to the globe', 'sky-btn', () => ctx.go('globe', { lat: ctx.params.lat, lon: ctx.params.lon }));
-  info.append(placeLine, sunLine, tileStatus, about, backBtn);
-
-  const dock = el('div', 'sky-dock');
-
-  const openBtn = button('Open this patch', 'sky-btn primary sky-open', () => openAtReticle());
-
-  const readout = el('section', 'sky-panel sky-readout');
-  readout.setAttribute('aria-label', 'Reticle readout');
-  const rowOf = (k: string) => {
-    const r = el('div', 'row');
-    const key = el('span', 'k', k);
-    const val = el('span');
-    r.append(key, val);
-    readout.appendChild(r);
-    return val;
-  };
-  const roRa = rowOf('RA');
-  const roDec = rowOf('Dec');
-  const roAlt = rowOf('Alt, Az');
-  const roNote = el('div', 'sky-quiet');
-  readout.appendChild(roNote);
-  const live = el('div', 'sky-sr');
-  live.setAttribute('aria-live', 'polite');
-
-  const targetsPanel = el('details', 'sky-panel sky-targets');
-  targetsPanel.open = !phoneMq.matches;
-  targetsPanel.append(el('summary', undefined, 'Challenge targets'));
-  targetsPanel.appendChild(el('p', 'sky-quiet', 'Times are local solar time for this place.'));
-  const list = el('ul');
-  for (const r of rows) {
-    const li = el('li');
-    const nm = el('span', 'n', r.target.name);
-    r.go.append(nm, r.status);
-    r.go.setAttribute('aria-label', 'Turn the view to ' + r.target.name);
-    r.go.addEventListener('click', () => turnTo(r));
-    r.jump.addEventListener('click', () => jumpTime(r));
-    li.append(r.go, r.jump);
-    list.appendChild(li);
+  // ---- bottom strip
+  const bottom = el('div', 'sky-bottom');
+  const msgs = el('div', 'sky-msgs');
+  const statusLine = el('div', 'sky-msg');
+  statusLine.setAttribute('role', 'status');
+  const noteLine = el('div', 'sky-msg');
+  if (!readNoteDismissed()) {
+    noteLine.append(el('span', undefined, NOTE_TEXT));
+    const x = button('x', 'x', () => {
+      noteLine.replaceChildren();
+      try {
+        sessionStorage.setItem(NOTE_KEY, '1');
+      } catch {
+        /* ignore */
+      }
+    });
+    x.setAttribute('aria-label', 'Dismiss this note');
+    noteLine.appendChild(x);
   }
-  targetsPanel.appendChild(list);
+  msgs.append(statusLine, noteLine);
 
-  const controls = el('details', 'sky-panel sky-controls');
-  controls.open = !phoneMq.matches;
-  controls.appendChild(el('summary', undefined, 'Time and map'));
+  const strip = el('section', 'sky-strip');
+  strip.setAttribute('aria-label', 'Place, time and map controls');
+  bottom.append(msgs, strip);
 
-  const timeField = el('div', 'sky-field');
-  const timeLabel = el('label', undefined, 'Time (UTC)');
-  const timeInput = el('input');
-  timeInput.type = 'datetime-local';
-  timeInput.id = 'sky-time';
-  timeLabel.htmlFor = 'sky-time';
-  timeInput.addEventListener('change', () => {
-    const d = fromInputValue(timeInput.value);
-    if (d) setDate(d, true);
-  });
-  timeField.append(timeLabel, timeInput);
+  const openBtn = button('Open this patch', 'chrome-btn primary', () => openAtReticle());
+  const touchText = el('span');
+  const touchRow = el('div', 's-touch');
+  touchRow.append(touchText, openBtn);
 
-  const timeBtns = el('div', 'sky-btnrow');
-  const playBtn = button('Turn the sky', 'sky-btn', () => setPlaying(!playing));
-  playBtn.setAttribute('aria-pressed', 'false');
-  timeBtns.append(
-    button('Now', 'sky-btn', () => setDate(new Date(), true)),
-    button('-1 h', 'sky-btn', () => setDate(new Date(date.getTime() - 3600000), true)),
-    button('+1 h', 'sky-btn', () => setDate(new Date(date.getTime() + 3600000), true)),
-  );
-  if (!reduced) timeBtns.appendChild(playBtn);
+  const textBox = el('div', 's-text');
+  const l1 = el('div', 'l1');
+  const l1Place = el('span');
+  const l1Sun = el('small');
+  l1.append(l1Place, l1Sun);
+  const timeText = button('', 's-time-text');
+  const timeMain = el('span');
+  const timeUtc = el('small');
+  timeText.append(timeMain, timeUtc);
+  textBox.append(l1, timeText);
 
-  const waveField = el('div', 'sky-field');
-  const waveLabel = el('label', undefined, 'Wavelength');
-  const waveSel = el('select');
-  waveSel.id = 'sky-wave';
-  waveLabel.htmlFor = 'sky-wave';
+  const playBtns: HTMLButtonElement[] = [];
+  function timeButtons(cls: string): HTMLElement {
+    const g = el('div', 's-group ' + cls);
+    if (cls === 'desk-only') {
+      g.appendChild(
+        button('Now', 'chrome-btn', () => {
+          isTonight = false;
+          setDate(new Date(), true);
+        }),
+      );
+    }
+    g.append(
+      button('-1 h', 'chrome-btn', () => stepHours(-1)),
+      button('+1 h', 'chrome-btn', () => stepHours(1)),
+    );
+    if (!reduced) {
+      const p = button('Turn the sky', 'chrome-btn', () => setPlaying(!playing));
+      p.setAttribute('aria-pressed', 'false');
+      playBtns.push(p);
+      g.appendChild(p);
+    }
+    return g;
+  }
+
+  const timeBtnPhone = button('Time', 'chrome-btn s-timebtn');
+  const breakEl = el('div', 's-break');
+
+  const waveBox = el('div', 's-wave');
+  const waveSel = el('select', 'chrome-field');
+  waveSel.setAttribute('aria-label', 'Wavelength');
   const opts = [...frames];
   if (frameKnown && !opts.some((f) => f.index === frameKnown.index)) {
     opts.push(frameKnown);
@@ -327,57 +354,143 @@ export const mount: Mount = (root, ctx) => {
     writeParams({ frame: String(idx) });
     markDirty();
   });
-  waveField.append(waveLabel, waveSel);
+  waveBox.appendChild(waveSel);
 
-  const chartRow = el('label', 'sky-check');
+  const chartBtn = button('Star chart', 'chrome-btn desk-only', () => setStars(!starsOn));
+  chartBtn.setAttribute('aria-pressed', 'true');
+
+  const targetsAnchor = el('div', 's-anchor s-targets');
+  const targetsBtn = button('', 'chrome-btn');
+  targetsBtn.append(el('span', 'long', 'Challenge targets'), el('span', 'short', 'Targets'));
+  targetsBtn.setAttribute('aria-label', 'Challenge targets');
+  const targetsPop = el('section', 'sky-pop right pop-targets');
+  targetsPop.append(el('h2', undefined, 'Challenge targets'));
+  targetsPop.appendChild(el('p', 'secondary', 'Open one in the viewer, or find when it is up. Times are ' + clock.label + '.'));
+  const list = el('ul');
+  for (const r of rows) {
+    const li = el('li');
+    r.go.append(el('span', 'n', r.target.name), r.status);
+    r.go.setAttribute('aria-label', 'Open ' + r.target.name + ' in the viewer');
+    r.go.addEventListener('click', () => ctx.go('viewer', { q: r.target.name }));
+    r.jump.addEventListener('click', () => jumpTime(r));
+    li.append(r.go, r.jump);
+    list.appendChild(li);
+  }
+  targetsPop.appendChild(list);
+  targetsAnchor.append(targetsBtn, targetsPop);
+
+  const aboutAnchor = el('div', 's-anchor s-about');
+  const aboutBtn = button('About this map', 'chrome-btn');
+  const aboutPop = el('section', 'sky-pop right pop-about');
+  aboutPop.append(
+    el('p', undefined, NOTE_TEXT),
+    el('p', 'secondary', 'Map tiles: NASA/IPAC IRSA SPHEREx DR1 all-sky HiPS.'),
+  );
+  const chartCheckRow = el('label', 'sky-check phone-only');
   const chartBox = el('input');
   chartBox.type = 'checkbox';
   chartBox.checked = true;
-  chartBox.addEventListener('change', () => {
-    starsOn = chartBox.checked;
-    if (starLayer) starLayer.points.visible = starsOn;
-    namesLayer.style.display = starsOn ? '' : 'none';
-    markDirty();
+  chartBox.addEventListener('change', () => setStars(chartBox.checked));
+  chartCheckRow.append(chartBox, el('span', undefined, 'Star chart'));
+  aboutPop.appendChild(chartCheckRow);
+  aboutAnchor.append(aboutBtn, aboutPop);
+
+  const backBtn = button('', 'chrome-btn s-back', () =>
+    ctx.go('globe', { lat: ctx.params.lat, lon: ctx.params.lon }),
+  );
+  backBtn.append(el('span', 'long', 'Back to the globe'), el('span', 'short', 'Globe'));
+  backBtn.setAttribute('aria-label', 'Back to the globe');
+
+  // time popover: edit field, Now; on phones also the step buttons
+  const timePop = el('section', 'sky-pop pop-time');
+  const timeInput = el('input', 'chrome-field');
+  timeInput.type = 'datetime-local';
+  timeInput.setAttribute('aria-label', 'Time, ' + clock.label);
+  timeInput.title = 'Time, ' + clock.label;
+  timeInput.addEventListener('change', () => {
+    const d = clock.fromInput(timeInput.value);
+    if (d) {
+      isTonight = false;
+      setDate(d, true);
+    }
   });
-  chartRow.append(chartBox, el('span', undefined, 'Star chart'));
+  timePop.append(
+    timeInput,
+    button('Now', 'chrome-btn', () => {
+      isTonight = false;
+      setDate(new Date(), true);
+    }),
+    timeButtons('phone-only'),
+  );
 
-  controls.append(timeField, timeBtns, waveField, chartRow);
+  strip.append(
+    touchRow,
+    textBox,
+    timeButtons('desk-only'),
+    timeBtnPhone,
+    breakEl,
+    waveBox,
+    chartBtn,
+    targetsAnchor,
+    aboutAnchor,
+    backBtn,
+    timePop,
+  );
 
-  dock.append(openBtn, readout, targetsPanel, controls);
-  wrap.append(info, dock, live);
+  const live = el('div', 'sky-sr');
+  live.setAttribute('aria-live', 'polite');
+  wrap.append(bottom, live);
 
-  const namesLayer = el('div');
-  overlay.insertBefore(namesLayer, overlay.firstChild);
-  const nameLabels: NamedLabel[] = [];
-
-  // ---- tile loading state
-  const prevMgr = {
-    onStart: DefaultLoadingManager.onStart,
-    onLoad: DefaultLoadingManager.onLoad,
-    onError: DefaultLoadingManager.onError,
-  };
-  let tileLoading = false;
-  let tileErrors = 0;
-  let tileTotal = 0;
-  let tileFailed = false;
-  DefaultLoadingManager.onStart = (url, loaded, total) => {
-    prevMgr.onStart?.(url, loaded, total);
-    if (!tileLoading) tileErrors = 0;
-    tileLoading = true;
-    tileTotal = total;
-    uiDirty = true;
-  };
-  DefaultLoadingManager.onLoad = () => {
-    prevMgr.onLoad?.();
-    tileLoading = false;
-    tileFailed = tileErrors >= 3 && tileErrors >= tileTotal * 0.5;
-    uiDirty = true;
+  function setStars(on: boolean): void {
+    starsOn = on;
+    chartBox.checked = on;
+    chartBtn.setAttribute('aria-pressed', String(on));
+    if (starLayer) starLayer.points.visible = on;
+    namesLayer.style.display = on ? '' : 'none';
     markDirty();
+  }
+
+  // ---- popovers
+  const pops: Pop[] = [
+    { btns: [timeText, timeBtnPhone], pop: timePop },
+    { btns: [targetsBtn], pop: targetsPop },
+    { btns: [aboutBtn], pop: aboutPop },
+  ];
+  function closePops(except?: Pop, refocus = false): void {
+    for (const p of pops) {
+      if (p === except || !p.pop.classList.contains('open')) continue;
+      p.pop.classList.remove('open');
+      p.btns.forEach((b) => b.setAttribute('aria-expanded', 'false'));
+      if (refocus) {
+        const vis = p.btns.find((b) => b.offsetParent !== null);
+        vis?.focus();
+      }
+    }
+  }
+  for (const p of pops) {
+    p.btns.forEach((b) => {
+      b.setAttribute('aria-expanded', 'false');
+      b.addEventListener('click', () => {
+        const open = !p.pop.classList.contains('open');
+        closePops(open ? p : undefined);
+        p.pop.classList.toggle('open', open);
+        p.btns.forEach((x) => x.setAttribute('aria-expanded', String(open)));
+      });
+    });
+  }
+  const onDocPointer = (e: PointerEvent): void => {
+    const t = e.target as Node;
+    for (const p of pops) {
+      if (!p.pop.classList.contains('open')) continue;
+      if (p.pop.contains(t) || p.btns.some((b) => b.contains(t))) return;
+    }
+    closePops();
   };
-  DefaultLoadingManager.onError = (url) => {
-    prevMgr.onError?.(url);
-    tileErrors++;
+  const onDocKey = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape' && pops.some((p) => p.pop.classList.contains('open'))) closePops(undefined, true);
   };
+  document.addEventListener('pointerdown', onDocPointer, true);
+  document.addEventListener('keydown', onDocKey);
 
   // ---- time
   let playing = false;
@@ -403,11 +516,19 @@ export const mount: Mount = (root, ctx) => {
     } else urlPending = true;
   }
 
+  function stepHours(h: number): void {
+    isTonight = false;
+    setDate(new Date(date.getTime() + h * 3600000), true);
+  }
+
   function setPlaying(on: boolean): void {
     if (on && reduced) return;
     playing = on;
-    setText(playBtn, on ? 'Pause' : 'Turn the sky');
-    playBtn.setAttribute('aria-pressed', String(on));
+    if (on) isTonight = false;
+    for (const b of playBtns) {
+      setText(b, on ? 'Pause' : 'Turn the sky');
+      b.setAttribute('aria-pressed', String(on));
+    }
     if (!on && urlPending) {
       writeParams({ t: toIso(date) });
       urlPending = false;
@@ -416,20 +537,20 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function localDayWord(d: Date): string {
-    const diff = localDayNumber(d, lon) - localDayNumber(date, lon);
-    return diff === 0 ? '' : diff === 1 ? ' tomorrow' : diff === -1 ? ' yesterday' : ' on ' + fmtDay(d, lon);
+    const diff = clock.dayNumber(d) - clock.dayNumber(date);
+    return diff === 0 ? '' : diff === 1 ? ' tomorrow' : diff === -1 ? ' yesterday' : '';
   }
 
   function refreshUi(): void {
-    setText(
-      placeLine,
-      'Sky over ' + fmtPlace(lat, lon) + ' at ' + fmtClock(date, lon) + ' local solar time, ' +
-        fmtDay(date, lon) + ' (' + fmtUtcClock(date) + ' UTC)',
-    );
+    setText(l1Place, 'Sky over ' + (placeName || fmtPlace(lat, lon)));
     const sun = sunAltitude(place, date);
-    setText(sunLine, sun > 0 ? 'Daytime here: the Sun is up. The infrared map is still shown.' : '');
-    sunLine.style.display = sun > 0 ? '' : 'none';
-    if (document.activeElement !== timeInput) timeInput.value = toInputValue(date);
+    setText(l1Sun, sun > 0 ? 'The Sun is up here at this time.' : '');
+    setText(
+      timeMain,
+      (isTonight ? 'Tonight, ' + clock.time(date) : clock.full(date)) + ' ' + clock.label,
+    );
+    setText(timeUtc, fmtUtcClock(date) + ' UTC');
+    if (document.activeElement !== timeInput) timeInput.value = clock.toInput(date);
 
     for (const r of rows) {
       const ri = riseInfo({ ra: r.target.ra, dec: r.target.dec }, place, date);
@@ -438,29 +559,19 @@ export const mount: Mount = (root, ctx) => {
       let jumpText = '';
       if (ri.state === 'circumpolar') {
         text = 'Always up, ' + Math.round(ri.altNow) + ' deg now';
-        jumpText = 'Time of highest point';
+        jumpText = 'Show me its highest point';
       } else if (ri.state === 'up') {
         text = 'Up now, ' + Math.round(ri.altNow) + ' deg';
-        jumpText = 'Time of highest point';
+        jumpText = 'Show me its highest point';
       } else if (ri.state === 'rises' && ri.nextRise) {
-        text = 'Below the horizon until about ' + fmtClock(ri.nextRise, lon) + localDayWord(ri.nextRise);
-        jumpText = 'Set time when it is up';
+        text = 'Below the horizon until ' + clock.time(ri.nextRise) + localDayWord(ri.nextRise);
+        jumpText = 'Show me when it is up';
       } else {
         text = 'Never rises from here';
       }
       setText(r.status, text);
       setText(r.jump, jumpText);
       r.jump.style.display = jumpText ? '' : 'none';
-      r.go.disabled = ri.altNow <= 0;
-      r.go.title = ri.altNow > 0 ? 'Turn the view to ' + r.target.name : r.target.name + ' is below the horizon';
-    }
-
-    if (tileFailed) {
-      setText(tileStatus, 'SPHEREx map tiles did not load. The chart and targets still work.');
-      tileStatus.classList.add('err');
-    } else {
-      setText(tileStatus, tileLoading ? 'Loading map tiles' : '');
-      tileStatus.classList.remove('err');
     }
   }
 
@@ -485,9 +596,11 @@ export const mount: Mount = (root, ctx) => {
     if (ri.state === 'rises' && ri.nextRise) d = new Date(ri.nextRise.getTime() + 2 * 3600000);
     else if (ri.state === 'up' || ri.state === 'circumpolar') d = transitTime(date, r.target);
     if (!d) return;
+    isTonight = false;
     setDate(d, true);
     refreshUi();
     uiDirty = false;
+    closePops();
     turnTo(r);
   }
 
@@ -499,14 +612,12 @@ export const mount: Mount = (root, ctx) => {
     const aa = worldToAltAz(w);
     if (aa.alt <= 0) return;
     intro = null;
-    const az1 = aa.az;
-    let d = wrap360(az1 - az);
+    let d = wrap360(aa.az - az);
     if (d > 180) d -= 360;
     const target = { alt: clamp(aa.alt, ALT_MIN, ALT_MAX), az: az + d };
     if (reduced) {
       az = wrap360(target.az);
       alt = target.alt;
-      markDirty();
     } else tween = { start: performance.now(), az0: az, alt0: alt, az1: target.az, alt1: target.alt };
     markDirty();
   }
@@ -521,6 +632,11 @@ export const mount: Mount = (root, ctx) => {
     altAzToWorld(alt, az, camDir);
     camera.lookAt(camDir);
     camera.updateMatrixWorld();
+    const ring = fov < FOV_RINGS;
+    if (ring !== ringMode) {
+      ringMode = ring;
+      starLayer?.setRing(ring);
+    }
   }
 
   const ray = new Vector3();
@@ -557,11 +673,8 @@ export const mount: Mount = (root, ctx) => {
     if (!reticleOn) {
       footprint.style.display = 'none';
       reticle.style.display = 'none';
-      setText(roRa, '-');
-      setText(roDec, '-');
-      setText(roAlt, '-');
-      setText(roNote, touchMode ? 'Tap the sky to place the reticle.' : 'Move the pointer over the sky.');
-      openBtn.classList.remove('on');
+      readout.style.display = 'none';
+      touchRow.classList.remove('on');
       return;
     }
     const s = reticleSky();
@@ -575,18 +688,40 @@ export const mount: Mount = (root, ctx) => {
       footprint.style.height = px.toFixed(1) + 'px';
       footprint.style.transform = 'translate(' + (rx - px / 2).toFixed(1) + 'px,' + (ry - px / 2).toFixed(1) + 'px)';
     } else footprint.style.display = 'none';
-    setText(roRa, fmtRa(s.ra) + '  ' + s.ra.toFixed(3) + ' deg');
-    setText(roDec, fmtDeg(s.dec, 3, true) + ' deg');
-    setText(roAlt, fmtDeg(s.alt, 1) + ' deg, ' + fmtDeg(s.az, 1) + ' deg');
-    setText(
-      roNote,
-      below
-        ? 'Below the horizon'
-        : px > 6
-          ? 'Square is the 400 arcsec patch'
-          : 'Patch 400 arcsec, smaller than the ring at this zoom',
-    );
-    openBtn.classList.toggle('on', touchMode && !below);
+    const note = below
+      ? 'Below the horizon'
+      : px > 6
+        ? 'Square is the 400 arcsec patch'
+        : 'Patch 400 arcsec, smaller than the ring at this zoom';
+    const raTxt = 'RA ' + fmtRa(s.ra) + '  ' + s.ra.toFixed(3) + ' deg';
+    const decTxt = 'Dec ' + fmtDeg(s.dec, 3, true) + ' deg';
+    const altTxt = 'Alt ' + fmtDeg(s.alt, 1) + ' deg  Az ' + fmtDeg(s.az, 1) + ' deg';
+    if (touchMode) {
+      readout.style.display = 'none';
+      touchRow.classList.add('on');
+      setText(touchText, below ? note : fmtRa(s.ra) + ', ' + fmtDeg(s.dec, 2, true) + ' deg, alt ' + fmtDeg(s.alt, 0) + ' deg');
+      openBtn.disabled = below;
+    } else {
+      touchRow.classList.remove('on');
+      readout.style.display = '';
+      setText(roRa, raTxt);
+      setText(roDec, decTxt);
+      setText(roAlt, altTxt);
+      setText(roNote, note);
+      const w = 200;
+      const h = 70;
+      const limitY = height - stripH - 20;
+      let ox = rx + 26;
+      let align = 'left';
+      if (ox + w > width - 8) {
+        ox = rx - 26 - w;
+        align = 'right';
+      }
+      let oy = ry + 14;
+      if (oy + h > limitY) oy = ry - 14 - h;
+      readout.style.textAlign = align;
+      readout.style.transform = 'translate(' + ox.toFixed(0) + 'px,' + oy.toFixed(0) + 'px)';
+    }
   }
 
   function openAtReticle(): void {
@@ -636,17 +771,18 @@ export const mount: Mount = (root, ctx) => {
       if (ok) {
         r.mark.style.transform = 'translate(' + pt.x.toFixed(1) + 'px,' + pt.y.toFixed(1) + 'px)';
         const w = r.target.name.length * 7 + 4;
-        place2(r.label, pt.x + 12, pt.y - 8);
-        rects.push(pt.x + 12, pt.y - 8, pt.x + 12 + w, pt.y + 8);
+        place2(r.label, pt.x + 14, pt.y - 8);
+        rects.push(pt.x + 14, pt.y - 8, pt.x + 14 + w, pt.y + 8);
       }
     }
     if (starLayer && starsOn) {
       let shown = 0;
+      const cap = ringMode ? 40 : 12;
       const named = starLayer.named;
       for (let i = 0; i < named.length; i++) {
         const nl = nameLabels[i];
         let ok = false;
-        if (shown < 40) {
+        if (shown < cap) {
           wv.copy(named[i].dir).applyMatrix4(celestial.matrix);
           if (wv.y > 0.02 && proj(wv, pt) && pt.x > 0 && pt.x < width && pt.y > 0 && pt.y < height) {
             if (free(pt.x + 10, pt.y - 8, nl.w, 16)) {
@@ -663,6 +799,7 @@ export const mount: Mount = (root, ctx) => {
       }
     }
   }
+  const nameLabels: NamedLabel[] = [];
 
   // ---- input
   const pointers = new Map<number, { x: number; y: number }>();
@@ -697,7 +834,7 @@ export const mount: Mount = (root, ctx) => {
   }
 
   canvas.addEventListener('pointerdown', (e) => {
-    canvas.focus({ preventScroll: true });
+    if (e.pointerType !== 'touch') canvas.focus({ preventScroll: true });
     intro = null;
     tween = null;
     touchMode = e.pointerType === 'touch';
@@ -758,7 +895,7 @@ export const mount: Mount = (root, ctx) => {
   canvas.addEventListener('pointerup', (e) => endPointer(e, false));
   canvas.addEventListener('pointercancel', (e) => endPointer(e, true));
   canvas.addEventListener('pointerleave', (e) => {
-    if (e.pointerType === 'touch' || pointers.size > 0 || openBtn.classList.contains('on')) return;
+    if (e.pointerType === 'touch' || pointers.size > 0 || touchMode) return;
     reticleOn = false;
     markDirty();
   });
@@ -829,12 +966,14 @@ export const mount: Mount = (root, ctx) => {
     rect = canvas.getBoundingClientRect();
     width = Math.max(1, Math.floor(rect.width));
     height = Math.max(1, Math.floor(rect.height));
+    stripH = strip.offsetHeight || 60;
     renderer.setSize(width, height, false);
     starLayer?.setPixelRatio(pixelRatio);
     markDirty();
   }
   const ro = new ResizeObserver(resize);
   ro.observe(wrap);
+  ro.observe(strip);
 
   // ---- loop
   let lastChange = performance.now();
@@ -842,6 +981,8 @@ export const mount: Mount = (root, ctx) => {
   let viewDirty = true;
   let raf = 0;
   let last = performance.now();
+  let shownLoading = false;
+  let shownFailed = false;
 
   function markDirty(): void {
     lastChange = performance.now();
@@ -890,6 +1031,18 @@ export const mount: Mount = (root, ctx) => {
       lastUi = now;
     }
 
+    const ld = !!hips?.loading;
+    const fl = !!hips?.failed;
+    if (ld !== shownLoading || fl !== shownFailed) {
+      shownLoading = ld;
+      shownFailed = fl;
+      setText(
+        statusLine,
+        fl ? 'Map tiles did not load. The chart and targets still work.' : ld ? 'Loading map' : '',
+      );
+    }
+    if (ld) lastChange = now;
+
     if (now - lastChange > 1000 && now - lastRender < 250) return;
 
     if (viewDirty) {
@@ -904,6 +1057,17 @@ export const mount: Mount = (root, ctx) => {
   }
 
   applyTime();
+  // face the highest challenge target above the horizon, else the equator side
+  {
+    let best = 0;
+    for (const r of rows) {
+      const aa = worldToAltAz(r.dir.clone().applyMatrix4(celestial.matrix));
+      if (aa.alt > best) {
+        best = aa.alt;
+        az = aa.az;
+      }
+    }
+  }
   resize();
   refreshUi();
   raf = requestAnimationFrame(tick);
@@ -915,6 +1079,7 @@ export const mount: Mount = (root, ctx) => {
       starLayer = createStarLayer(stars);
       starLayer.points.visible = starsOn;
       starLayer.setPixelRatio(pixelRatio);
+      starLayer.setRing(ringMode);
       celestial.add(starLayer.points);
       for (const n of starLayer.named) {
         const node = el('span', 'sky-label', n.star.name ?? '');
@@ -931,9 +1096,8 @@ export const mount: Mount = (root, ctx) => {
     cancelAnimationFrame(raf);
     window.clearTimeout(liveTimer);
     ro.disconnect();
-    DefaultLoadingManager.onStart = prevMgr.onStart;
-    DefaultLoadingManager.onLoad = prevMgr.onLoad;
-    DefaultLoadingManager.onError = prevMgr.onError;
+    document.removeEventListener('pointerdown', onDocPointer, true);
+    document.removeEventListener('keydown', onDocKey);
     hips?.dispose();
     starLayer?.dispose();
     backdrop.dispose();

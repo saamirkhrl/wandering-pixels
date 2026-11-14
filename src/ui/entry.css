@@ -1,0 +1,73 @@
+:root {
+  --chrome-bg: rgba(4, 6, 13, 0.88);
+  --chrome-rule: rgba(228, 233, 241, 0.22);
+  --field-bg: #0c1122;
+}
+
+.chrome {
+  background: var(--chrome-bg);
+  color: var(--paper);
+  border: 1px solid var(--chrome-rule);
+  border-radius: var(--radius);
+}
+
+.chrome .secondary,
+.chrome small {
+  color: var(--paper-dim);
+}
+
+.chrome-btn {
+  min-height: var(--control-height);
+  min-width: var(--control-height);
+  padding: 0 14px;
+  font: inherit;
+  color: var(--paper);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.chrome-btn:hover {
+  border-color: var(--paper-dim);
+}
+
+.chrome-btn[aria-pressed='true'],
+.chrome-btn[aria-expanded='true'] {
+  border-color: var(--paper);
+}
+
+.chrome-btn:disabled {
+  color: var(--rule);
+  cursor: default;
+}
+
+.chrome-btn.primary {
+  background: var(--signal);
+  color: var(--ink);
+  border-color: var(--signal);
+  font-weight: 700;
+}
+
+.chrome-field {
+  min-height: var(--control-height);
+  padding: 0 12px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+  background: var(--field-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color-scheme: dark;
+}
+
+select.chrome-field {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--paper-dim) 50%),
+    linear-gradient(135deg, var(--paper-dim) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}

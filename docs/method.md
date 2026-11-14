@@ -1,7 +1,7 @@
 # Method and validation
 
-Status: phases A and B done (registration, wavelength sampling, plain versus spectrally matched
-differences). Injection-recovery and known movers are placeholders.
+Status: complete for the hackathon (phases A, B and C: registration, wavelength sampling, plain versus
+spectrally matched differences, injection-recovery, known movers).
 
 ## Three results in brief
 
@@ -344,4 +344,98 @@ Results: to be written (phase C).
 
 ## Known movers
 
-To be written (phase D).
+In plain words: we checked that the pipeline sees two real nearby moving objects move by the
+right amount. Eps Indi B, a pair of brown dwarfs, moves exactly as its catalogue motion predicts,
+to within about a tenth of an arcsecond. Barnard's Star is too bright for SPHEREx (its centre is
+saturated in every exposure), but its faint outer glow still shows the right yearly motion.
+WISE 0855-0714, the coldest known brown dwarf, is too faint for SPHEREx single exposures; we give
+upper limits.
+
+Eps Indi B (Gaia DR3 6412596012146801152; Ba+Bb unresolved, separation about 0.9 arcsec in 2026,
+Chen et al. 2022). Gaussian centroids in 66 to 119 exposures per visit, four visits. Measured
+displacement between visits minus the prediction from Gaia DR3 proper motion and parallax:
+-0.03 to -0.10 arcsec in RA* and -0.06 to +0.06 arcsec in Dec for all six visit pairs (errors
+0.02 to 0.03 arcsec), the largest being 0.10 arcsec = 0.017 pixel; for example visits 0 to 3
+(about 17 months): measured (+5.019, -3.739) arcsec, predicted (+5.108, -3.702). The residuals are
+at the level of the per-frame registration offsets of phase A (0.05 to 0.08 arcsec). The absolute
+position differs from the Gaia DR3 catalogue position by a constant (+0.2, -0.55) arcsec in every
+visit, and by (+0.1 to +0.2, -0.1 to -0.2) arcsec from the Chen et al. 2022 system motion, as
+expected for an unresolved binary whose light centre moves along its 11-year orbit.
+
+Barnard's Star (Gaia DR3 4472832130942575872, G 8.2). All 358 exposures carry OVERFLOW, NONLINEAR or
+BLOOM flags in the central 5 x 5 pixels: no detector or wavelength is unsaturated, so no
+core photometry or centroid is possible. A wings-only position (profile fit to pixels 2 to 5 px
+from the centre) was calibrated on unsaturated G 9.5 to 12.5 stars, where it is biased by up to
+0.24 px along detector x and scatters 0.30 px per exposure. Over the 12-month pair, where the
+detector orientation is the same, the bias cancels: measured displacement (-0.61 +/- 0.15,
++10.23 +/- 0.12) arcsec against predicted (-0.78, +10.26), i.e. 1.68 px/yr measured against
+1.69 predicted. Over 6-month pairs the detector is rotated by 180 degrees and the uncorrected
+wings bias appears as a 0.5 to 0.9 arcsec RA error (larger than the quoted errors); the
+6-month results are therefore not usable without a better wings model.
+
+WISE 0855-0714 (Luhman and Esplin 2016; W2 = 14.02 Vega, about 17.4 AB at 4.6 um, essentially
+nothing below 3 um): results in "WISE 0855" below.
+
+RW Aurigae and R Draconis, the two bright variable-star targets, are saturated: RW Aur in
+detectors 2 to 6 and in most detector 1 frames (17 of 334 usable); R Dra in all 56 of 56 sampled
+exposures (OVERFLOW, NONLINEAR or BLOOM at its position). Neither can be measured with this method.
+
+Real variable stars, not saturated (Gaia DR3 phot_variable_flag = VARIABLE in the Barnard field,
+selected by the Gaia G-band scatter in vari_summary): the matched comparison flags them as
+changed while their constant neighbours of the same brightness stay quiet. Example: Gaia DR3
+4472819623984651392 (G 12.66, Gaia G scatter 0.16 mag): rms z of 18 visit-to-visit matched
+comparisons 18.2, constant partner about 1; Gaia DR3 4472838904098844288 (G 15.4, scatter 0.23
+mag): rms z 2.3 against 0.9 for its partner. Figure variable_demo.png.
+
+## Negative results
+
+- Per-pixel matched images (M1) failed. Fitting each grid pixel's spectrum across resampled
+  exposures gave z width 2.77 +/- 0.16 and scatter 6.5 +/- 0.3 percent (Barnard), worse than a
+  plain resampled pair (1.76 +/- 0.06, 5.8 +/- 0.3 percent). The PSF is undersampled, every
+  exposure lands on a different pixel phase, and resampling mixes that into each grid pixel.
+  The matched method works per star on native pixels, not per pixel on a grid.
+- The website's paired-stack image is built from bilinearly resampled frames. The data seat
+  measured that it is not cleaner than a single pair at pixel level; we did not validate it at
+  pixel level either. Only the per-star readout (docs/algorithm.md) is validated.
+- The visit-stack difference (P2) is a fair picture of what changed, with less noise than a
+  single pair (scatter 4.4 against 5.7 percent), but its stated significance is wrong by a factor
+  of about 4.8 (z width 4.76 +/- 0.34), because the two stacks mix wavelengths differently.
+- No resampling kernel (bilinear, Lanczos-3, flux-conserving exact or adaptive) removes the
+  bright-star dipoles in a plain pair; adaptive only lowers them by blurring.
+- Planet Nine is not expected to be detectable in these data. Model predictions for a 10 Earth
+  mass planet at about 600 au give W1 about 26.6 AB nominally and 18.8 AB in the most favourable
+  case (Fortney et al. 2016, arXiv:1604.07424); unWISE searches already exclude W1 brighter than
+  about 19.4 AB over most of the sky (Meisner et al. 2018); the SPHEREx survey depth is about
+  AB 18.5 to 19 (5 sigma) at 0.75 to 3.8 um and shallower at longer wavelengths (Crill et al.
+  2025, arXiv:2505.24856). Our measured detection limit for a moving point source is in
+  "Injection and recovery". The 500 au demonstration below is a worked example of the method,
+  not a search.
+
+## Reproducing
+
+Everything runs from public data with `uv` in `validation/`. In order:
+
+```
+cd validation
+uv sync
+uv run python scripts/00_index.py --field all        # exposure index (SIA2)
+uv run python scripts/01_fetch.py --field all        # cutouts from S3 (about 7.7 GB downloaded)
+uv run python scripts/02_wavelength.py --field all   # wavelength sampling
+uv run python scripts/03_registration.py --field all # registration precision
+uv run python scripts/04_zodi.py --field all         # IMAGE minus ZODI
+uv run python scripts/05_grid_products.py --field barnard
+uv run python scripts/06_forced_phot.py --field barnard ; uv run python scripts/06_forced_phot.py --field epsindi
+uv run python scripts/07_metrics.py --field all
+uv run python scripts/07b_phaseb_controls.py --field all
+uv run python scripts/07c_error_floor.py
+uv run python scripts/09_algorithm_vectors.py         # port test vectors
+uv run python scripts/10_thresholds.py --field all
+uv run python scripts/10_injection.py --field barnard
+uv run python scripts/11_known_movers.py
+uv run python scripts/12_variables.py
+uv run python scripts/13_distant_body.py
+uv run python scripts/14_pair_gaps.py
+```
+
+Data: SPHEREx Level 2 images, IRSA / NASA (DR1 and QR3); Gaia DR3 (ESA, Gaia Collaboration 2023);
+Sonora Bobcat model spectra (Marley et al. 2021, CC BY 4.0) for the brown dwarf injection template.

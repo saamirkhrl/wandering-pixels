@@ -12,7 +12,7 @@ later and no build step.
 
     npx -y vite-node scripts/build-cache.ts <slug|all>
 
-Slugs: `barnards-star`, `eps-indi-b`, `wise-0855`, `rw-aur`, `r-dra`. For each target it
+Slugs: `barnards-star`, `eps-indi-b`, `wise-0855`, `rw-aur`, `r-dra`, `v391-oph`. For each target it
 queries IRSA SIA2 for every Level 2 exposure covering the position, reads the selected
 exposures from the public SPHEREx S3 bucket by HTTP Range requests, resamples them onto the
 shared 65 x 65 grid (6.15 arcsec/px), adds Gaia DR3 and WISE overlay stars, and writes the
@@ -33,7 +33,7 @@ check compares every frame with format 1 and `--delete-v1` then removes the old 
     npx -y vite-node scripts/build-cache.ts --convert all --delete-v1
 
 (`scripts/convert-cache.ts` does the same). A rebuild removes stale hashed files and any
-format 1 files.
+format 1 files. Readouts (`readouts.*` and the index `readouts` key) are kept across a rebuild, but rebuild them afterwards with `npx -y vite-node scripts/build-readouts.ts <slug|all>` because they depend on the exposure list and default detector.
 
 Contact sheets for a visual check: `npx -y vite-node scripts/contact-sheet.ts <slug|all>`
 (written to `$WP_SAMPLES_DIR/cache-check/`, default `../research/samples/` next to the repo).

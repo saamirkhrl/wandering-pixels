@@ -17,12 +17,20 @@ import type { CachedSlug, Frame } from '../src/lib/spherex/types';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const CACHE_DIR = join(ROOT, 'public', 'cache');
-export const ALL_SLUGS: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra'];
+export const ALL_SLUGS: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra', 'v391-oph'];
 const HASHED = /\.[0-9a-f]{8}\.(bin|json)$/;
 
-/** Writes the files of one target (index.json last) and removes stale hashed files. */
+/**
+ * Writes the files of one target (index.json last) and removes stale hashed files. Files named
+ * readouts.* are kept, and the old index.json `readouts` key is carried over when its file still exists.
+ */
 export function writeCacheDir(dir: string, files: Record<string, Uint8Array | string>): void {
   mkdirSync(dir, { recursive: true });
+  let oldReadouts: unknown;
+  try {
+    const old = JSON.parse(readFileSync(join(dir, 'index.json'), 'utf8')) as { readouts?: { file?: unknown } };
+    if (old.readouts && typeof old.readouts.file === 'string' && existsSync(join(dir, old.readouts.file))) oldReadouts = old.readouts;
+  } catch { /* no old index */ }
   for (const [name, data] of Object.entries(files)) {
     if (name === 'index.json') continue;
     const tmp = join(dir, `${name}.tmp`);
@@ -30,10 +38,15 @@ export function writeCacheDir(dir: string, files: Record<string, Uint8Array | st
     renameSync(tmp, join(dir, name));
   }
   const tmp = join(dir, 'index.json.tmp');
-  writeFileSync(tmp, files['index.json']);
+  let indexData = files['index.json'];
+  if (oldReadouts) {
+    const text = typeof indexData === 'string' ? indexData : new TextDecoder().decode(indexData);
+    indexData = JSON.stringify({ ...JSON.parse(text), readouts: oldReadouts });
+  }
+  writeFileSync(tmp, indexData);
   renameSync(tmp, join(dir, 'index.json'));
   for (const name of readdirSync(dir)) {
-    if (HASHED.test(name) && !(name in files)) unlinkSync(join(dir, name));
+    if (HASHED.test(name) && !(name in files) && !name.startsWith('readouts.')) unlinkSync(join(dir, name));
     else if (name.endsWith('.tmp')) unlinkSync(join(dir, name));
   }
 }

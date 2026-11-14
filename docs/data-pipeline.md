@@ -85,6 +85,7 @@ default detector are in `scripts/README.md`.
 
       npx -y vite-node scripts/convert-cache.ts <slug|all> [--delete-v1]
 
+- Readouts are kept across a cache rebuild but should be rebuilt afterwards with `npx -y vite-node scripts/build-readouts.ts <slug|all>`, because they depend on the exposure list and default detector.
 - Contact sheets for a visual check: `npx -y vite-node scripts/contact-sheet.ts <slug|all>`.
 - Slugs: `barnards-star`, `eps-indi-b`, `wise-0855`, `rw-aur`, `r-dra`.
 

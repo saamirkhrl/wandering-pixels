@@ -50,6 +50,26 @@ describe.each(ALL)('readouts %s', (slug) => {
       expect(r.stars.length).toBeLessThanOrEqual(41);
     });
 
+    it('has field pairs and a variable flag per star', async () => {
+      const r = await loadCachedReadouts(slug, { fetchFn: diskFetch });
+      expect(Array.isArray(r.fieldPairs)).toBe(true);
+      const keys = new Set(r.stars.flatMap((s) => s.pairs.map((p) => `${p.a}:${p.b}`)));
+      expect(r.fieldPairs.length).toBe(keys.size);
+      for (const f of r.fieldPairs) {
+        expect(f.a).toBeLessThan(f.b);
+        expect(f.fieldChangedFraction).toBeGreaterThanOrEqual(0);
+        expect(f.fieldChangedFraction).toBeLessThanOrEqual(1);
+        expect(f.fieldReliable).toBe(f.fieldChangedFraction <= 0.1);
+        expect(f.nField).toBeGreaterThanOrEqual(0);
+        for (const s of r.stars) {
+          for (const p of s.pairs.filter((q) => q.a === f.a && q.b === f.b)) {
+            if (!f.fieldReliable) expect(p.unreliableReasons).toContain('field offset');
+          }
+        }
+      }
+      for (const s of r.stars) expect([true, false, null]).toContain(s.variable);
+    });
+
     it('has consistent pairs', async () => {
       const r = await loadCachedReadouts(slug, { fetchFn: diskFetch });
       const visits = new Map(r.visits.map((v) => [v.visit, v]));
@@ -70,6 +90,14 @@ describe.each(ALL)('readouts %s', (slug) => {
             expect(Number.isFinite(p.z as number)).toBe(true);
             expect((p.verdict === 'changed') === (Math.abs(p.z as number) >= 3)).toBe(true);
           }
+          expect(typeof p.reliable).toBe('boolean');
+          expect(Array.isArray(p.unreliableReasons)).toBe(true);
+          expect(p.reliable).toBe(p.unreliableReasons.length === 0);
+          if (p.flags.some((f) => f === 'saturated' || f === 'blended' || f === 'partial_visit')) {
+            expect(p.reliable).toBe(false);
+          }
+          if (p.w.length < 2) expect(p.unreliableReasons).toContain('fewer than 2 wavelengths');
+          if (s.brightNeighbour) expect(p.reliable).toBe(false);
         }
       }
     });

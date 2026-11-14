@@ -1,6 +1,7 @@
 // Per-star matched readouts for the cached targets (docs/algorithm.md).
 //
 //   npx -y vite-node scripts/build-readouts.ts <slug|all>
+//   npx -y vite-node scripts/build-readouts.ts --rebuild <slug|all>   rebuild the trimmed files from the saved full results (no downloads)
 //   npx -y vite-node scripts/build-readouts.ts --vectors      compare the Barnard vector stars (no files written)
 //   npx -y vite-node scripts/build-readouts.ts --selfcheck <slug>   cropped stamps vs individual stamps (no files written)
 //
@@ -41,7 +42,7 @@ import { parseWcs, positionAt, skyToPix, worldToGrid } from '../src/lib/spherex/
 import { SpherexError } from '../src/lib/spherex/types';
 import type { CachedSlug, Exposure, GaiaStar, Grid, Target } from '../src/lib/spherex/types';
 import type { CachedReadouts, PairReadout, ReadoutsRef, StarReadout } from '../src/lib/spherex/readouts';
-import { READOUTS_FORMAT } from '../src/lib/spherex/readouts';
+import { READOUTS_FORMAT, applyReliability, fieldPairsOf, hasBrightNeighbour } from '../src/lib/spherex/readouts';
 
 // @ts-expect-error plain JS helper modules without type declarations
 import { fetchUpstream } from '../api/_lib/http.js';
@@ -351,6 +352,7 @@ async function buildOne(slug: CachedSlug): Promise<Summary> {
   // compare
   const vInfo = visits.map(([v, l]) => ({ visit: v, mjd: dp(mid(l), 2) as number, n: l.length }));
   const neighbours = gaia.map((g) => ({ ra: g.ra, dec: g.dec, g: g.gmag }));
+  const varFlags0 = await gaiaVariableFlags(stars.map((x) => x.id));
   const trimmed: StarReadout[] = [];
   const full: unknown[] = [];
   const verdicts: Record<string, number> = { changed: 0, 'no significant change': 0, 'no result': 0 };
@@ -378,13 +380,20 @@ async function buildOne(slug: CachedSlug): Promise<Summary> {
         }
       }
     }
-    trimmed.push({ id: s.id, ra: dp(s.ra, 6) as number, dec: dp(s.dec, 6) as number, gmag: dp(s.gmag, 2), isTarget: s.isTarget, pairs });
+    trimmed.push({
+      id: s.id, ra: dp(s.ra, 6) as number, dec: dp(s.dec, 6) as number, gmag: dp(s.gmag, 2), isTarget: s.isTarget,
+      brightNeighbour: hasBrightNeighbour({ ra: s.ra, dec: s.dec, sourceId: s.gaiaIndex >= 0 ? s.id : undefined }, gaia),
+      variable: varFlags0.get(s.id) ?? null,
+      pairs,
+    });
     full.push({ star: { ...s, target: undefined }, blended, accepted: Object.fromEntries(accepted), pairs: fullPairs, measurements: records[k] });
   }
   if (trimmed[0].pairs.length === 0) targetRows.push('no visit pair with >= 8 accepted exposures in both visits');
 
+  const fieldPairs = fieldPairsOf(trimmed);
+  applyReliability(trimmed, fieldPairs);
   const out: CachedReadouts = {
-    format: READOUTS_FORMAT, slug, detector: detector as CachedReadouts['detector'], builtAt: new Date().toISOString(), visits: vInfo, stars: trimmed,
+    format: READOUTS_FORMAT, slug, detector: detector as CachedReadouts['detector'], builtAt: new Date().toISOString(), visits: vInfo, stars: trimmed, fieldPairs,
   };
   const body = new TextEncoder().encode(JSON.stringify(out));
   const hash = fnv1a32(body);
@@ -420,6 +429,121 @@ async function buildOne(slug: CachedSlug): Promise<Summary> {
   };
   console.log(`  wrote ${file} (${body.length} bytes)`);
   return s;
+}
+
+// ---- rebuild from the saved full results ------------------------------------------------------
+
+const TAP_URL = 'https://gea.esac.esa.int/tap-server/tap/sync';
+
+/** Gaia DR3 phot_variable_flag per source id: 'VARIABLE' -> true, 'NOT_AVAILABLE' -> false, anything else or missing -> null. */
+async function gaiaVariableFlags(ids: string[]): Promise<Map<string, boolean | null>> {
+  const out = new Map<string, boolean | null>();
+  const clean = [...new Set(ids.filter((i) => /^\d+$/.test(i)))];
+  for (let i = 0; i < clean.length; i += 100) {
+    const chunk = clean.slice(i, i + 100);
+    const body = new URLSearchParams({
+      REQUEST: 'doQuery', LANG: 'ADQL', FORMAT: 'csv',
+      QUERY: `SELECT source_id, phot_variable_flag FROM gaiadr3.gaia_source WHERE source_id IN (${chunk.join(',')})`,
+    });
+    const text = await retry('gaia tap', 4, async () => {
+      const res = await fetch(TAP_URL, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.text();
+    });
+    for (const line of text.split(/\r?\n/).slice(1)) {
+      const [id, flag] = line.split(',');
+      if (!id) continue;
+      out.set(id.trim(), flag === 'VARIABLE' ? true : flag === 'NOT_AVAILABLE' ? false : null);
+    }
+  }
+  return out;
+}
+
+const nz = (x: unknown): number => (typeof x === 'number' ? x : NaN);
+
+/** Saved full JSON (non-finite numbers stored as null) back to what trimPair reads. */
+function reviveResult(r: Record<string, any>): MatchedResult {
+  const comb = (c: Record<string, any> | null) => (c ? { ...c, D: nz(c.D), var: nz(c.var), z: nz(c.z), fractionalChange: nz(c.fractionalChange) } : null);
+  return {
+    ...r,
+    perWavelength: (r.perWavelength as Record<string, any>[]).map((k) => ({ ...k, w0: nz(k.w0), D: nz(k.D), var: nz(k.var), z: nz(k.z) })),
+    D: nz(r.D), var: nz(r.var), z: nz(r.z), fractionalChange: nz(r.fractionalChange),
+    plain: comb(r.plain), ps: comb(r.ps),
+  } as unknown as MatchedResult;
+}
+
+interface Rebuilt { slug: string; file: string; bytes: number; count: number; note: string[] }
+
+async function rebuildOne(slug: CachedSlug): Promise<Rebuilt> {
+  const samples = process.env.WP_SAMPLES_DIR ?? resolve(ROOT, '..', 'research', 'samples');
+  const full = JSON.parse(readFileSync(join(samples, 'readouts', `${slug}.json`), 'utf8')) as {
+    detector: number; visits: CachedReadouts['visits']; stars: { star: { id: string; isTarget: boolean; ra: number; dec: number; gmag: number | null }; blended: boolean; pairs: { a: number; b: number; result: Record<string, any> }[] }[];
+  };
+  const note: string[] = [];
+  const dir = join(CACHE, slug);
+  const indexPath = join(dir, 'index.json');
+  const indexRaw = readFileSync(indexPath, 'utf8');
+  const vByIdx = new Map(full.visits.map((v) => [v.visit, v]));
+  const { gaia } = await loadCachedStars(slug, { baseUrl: '/cache/', fetchFn: diskFetch() });
+
+  const varFlags = await gaiaVariableFlags(full.stars.map((fs) => fs.star.id));
+  const stars: StarReadout[] = full.stars.map((fs) => {
+    const s = fs.star;
+    const matched = s.id !== 'target';
+    if (s.isTarget && !matched) note.push('target has no Gaia match and no catalogue magnitude: its own bright-neighbour rule is evaluated against the Gaia list only');
+    const pairs = fs.pairs.map((p) => trimPair(reviveResult(p.result), p.a, p.b, vByIdx.get(p.a)!.mjd, vByIdx.get(p.b)!.mjd));
+    return {
+      id: s.id, ra: dp(s.ra, 6) as number, dec: dp(s.dec, 6) as number, gmag: dp(nz(s.gmag), 2), isTarget: s.isTarget,
+      brightNeighbour: hasBrightNeighbour({ ra: s.ra, dec: s.dec, sourceId: matched ? s.id : undefined }, gaia),
+      variable: varFlags.get(s.id) ?? null,
+      pairs,
+    };
+  });
+  const fieldPairs = fieldPairsOf(stars);
+  applyReliability(stars, fieldPairs);
+  const detector = full.detector;
+  const out: CachedReadouts = {
+    format: READOUTS_FORMAT, slug, detector: detector as CachedReadouts['detector'], builtAt: new Date().toISOString(),
+    visits: full.visits, stars, fieldPairs,
+  };
+  const body = new TextEncoder().encode(JSON.stringify(out));
+  const file = `readouts.d${detector}.${fnv1a32(body)}.json`;
+  const tmp = join(dir, `${file}.tmp`);
+  writeFileSync(tmp, body);
+  renameSync(tmp, join(dir, file));
+  const parsed = JSON.parse(indexRaw) as Record<string, unknown>;
+  const indent = /^\{\s*\n( +)"/.exec(indexRaw)?.[1].length ?? 0;
+  const trailing = indexRaw.endsWith('\n') ? '\n' : '';
+  const count = stars.reduce((n, s) => n + s.pairs.length, 0);
+  parsed.readouts = { file, bytes: body.length, detector, count } satisfies ReadoutsRef;
+  const idxTmp = join(dir, 'index.json.tmp');
+  writeFileSync(idxTmp, JSON.stringify(parsed, null, indent || undefined) + trailing);
+  renameSync(idxTmp, indexPath);
+  for (const name of readdirSync(dir)) {
+    if (/^readouts\..*\.json$/.test(name) && name !== file) unlinkSync(join(dir, name));
+  }
+  if (body.length > BUDGET_BYTES) note.push(`OVER BUDGET: ${body.length} bytes > ${BUDGET_BYTES}`);
+
+  // report
+  const rate = (rs: PairReadout[]): string => `${rs.filter((r) => r.verdict === 'changed').length}/${rs.length}`;
+  const tgt = stars[0];
+  console.log(`\n== ${slug} == ${file} ${body.length} bytes, ${count} results`);
+  for (const p of tgt.pairs) {
+    console.log(`  target ${p.a}->${p.b}: "${p.verdict}" z=${p.z} reliable=${p.reliable ? 'yes' : 'no'} [${p.unreliableReasons.join(', ')}]`);
+  }
+  for (const f of fieldPairs) console.log(`  field ${f.a}->${f.b}: changed fraction ${f.fieldChangedFraction} (nField ${f.nField}) fieldReliable=${f.fieldReliable}`);
+  const all = stars.flatMap((s) => s.pairs);
+  const rel = all.filter((p) => p.reliable);
+  const isVar = new Map(stars.map((st) => [st, st.variable === true]));
+  const relNoVar = stars.filter((st) => !isVar.get(st)).flatMap((st) => st.pairs.filter((p) => p.reliable));
+  console.log(`  results ${all.length}, reliable ${rel.length}; changed among reliable ${rate(rel)} (incl. variables), ${rate(relNoVar)} (excl. catalogued variables); variables ${stars.filter((st) => st.variable === true).length}, unknown ${stars.filter((st) => st.variable === null).length}`);
+  for (const f of fieldPairs) {
+    const r = rel.filter((p) => p.a === f.a && p.b === f.b);
+    console.log(`    pair ${f.a}->${f.b}: reliable ${r.length}, changed ${rate(r)}`);
+  }
+  console.log(`  stars with brightNeighbour: ${stars.filter((s) => s.brightNeighbour).length}/${stars.length}; stars with any reliable result: ${stars.filter((s) => s.pairs.some((p) => p.reliable)).length}`);
+  for (const n of note) console.log(`  NOTE ${n}`);
+  return { slug, file, bytes: body.length, count, note };
 }
 
 // ---- vector comparison ------------------------------------------------------------------------
@@ -520,6 +644,12 @@ async function main(): Promise<void> {
   setFetch(fetch);
   if (args.includes('--vectors')) return vectorCompare();
   const arg = args.find((a) => !a.startsWith('--'));
+  if (args.includes('--rebuild')) {
+    const list = arg === 'all' ? SLUGS : SLUGS.filter((x) => x === arg);
+    if (list.length === 0) { console.error('usage: --rebuild <slug|all>'); process.exit(2); }
+    for (const slug of list) await rebuildOne(slug);
+    process.exit(0);
+  }
   if (!arg) {
     console.error('usage: vite-node scripts/build-readouts.ts <slug|all> | --vectors | --selfcheck <slug>');
     process.exit(2);

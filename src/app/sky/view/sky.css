@@ -134,7 +134,7 @@
   font-size: 12px;
   line-height: 16px;
   color: var(--paper);
-  -webkit-text-stroke: 3px var(--sky);
+  -webkit-text-stroke: 4px var(--sky);
   paint-order: stroke fill;
   pointer-events: none;
   z-index: 3;
@@ -534,4 +534,40 @@
   .sky-check {
     min-height: 44px;
   }
+}
+
+.s-note {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--paper-dim);
+}
+
+.s-note:empty {
+  display: none;
+}
+
+.s-note button {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -14px -8px -14px 0;
+  background: transparent;
+  border: 0;
+  color: var(--paper-dim);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.pop-time .sky-check {
+  flex-basis: 100%;
+}
+
+.s-time-text .long,
+.s-time-text .short {
+  margin-left: 0.3em;
 }

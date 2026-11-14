@@ -374,7 +374,16 @@ wings bias appears as a 0.5 to 0.9 arcsec RA error (larger than the quoted error
 6-month results are therefore not usable without a better wings model.
 
 WISE 0855-0714 (Luhman and Esplin 2016; W2 = 14.02 Vega, about 17.4 AB at 4.6 um, essentially
-nothing below 3 um): results in "WISE 0855" below.
+nothing below 3 um). 258 exposures in 3 visits. At its predicted position we
+measure no flux that follows its 8 arcsec/yr motion. A background star, Gaia DR3
+5756956644387831296 (G 16.3, 6.8 arcsec from the predicted 2026.0 position), lies 1.8, 1.3 and
+0.7 pixels from WISE 0855's predicted position in the three visits; its flux at a fixed position
+is constant over the visits (detector 2: 0.88, 0.94, 0.90 mJy, +/- 0.01 to 0.03), and the
+"source" seen by eye at the predicted position in detector 2 is this star. In detector 6
+(about 4.6 um, where WISE 0855 should be brightest, expected about 17.4 AB = 0.41 mJy) the
+flux at the moving position equals the fixed-position flux of the star; our 3 sigma limit,
+16.8 AB (aperture sum, no aperture correction, star not subtracted), is not deep enough to
+constrain WISE 0855. A non-detection, limited by the neighbour and by depth.
 
 RW Aurigae and R Draconis, the two bright variable-star targets, are saturated: RW Aur in
 detectors 2 to 6 and in most detector 1 frames (17 of 334 usable); R Dra in all 56 of 56 sampled
@@ -384,7 +393,7 @@ Real variable stars, not saturated (Gaia DR3 phot_variable_flag = VARIABLE in th
 selected by the Gaia G-band scatter in vari_summary): the matched comparison flags them as
 changed while their constant neighbours of the same brightness stay quiet. Example: Gaia DR3
 4472819623984651392 (G 12.66, Gaia G scatter 0.16 mag): rms z of 18 visit-to-visit matched
-comparisons 18.2, constant partner about 1; Gaia DR3 4472838904098844288 (G 15.4, scatter 0.23
+comparisons 18.2, constant partner 0.9 (median |z| 8.8 against 0.5); Gaia DR3 4472838904098844288 (G 15.4, scatter 0.23
 mag): rms z 2.3 against 0.9 for its partner. Figure variable_demo.png.
 
 ## Negative results

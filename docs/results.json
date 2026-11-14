@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "updated_utc": "2026-11-14T17:10:25+00:00"
+    "updated_utc": "2026-11-14T17:17:52+00:00"
   },
   "wavelength_source_check": {
     "random_D1_median_dwave": {
@@ -18364,6 +18364,16 @@
           "note": "predicted 1.69 px/yr"
         }
       },
+      "rms_disp_minus_pred": {
+        "value": [
+          0.5798173478552869,
+          0.09634260617492525
+        ],
+        "unit": "arcsec (RA*, Dec)",
+        "n": 3,
+        "script": "scripts/11_known_movers.py",
+        "note": "over visit pairs 0-2, 2-4, 0-4; the formal error is smaller than the RA* value (wings-method systematic)"
+      },
       "displacement_without_bias_correction": {
         "v0_v2": {
           "ra_minus_pred": {
@@ -19262,6 +19272,1007 @@
           "script": "scripts/11_known_movers.py",
           "note": "error 1.92"
         }
+      }
+    },
+    "wise0855": {
+      "gaia_within_60as": {
+        "value": 10,
+        "unit": "sources",
+        "script": "scripts/11_known_movers.py",
+        "note": "nearest 6.8 arcsec"
+      },
+      "detector2_contaminant": {
+        "gaia_id": "5756956644387831296",
+        "ra": {
+          "value": 133.75818250493919,
+          "unit": "deg (2016.0)",
+          "script": "scripts/11_known_movers.py"
+        },
+        "dec": {
+          "value": -7.241155906974705,
+          "unit": "deg (2016.0)",
+          "script": "scripts/11_known_movers.py"
+        },
+        "G": {
+          "value": 16.314916610717773,
+          "unit": "mag",
+          "script": "scripts/11_known_movers.py"
+        },
+        "sep_from_2026_position": {
+          "value": 6.812701962395169,
+          "unit": "arcsec",
+          "script": "scripts/11_known_movers.py"
+        }
+      },
+      "per_visit": {
+        "D1_v0": {
+          "mov": {
+            "flux": {
+              "value": 0.6029939342675489,
+              "unit": "mJy (aperture)",
+              "n": 4,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03594; chi2r 1.10"
+            },
+            "upper_limit_ab": {
+              "value": 16.7706762320076,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 4,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 1.0160711308430077,
+              "unit": "mJy (aperture)",
+              "n": 4,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03939; chi2r 1.21"
+            },
+            "upper_limit_ab": {
+              "value": 16.26331323537166,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 4,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.6020552215207667,
+              "unit": "mJy (aperture)",
+              "n": 4,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03595; chi2r 1.11"
+            },
+            "upper_limit_ab": {
+              "value": 16.77207321284802,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 4,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D1_v1": {
+          "mov": {
+            "flux": {
+              "value": 0.9369262449168225,
+              "unit": "mJy (aperture)",
+              "n": 16,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01917; chi2r 1.50"
+            },
+            "upper_limit_ab": {
+              "value": 16.406136672652597,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 16,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 1.0185286443984665,
+              "unit": "mJy (aperture)",
+              "n": 16,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01953; chi2r 1.26"
+            },
+            "upper_limit_ab": {
+              "value": 16.31941483422676,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 16,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.6200880701653484,
+              "unit": "mJy (aperture)",
+              "n": 16,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01796; chi2r 1.83"
+            },
+            "upper_limit_ab": {
+              "value": 16.828456359038164,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 16,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D1_v2": {
+          "mov": {
+            "flux": {
+              "value": 1.1093793949751516,
+              "unit": "mJy (aperture)",
+              "n": 13,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.02000; chi2r 0.77"
+            },
+            "upper_limit_ab": {
+              "value": 16.230170791172714,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 13,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 1.024755243446042,
+              "unit": "mJy (aperture)",
+              "n": 13,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01958; chi2r 0.95"
+            },
+            "upper_limit_ab": {
+              "value": 16.313005940905324,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 13,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.6135653835796552,
+              "unit": "mJy (aperture)",
+              "n": 13,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01780; chi2r 1.67"
+            },
+            "upper_limit_ab": {
+              "value": 16.839813771599303,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 13,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D2_v0": {
+          "mov": {
+            "flux": {
+              "value": 0.5253988324998761,
+              "unit": "mJy (aperture)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.02335; chi2r 1.73"
+            },
+            "upper_limit_ab": {
+              "value": 16.962954339242845,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.8776349801325952,
+              "unit": "mJy (aperture)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.02512; chi2r 0.75"
+            },
+            "upper_limit_ab": {
+              "value": 16.452339900017535,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.525235329813497,
+              "unit": "mJy (aperture)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.02335; chi2r 1.72"
+            },
+            "upper_limit_ab": {
+              "value": 16.963256519649242,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D2_v1": {
+          "mov": {
+            "flux": {
+              "value": 0.8701111753472739,
+              "unit": "mJy (aperture)",
+              "n": 25,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01373; chi2r 1.92"
+            },
+            "upper_limit_ab": {
+              "value": 16.50091081163304,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 25,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.9372187831629449,
+              "unit": "mJy (aperture)",
+              "n": 25,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01394; chi2r 1.88"
+            },
+            "upper_limit_ab": {
+              "value": 16.423077072241668,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 25,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.5720402434675363,
+              "unit": "mJy (aperture)",
+              "n": 25,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01298; chi2r 1.96"
+            },
+            "upper_limit_ab": {
+              "value": 16.93501098448419,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 25,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D2_v2": {
+          "mov": {
+            "flux": {
+              "value": 0.9788581538595262,
+              "unit": "mJy (aperture)",
+              "n": 15,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01787; chi2r 1.92"
+            },
+            "upper_limit_ab": {
+              "value": 16.365387255071315,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 15,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.8969562421504496,
+              "unit": "mJy (aperture)",
+              "n": 14,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01808; chi2r 2.12"
+            },
+            "upper_limit_ab": {
+              "value": 16.45440334735716,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 14,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.5389220701741639,
+              "unit": "mJy (aperture)",
+              "n": 14,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01655; chi2r 2.22"
+            },
+            "upper_limit_ab": {
+              "value": 16.97558171612045,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 14,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D3_v0": {
+          "mov": {
+            "flux": {
+              "value": 0.31259335963106755,
+              "unit": "mJy (aperture)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03580; chi2r 2.35"
+            },
+            "upper_limit_ab": {
+              "value": 17.341964593233854,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.5283643570445198,
+              "unit": "mJy (aperture)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03837; chi2r 0.48"
+            },
+            "upper_limit_ab": {
+              "value": 16.878729877706448,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.31335048625637013,
+              "unit": "mJy (aperture)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03581; chi2r 2.37"
+            },
+            "upper_limit_ab": {
+              "value": 17.33993802960075,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D3_v1": {
+          "mov": {
+            "flux": {
+              "value": 0.5782794135253378,
+              "unit": "mJy (aperture)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01320; chi2r 3.28"
+            },
+            "upper_limit_ab": {
+              "value": 16.922780905609116,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.6115393946276041,
+              "unit": "mJy (aperture)",
+              "n": 19,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01367; chi2r 3.56"
+            },
+            "upper_limit_ab": {
+              "value": 16.863526181434658,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 19,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.36757697797036,
+              "unit": "mJy (aperture)",
+              "n": 19,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01282; chi2r 1.99"
+            },
+            "upper_limit_ab": {
+              "value": 17.37862899748415,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 19,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D3_v2": {
+          "mov": {
+            "flux": {
+              "value": 0.6567595832652057,
+              "unit": "mJy (aperture)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01263; chi2r 4.04"
+            },
+            "upper_limit_ab": {
+              "value": 16.7956436986556,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.5951362792618614,
+              "unit": "mJy (aperture)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01241; chi2r 2.84"
+            },
+            "upper_limit_ab": {
+              "value": 16.897650742742986,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.3680375859761921,
+              "unit": "mJy (aperture)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01169; chi2r 3.10"
+            },
+            "upper_limit_ab": {
+              "value": 17.386484012873552,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D4_v0": {
+          "mov": {
+            "flux": {
+              "value": 0.1314019753823405,
+              "unit": "mJy (aperture)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03021; chi2r 0.00"
+            },
+            "upper_limit_ab": {
+              "value": 18.03404681049468,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.1961090317605559,
+              "unit": "mJy (aperture)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.02952; chi2r 0.16"
+            },
+            "upper_limit_ab": {
+              "value": 17.76418293275036,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.1312322672464551,
+              "unit": "mJy (aperture)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03021; chi2r 0.00"
+            },
+            "upper_limit_ab": {
+              "value": 18.034900091584028,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 2,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D4_v1": {
+          "mov": {
+            "flux": {
+              "value": 0.2524195181811986,
+              "unit": "mJy (aperture)",
+              "n": 17,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01137; chi2r 3.05"
+            },
+            "upper_limit_ab": {
+              "value": 17.757169834265177,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 17,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.27984243167849876,
+              "unit": "mJy (aperture)",
+              "n": 17,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01150; chi2r 3.06"
+            },
+            "upper_limit_ab": {
+              "value": 17.656582500161043,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 17,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.17721806372069704,
+              "unit": "mJy (aperture)",
+              "n": 17,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01117; chi2r 1.84"
+            },
+            "upper_limit_ab": {
+              "value": 18.090809166632262,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 17,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D4_v2": {
+          "mov": {
+            "flux": {
+              "value": 0.3072723864625235,
+              "unit": "mJy (aperture)",
+              "n": 10,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01439; chi2r 1.88"
+            },
+            "upper_limit_ab": {
+              "value": 17.53855957823655,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 10,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.2716928859919888,
+              "unit": "mJy (aperture)",
+              "n": 10,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01424; chi2r 2.68"
+            },
+            "upper_limit_ab": {
+              "value": 17.656318835954348,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 10,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.1605900348461191,
+              "unit": "mJy (aperture)",
+              "n": 12,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.01261; chi2r 2.08"
+            },
+            "upper_limit_ab": {
+              "value": 18.15615702798727,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 12,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D5_v0": {
+          "mov": {
+            "flux": {
+              "value": 0.42530339606150247,
+              "unit": "mJy (aperture)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.04600; chi2r 3.67"
+            },
+            "upper_limit_ab": {
+              "value": 17.02322534232399,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.449542722786625,
+              "unit": "mJy (aperture)",
+              "n": 6,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.04913; chi2r 4.49"
+            },
+            "upper_limit_ab": {
+              "value": 16.960242035587363,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 6,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.4252504612108143,
+              "unit": "mJy (aperture)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.04600; chi2r 3.67"
+            },
+            "upper_limit_ab": {
+              "value": 17.02332266681362,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 7,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D5_v1": {
+          "mov": {
+            "flux": {
+              "value": 0.42285311683069093,
+              "unit": "mJy (aperture)",
+              "n": 15,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03013; chi2r 1.92"
+            },
+            "upper_limit_ab": {
+              "value": 17.124249517464413,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 15,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.42306801614224154,
+              "unit": "mJy (aperture)",
+              "n": 15,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03028; chi2r 1.92"
+            },
+            "upper_limit_ab": {
+              "value": 17.12287005200109,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 15,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.354878458817413,
+              "unit": "mJy (aperture)",
+              "n": 17,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.02805; chi2r 2.12"
+            },
+            "upper_limit_ab": {
+              "value": 17.293805232418983,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 17,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D5_v2": {
+          "mov": {
+            "flux": {
+              "value": 0.4527306563031065,
+              "unit": "mJy (aperture)",
+              "n": 11,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03536; chi2r 5.55"
+            },
+            "upper_limit_ab": {
+              "value": 17.031932443979194,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 11,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.4258033709051052,
+              "unit": "mJy (aperture)",
+              "n": 11,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03563; chi2r 4.89"
+            },
+            "upper_limit_ab": {
+              "value": 17.08386939045946,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 11,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.2694399375561553,
+              "unit": "mJy (aperture)",
+              "n": 11,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03421; chi2r 3.17"
+            },
+            "upper_limit_ab": {
+              "value": 17.47351714347398,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 11,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D6_v0": {
+          "mov": {
+            "flux": {
+              "value": 0.3487397608803967,
+              "unit": "mJy (aperture)",
+              "n": 3,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.12835; chi2r 0.41"
+            },
+            "upper_limit_ab": {
+              "value": 16.73611866911615,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 3,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.31219368598213476,
+              "unit": "mJy (aperture)",
+              "n": 3,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.12952; chi2r 0.07"
+            },
+            "upper_limit_ab": {
+              "value": 16.786166568287403,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 3,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.3487850305862783,
+              "unit": "mJy (aperture)",
+              "n": 3,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.12835; chi2r 0.41"
+            },
+            "upper_limit_ab": {
+              "value": 16.736056692613232,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 3,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D6_v1": {
+          "mov": {
+            "flux": {
+              "value": 0.6317546942998205,
+              "unit": "mJy (aperture)",
+              "n": 12,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.05367; chi2r 1.13"
+            },
+            "upper_limit_ab": {
+              "value": 16.652198214875153,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 12,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.6539271099915945,
+              "unit": "mJy (aperture)",
+              "n": 11,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.05598; chi2r 1.43"
+            },
+            "upper_limit_ab": {
+              "value": 16.613052900052224,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 11,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.6195767195286189,
+              "unit": "mJy (aperture)",
+              "n": 12,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.05523; chi2r 0.93"
+            },
+            "upper_limit_ab": {
+              "value": 16.662516016578724,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 12,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        },
+        "D6_v2": {
+          "mov": {
+            "flux": {
+              "value": 0.5278603171988425,
+              "unit": "mJy (aperture)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03942; chi2r 2.16"
+            },
+            "upper_limit_ab": {
+              "value": 16.8742755121911,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 20,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f26": {
+            "flux": {
+              "value": 0.534263773882435,
+              "unit": "mJy (aperture)",
+              "n": 21,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03850; chi2r 1.91"
+            },
+            "upper_limit_ab": {
+              "value": 16.868188591227238,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 21,
+              "script": "scripts/11_known_movers.py"
+            }
+          },
+          "f1": {
+            "flux": {
+              "value": 0.44355593306903995,
+              "unit": "mJy (aperture)",
+              "n": 21,
+              "script": "scripts/11_known_movers.py",
+              "note": "error 0.03836; chi2r 1.26"
+            },
+            "upper_limit_ab": {
+              "value": 17.03222453628395,
+              "unit": "AB mag (flux + 3 sigma)",
+              "n": 21,
+              "script": "scripts/11_known_movers.py"
+            }
+          }
+        }
+      },
+      "expected_w2": {
+        "value": 17.358999999999998,
+        "unit": "AB mag",
+        "script": "scripts/11_known_movers.py",
+        "note": "0.413 mJy; Luhman & Esplin 2016 W2 14.02 Vega + 3.339 (IRSA WISE explanatory supplement)"
+      },
+      "D6_all_visits_moving": {
+        "flux": {
+          "value": 0.5593558676254279,
+          "unit": "mJy (aperture)",
+          "n": 35,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.03879"
+        },
+        "limit_ab": {
+          "value": 16.825626435063764,
+          "unit": "AB mag (3 sigma)",
+          "n": 35,
+          "script": "scripts/11_known_movers.py"
+        }
+      },
+      "D3_all_visits_moving": {
+        "flux": {
+          "value": 0.5875417833952922,
+          "unit": "mJy (aperture)",
+          "n": 42,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.01659"
+        },
+        "limit_ab": {
+          "value": 16.88917704289103,
+          "unit": "AB mag (3 sigma)",
+          "n": 42,
+          "script": "scripts/11_known_movers.py"
+        }
+      },
+      "D2_f26_stack_centroids_px": {
+        "value": [
+          [
+            -1.0998811321627606,
+            -0.29794138016200833
+          ],
+          [
+            1.0732238246121426,
+            0.25165786530876844
+          ],
+          [
+            -1.1023164486579375,
+            -0.28751590830056273
+          ]
+        ],
+        "unit": "px (x, y) from aligned position, per visit",
+        "n": 3,
+        "script": "scripts/11_known_movers.py",
+        "note": "errors x 0.01, 0.01, 0.01"
+      },
+      "D2_mov_stack_centroids_px": {
+        "value": [
+          [
+            -1.8386114025082811,
+            -0.04682247996941413
+          ],
+          [
+            1.2784537115341088,
+            0.18872724414074327
+          ],
+          [
+            -0.5388628174154597,
+            -0.347363037082804
+          ]
+        ],
+        "unit": "px (x, y) from aligned position, per visit",
+        "n": 3,
+        "script": "scripts/11_known_movers.py",
+        "note": "errors x 0.01, 0.01, 0.01"
+      },
+      "D6_f26_stack_centroids_px": {
+        "value": [
+          [
+            0.6139220225995032,
+            -0.32776652134948847
+          ],
+          [
+            -0.007254254649275538,
+            0.02549682716121282
+          ],
+          [
+            -0.6140532883996492,
+            -0.04665880393101318
+          ]
+        ],
+        "unit": "px (x, y) from aligned position, per visit",
+        "n": 3,
+        "script": "scripts/11_known_movers.py",
+        "note": "errors x 0.36, 0.06, 0.04"
+      },
+      "D6_mov_stack_centroids_px": {
+        "value": [
+          [
+            -0.1456556991149469,
+            -0.03306915349702422
+          ],
+          [
+            0.1859470909297265,
+            -0.03537186899924194
+          ],
+          [
+            -0.06656566786677942,
+            -0.11380895643197064
+          ]
+        ],
+        "unit": "px (x, y) from aligned position, per visit",
+        "n": 3,
+        "script": "scripts/11_known_movers.py",
+        "note": "errors x 0.30, 0.06, 0.05"
+      },
+      "download_bytes": {
+        "value": 0,
+        "unit": "bytes",
+        "script": "scripts/11_known_movers.py",
+        "note": "cutouts and headers fetched in this run (0 when cached)"
       }
     },
     "_citations": [

@@ -68,7 +68,7 @@ needed for a ratio or a significance.
 | Minimum samples | 3, with at least one on each side of w0 | step 3 |
 | Outlier clip | the single worst sample, dropped if its normalised residual exceeds 4 | step 3 |
 | w0 separation | each selected w0 more than 5 b0 above the previous | step 4 |
-| Verdict threshold | |z| >= 3 'changed' (about 1 percent false alarms on steady stars, see below) | step 5 |
+| Verdict threshold | abs(z) >= 3 'changed' (about 1 percent false alarms on steady stars, see below) | step 5 |
 | Pairing tolerance (PS) | |lam gap| <= 1.0 mean bandwidth of the two exposures | step 6 |
 | Partial visit | fewer than 8 accepted exposures in a visit | step 7 |
 | Visit membership | at least 12 exposures (library `inStack` rule) | inputs |

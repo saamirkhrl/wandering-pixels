@@ -352,7 +352,7 @@ was not tested.
 False alarms of the readout on steady stars (var' = var + (0.02 F)^2; one value per star,
 detector and visit pair; 68 percent intervals):
 
-| field, method | N | |z| >= 3 | |z| >= 4 | |z| >= 5 |
+| field, method | N | abs(z) >= 3 | abs(z) >= 4 | abs(z) >= 5 |
 |---|---|---|---|---|
 | Barnard, P1 | 1258 | 2.1 % [1.7, 2.6] | 0.9 % [0.6, 1.2] | 0.8 % [0.6, 1.1] |
 | Barnard, PS | 1238 | 3.2 % [2.7, 3.7] | 1.2 % [0.9, 1.6] | 0.7 % [0.5, 1.1] |

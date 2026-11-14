@@ -16,6 +16,12 @@ spectrally matched differences, injection-recovery, known movers).
 3. For point-source photometry, the archive's error bars are too small: differences of a constant
    star scatter 1.2 to 1.4 times more than the stated errors predict. A missing error of about
    2 percent of the star's flux explains it. (Section "Error bars".)
+
+Also measured: fake moving stars planted in real images are found half the time at AB 18.3 to
+19.1 when they move 2 pixels or more between visits ("Injection and recovery"); the change
+readout gives about 1 percent false alarms on steady stars at |z| >= 3; Eps Indi B moves as its
+catalogue predicts to within 0.1 arcsec; Barnard's Star, RW Aur and R Dra are saturated; WISE
+0855 is not detected ("Known movers").
 Every number below is in `docs/results.json`, with its sample size and the script that produced
 it. Commands to reproduce: `validation/README.md`.
 

@@ -294,6 +294,8 @@ export function samplesOfVisit(exposures: readonly MatchedExposure[], visit: num
   const out: Sample[] = [];
   for (const e of exposures) {
     if (e.visit !== visit || !e.measurement.ok) continue;
+    // exposures with a non-finite lam or bw are not accepted
+    if (!Number.isFinite(e.wavelength) || !Number.isFinite(e.bandwidth)) continue;
     out.push({
       id: e.id,
       mjd: e.mjd,

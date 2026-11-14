@@ -27,7 +27,8 @@ const V = vectors as unknown as {
   stars: Array<{ stamp: StampVector }>;
 };
 
-function close(a: number, b: number, rel = 1e-3): void {
+// docs/algorithm.md: a port matches the unrounded vectors to 1e-6 relative.
+function close(a: number, b: number, rel = 1e-6): void {
   expect(Math.abs(a - b)).toBeLessThanOrEqual(rel * Math.abs(b));
 }
 

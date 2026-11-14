@@ -9,8 +9,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 
-import { decodeCache } from '../src/lib/spherex/cache';
-import type { CacheManifest } from '../src/lib/spherex/cache';
+import { loadCached } from '../src/lib/spherex/cache';
 import { buildMovie, difference } from '../src/lib/spherex/movie';
 import type { CachedSlug, Detector, MovieFrame } from '../src/lib/spherex/types';
 
@@ -102,15 +101,21 @@ function asinhShade(lo: number, hi: number, px: Float32Array): (i: number) => nu
   };
 }
 
+// Reads the format 2 cache from public/cache on disk through the library loader; any other URL throws.
+const diskFetch = (async (input: unknown) => {
+  const m = /^\/cache\/([a-z0-9-]+)\/([a-z0-9.-]+)$/.exec(String(input));
+  if (!m) throw new Error(`network access not allowed: ${String(input)}`);
+  const path = join(ROOT, 'public', 'cache', m[1], m[2]);
+  if (!existsSync(path)) return new Response('missing', { status: 404 });
+  return new Response(readFileSync(path), { status: 200 });
+}) as typeof fetch;
+
 export function loadFromDisk(slug: CachedSlug) {
-  const dir = join(ROOT, 'public', 'cache', slug);
-  const manifest = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8')) as CacheManifest;
-  const bin = new Uint8Array(readFileSync(join(dir, 'frames.bin')));
-  return decodeCache(manifest, bin);
+  return loadCached(slug, { fetchFn: diskFetch });
 }
 
-export function writeSheet(slug: CachedSlug): string | null {
-  const c = loadFromDisk(slug);
+export async function writeSheet(slug: CachedSlug): Promise<string | null> {
+  const c = await loadFromDisk(slug);
   const rows: { det: Detector; tiles: MovieFrame[]; stretch: { lo: number; hi: number } }[] = [];
   for (const det of [2, 6] as Detector[]) {
     const m = buildMovie(c.frames, 'visit-stack', det, c.target);
@@ -154,7 +159,7 @@ export function writeSheet(slug: CachedSlug): string | null {
   return out;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const arg = process.argv[2];
   const todo = arg === 'all' ? SLUGS : SLUGS.filter((s) => s === arg);
   if (todo.length === 0) {
@@ -162,13 +167,18 @@ function main(): void {
     process.exit(2);
   }
   for (const slug of todo) {
-    if (!existsSync(join(ROOT, 'public', 'cache', slug, 'manifest.json'))) {
+    if (!existsSync(join(ROOT, 'public', 'cache', slug, 'index.json'))) {
       console.error(`no cache for ${slug}`);
       continue;
     }
     console.log(`${slug}: rows are detector 2 then detector 6; last column is the first-last difference`);
-    console.log(`  wrote ${writeSheet(slug)}`);
+    console.log(`  wrote ${await writeSheet(slug)}`);
   }
 }
 
-if (!process.env.VITEST) main();
+if (!process.env.VITEST) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

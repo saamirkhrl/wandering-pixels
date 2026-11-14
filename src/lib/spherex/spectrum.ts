@@ -1,9 +1,17 @@
 import type { Frame, SpectrumPoint } from './types';
+import { ADVISORY_MASK, BAD_DATA_MASK } from './types';
 import { worldToGrid } from './wcs';
 import { median, stdDev } from './stats';
 
 const ARCSEC_PER_RAD = 206264.806247;
 
+
+/**
+ * Aperture photometry per frame. `flux` is NaN (and fluxErr NaN) when no usable (non-NaN)
+ * aperture pixel exists. `flagged` = any aperture pixel is NaN or carries a BAD_DATA bit.
+ * `advisory` = any aperture pixel carries an ADVISORY bit (pixels keep their values).
+ * The background annulus excludes only NaN / BAD_DATA pixels.
+ */
 export function spectrumAt(frames: Frame[], ra: number, dec: number, apertureArcsec?: number): SpectrumPoint[] {
   const out: SpectrumPoint[] = [];
   for (const f of frames) {
@@ -17,6 +25,7 @@ export function spectrumAt(frames: Frame[], ra: number, dec: number, apertureArc
     const apIdx: number[] = [];
     const annVals: number[] = [];
     let flagged = false;
+    let advisory = false;
     const x0 = Math.max(0, Math.floor(cx - rOut));
     const x1 = Math.min(w - 1, Math.ceil(cx + rOut));
     const y0 = Math.max(0, Math.floor(cy - rOut));
@@ -27,10 +36,11 @@ export function spectrumAt(frames: Frame[], ra: number, dec: number, apertureArc
         const i = y * w + x;
         if (d <= r) {
           apIdx.push(i);
-          if (f.flags[i] !== 0 || !Number.isFinite(f.pixels[i])) flagged = true;
+          if ((f.flags[i] & BAD_DATA_MASK) !== 0 || !Number.isFinite(f.pixels[i])) flagged = true;
+          if ((f.flags[i] & ADVISORY_MASK) !== 0) advisory = true;
         } else if (d >= rIn && d <= rOut) {
           const p = f.pixels[i];
-          if (f.flags[i] === 0 && Number.isFinite(p)) annVals.push(p);
+          if ((f.flags[i] & BAD_DATA_MASK) === 0 && Number.isFinite(p)) annVals.push(p);
         }
       }
     }
@@ -62,6 +72,7 @@ export function spectrumAt(frames: Frame[], ra: number, dec: number, apertureArc
       visitIndex: e.visitIndex,
       detector: e.detector,
       flagged,
+      advisory,
     });
   }
   out.sort((a, b) => (Number.isNaN(a.wavelength) ? 1 : 0) - (Number.isNaN(b.wavelength) ? 1 : 0) || a.wavelength - b.wavelength);

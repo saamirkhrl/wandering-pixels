@@ -62,3 +62,48 @@ export function stdDev(values: number[]): number {
   for (const v of values) s += (v - m) * (v - m);
   return Math.sqrt(s / (n - 1));
 }
+
+function medianInPlace(a: Float64Array, n: number): number {
+  const s = a.subarray(0, n).sort();
+  return percentileSorted(s, 50);
+}
+
+/**
+ * Sigma-clipped median and robust sigma. Each iteration takes the median m and
+ * sigma = 1.4826 * MAD about m, then keeps values within nSigma * sigma of m. The result is the
+ * median of the final set and 1.4826 * MAD of that set about its median. NaN fields for empty
+ * input. Does not modify `values`.
+ */
+export function sigmaClippedStats(
+  values: ArrayLike<number>,
+  iterations = 3,
+  nSigma = 3,
+): { median: number; sigma: number } {
+  let n = values.length;
+  if (n === 0) return { median: NaN, sigma: NaN };
+  const cur = Float64Array.from(values as ArrayLike<number>);
+  const dev = new Float64Array(n);
+  const spread = (k: number, m: number): number => {
+    for (let i = 0; i < k; i++) dev[i] = Math.abs(cur[i] - m);
+    return 1.4826 * medianInPlace(dev, k);
+  };
+  for (let it = 0; it < iterations; it++) {
+    const m = medianInPlace(Float64Array.from(cur.subarray(0, n)), n);
+    const sigma = spread(n, m);
+    if (!(sigma > 0)) break;
+    const lim = nSigma * sigma;
+    let k = 0;
+    for (let i = 0; i < n; i++) {
+      if (Math.abs(cur[i] - m) <= lim) cur[k++] = cur[i];
+    }
+    if (k === 0 || k === n) break;
+    n = k;
+  }
+  const med = medianInPlace(Float64Array.from(cur.subarray(0, n)), n);
+  return { median: med, sigma: spread(n, med) };
+}
+
+/** Median of the sigma-clipped set (3 iterations at 3 sigma by default). */
+export function sigmaClippedMedian(values: ArrayLike<number>, iterations = 3, nSigma = 3): number {
+  return sigmaClippedStats(values, iterations, nSigma).median;
+}

@@ -1,7 +1,8 @@
 import type { Frame, MovieMode, Detector, Target, Movie, MovieFrame, DifferenceImage, Exposure } from './types';
-import { SpherexError } from './types';
+import { SpherexError, BAD_DATA_MASK } from './types';
 import { positionAt, worldToGrid } from './wcs';
-import { robustPercentiles } from './stats';
+import { robustPercentiles, sigmaClippedStats } from './stats';
+import { saturatedSources } from './saturation';
 
 const MJD_UNIX_EPOCH = 40587;
 
@@ -22,19 +23,102 @@ function meanOf(v: number[]): number {
   return s / v.length;
 }
 
-function stackFrames(members: Frame[], visitIndex: number, detector: Detector, target?: Target): MovieFrame {
+export interface BuildMovieOptions {
+  /** 'median' (default): subtract each frame's sigma-clipped median before stacking. 'none': leave pixels as is. */
+  background?: 'median' | 'none';
+}
+
+const BG_MAX_SAMPLES = 20000;
+const BG_MIN_PIXELS = 100;
+const BG_DILATE = 3;
+
+function subsample(values: number[]): number[] {
+  const stride = Math.max(1, Math.ceil(values.length / BG_MAX_SAMPLES));
+  if (stride === 1) return values;
+  const out: number[] = [];
+  for (let i = 0; i < values.length; i += stride) out.push(values[i]);
+  return out;
+}
+
+/**
+ * Background level of one frame (MJy/sr).
+ * plain: sigma-clipped median (3 iterations, 3 sigma, sigma = 1.4826*MAD) of finite pixels with
+ * flags == 0. level: the same estimator over those pixels minus two exclusion zones:
+ *   zone 1: Euclidean distance <= max(8, 3*sqrt(npix/pi)) px from each saturatedSources blob centre;
+ *   zone 2: pixels brighter than plain + 10 * robust sigma, dilated by 3 px (Chebyshev, 7x7 square).
+ * Fewer than 100 pixels left -> level = plain, fallback = true. Fewer than 100 usable pixels
+ * at all -> level = plain = 0. Inputs of > 20000 pixels are subsampled with a deterministic stride.
+ * nUsed is the number of pixels (before subsampling) that fed `level`.
+ */
+export function frameBackground(frame: Frame): { level: number; fallback: boolean; plain: number; nUsed: number } {
+  const { w, h, pixels, flags } = frame;
+  const n = w * h;
+  const usableVals: number[] = [];
+  for (let i = 0; i < n; i++) if ((flags[i] & BAD_DATA_MASK) === 0 && Number.isFinite(pixels[i])) usableVals.push(pixels[i]);
+  if (usableVals.length < BG_MIN_PIXELS) return { level: 0, fallback: false, plain: 0, nUsed: 0 };
+  const plainStats = sigmaClippedStats(subsample(usableVals), 3, 3);
+  const plain = plainStats.median;
+  const excluded = new Uint8Array(n);
+  for (const s of saturatedSources(frame)) {
+    const r = Math.max(8, 3 * Math.sqrt(s.npix / Math.PI));
+    const x0 = Math.max(0, Math.floor(s.x - r));
+    const x1 = Math.min(w - 1, Math.ceil(s.x + r));
+    const y0 = Math.max(0, Math.floor(s.y - r));
+    const y1 = Math.min(h - 1, Math.ceil(s.y + r));
+    for (let y = y0; y <= y1; y++)
+      for (let x = x0; x <= x1; x++) if ((x - s.x) ** 2 + (y - s.y) ** 2 <= r * r) excluded[y * w + x] = 1;
+  }
+  const thr = plain + 10 * plainStats.sigma;
+  const bright = new Uint8Array(n);
+  for (let i = 0; i < n; i++) if ((flags[i] & BAD_DATA_MASK) === 0 && pixels[i] > thr) bright[i] = 1;
+  const rowPass = new Uint8Array(n);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      if (!bright[y * w + x]) continue;
+      for (let xx = Math.max(0, x - BG_DILATE); xx <= Math.min(w - 1, x + BG_DILATE); xx++) rowPass[y * w + xx] = 1;
+    }
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      if (!rowPass[y * w + x]) continue;
+      for (let yy = Math.max(0, y - BG_DILATE); yy <= Math.min(h - 1, y + BG_DILATE); yy++) excluded[yy * w + x] = 1;
+    }
+  const kept: number[] = [];
+  for (let i = 0; i < n; i++) if (!excluded[i] && (flags[i] & BAD_DATA_MASK) === 0 && Number.isFinite(pixels[i])) kept.push(pixels[i]);
+  if (kept.length < BG_MIN_PIXELS) return { level: plain, fallback: true, plain, nUsed: usableVals.length };
+  const level = sigmaClippedStats(subsample(kept), 3, 3).median;
+  return { level, fallback: false, plain, nUsed: kept.length };
+}
+
+function stackFrames(
+  members: Frame[],
+  visitIndex: number,
+  detector: Detector,
+  target: Target | undefined,
+  background: 'median' | 'none',
+): MovieFrame {
   const first = members[0];
   const { w, h, grid } = first;
   const n = w * h;
   const pixels = new Float32Array(n);
   const variance = new Float32Array(n);
+  // Per-member pixel source: the input array for 'none', otherwise a background-subtracted copy.
+  const bgs = members.map((f) => (background === 'median' ? frameBackground(f) : null));
+  const levels = bgs.map((b) => (b ? b.level : 0));
+  const srcs: ArrayLike<number>[] = members.map((f, k) => {
+    if (background !== 'median') return f.pixels;
+    const c = new Float32Array(f.pixels.length);
+    const lv = levels[k];
+    for (let i = 0; i < c.length; i++) c[i] = f.pixels[i] - lv;
+    return c;
+  });
   for (let i = 0; i < n; i++) {
     let sw = 0;
     let swx = 0;
-    for (const f of members) {
-      const p = f.pixels[i];
+    for (let k = 0; k < members.length; k++) {
+      const f = members[k];
+      const p = srcs[k][i];
       const v = f.variance[i];
-      if (f.flags[i] !== 0 || !Number.isFinite(p) || !Number.isFinite(v) || !(v > 0)) continue;
+      if ((f.flags[i] & BAD_DATA_MASK) !== 0 || !Number.isFinite(p) || !Number.isFinite(v) || !(v > 0)) continue;
       const wt = 1 / v;
       sw += wt;
       swx += wt * p;
@@ -74,6 +158,8 @@ function stackFrames(members: Frame[], visitIndex: number, detector: Detector, t
     nExposures: members.length,
     exposureIds: members.map((f) => f.exposure.id),
     targetXY,
+    backgroundLevel: background === 'median' ? meanOf(levels) : 0,
+    ...(background === 'median' ? { backgroundFallback: bgs.some((b) => b !== null && b.fallback) } : {}),
   };
 }
 
@@ -84,7 +170,14 @@ function widen(lo: number, hi: number): { lo: number; hi: number } {
   return { lo: lo - d, hi: hi + d };
 }
 
-export function buildMovie(frames: Frame[], mode: MovieMode, detector: Detector, target?: Target): Movie {
+export function buildMovie(
+  frames: Frame[],
+  mode: MovieMode,
+  detector: Detector,
+  target?: Target,
+  opts: BuildMovieOptions = {},
+): Movie {
+  const background = opts.background ?? 'median';
   const sel = frames.filter((f) => f.exposure.detector === detector);
   const grid = sel.length ? sel[0].grid : frames.length ? frames[0].grid : { ra0: 0, dec0: 0, w: 0, h: 0, scaleArcsec: 6.15, epochMjd: 0 };
   if (sel.length === 0) {
@@ -92,15 +185,16 @@ export function buildMovie(frames: Frame[], mode: MovieMode, detector: Detector,
   }
   const out: MovieFrame[] = [];
   if (mode === 'single') {
-    for (const f of sel) out.push(stackFrames([f], f.exposure.visitIndex, detector, target));
+    for (const f of sel) out.push(stackFrames([f], f.exposure.visitIndex, detector, target, background));
   } else {
     const groups = new Map<number, Frame[]>();
     for (const f of sel) {
+      if (f.exposure.inStack === false) continue;
       const g = groups.get(f.exposure.visitIndex);
       if (g) g.push(f);
       else groups.set(f.exposure.visitIndex, [f]);
     }
-    for (const [vi, members] of groups) out.push(stackFrames(members, vi, detector, target));
+    for (const [vi, members] of groups) out.push(stackFrames(members, vi, detector, target, background));
   }
   out.sort((a, b) => a.mjd - b.mjd);
   const [lo, hi] = robustPercentiles(out.map((m) => m.pixels), [1, 99.5]);
@@ -139,20 +233,28 @@ export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
   };
 }
 
-export function summarize(exposures: Exposure[]): { detector: Detector; visits: number[]; count: number }[] {
-  const m = new Map<Detector, { visits: Set<number>; count: number }>();
+export function summarize(
+  exposures: Exposure[],
+): { detector: Detector; visits: number[]; count: number; outOfStack: number }[] {
+  const m = new Map<Detector, { visits: Set<number>; count: number; outOfStack: number }>();
   for (const e of exposures) {
     let r = m.get(e.detector);
     if (!r) {
-      r = { visits: new Set(), count: 0 };
+      r = { visits: new Set(), count: 0, outOfStack: 0 };
       m.set(e.detector, r);
     }
     r.visits.add(e.visitIndex);
     r.count++;
+    if (e.inStack === false) r.outOfStack++;
   }
   return [...m.entries()]
     .sort((x, y) => x[0] - y[0])
-    .map(([detector, r]) => ({ detector, visits: [...r.visits].sort((a, b) => a - b), count: r.count }));
+    .map(([detector, r]) => ({
+      detector,
+      visits: [...r.visits].sort((a, b) => a - b),
+      count: r.count,
+      outOfStack: r.outOfStack,
+    }));
 }
 
 export function pickBlinkPair(exposures: Exposure[], detector?: Detector): [Exposure, Exposure] | null {

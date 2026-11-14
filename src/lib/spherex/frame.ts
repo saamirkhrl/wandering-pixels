@@ -4,7 +4,7 @@ import type { Hdu, ReadOptions } from './fits';
 import { readFlagsBlock, maskBits } from './flags';
 import { readWaveTable, waveAt } from './wavelength';
 import { parseWcs, skyToPix, gridToWorld, positionAt } from './wcs';
-import { FLAG_BITS, SpherexError } from './types';
+import { BAD_DATA_MASK, FLAG_BITS, SpherexError } from './types';
 import type { Exposure, Frame, FrameOptions, Grid } from './types';
 
 function abortIf(signal?: AbortSignal): void {
@@ -157,7 +157,10 @@ async function loadFrameCounted(
         val += wt * (iv - zv);
         vr += wt * wt * vv;
       }
-      if (fl !== 0) { flags[j] = fl; continue; }
+      // Bad-data bits (and off-detector / non-finite sources) blank the pixel. Advisory bits are
+      // only OR-ed into flags: the pixel keeps its value and its normal variance weight.
+      flags[j] = fl;
+      if ((fl & BAD_DATA_MASK) !== 0) continue;
       pixels[j] = val;
       variance[j] = vr;
       good++;

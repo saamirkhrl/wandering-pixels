@@ -157,7 +157,9 @@ const SATURATED_SRC = bit(15) | bit(26); // NONLINEAR, BLOOM
 const BAD_PIXEL_SRC = bit(2) | bit(6) | bit(7) | bit(9) | bit(10) | bit(11) | bit(14); // SUR_ERROR, NONFUNC, DICHROIC, MISSING_DATA, HOT, COLD, PHANMISS
 const TRANSIENT_SRC = bit(0) | bit(27); // TRANSIENT, SNOWBALL
 const PERSIST_SRC = bit(17);
-const ARTIFACT_SRC = bit(20) | bit(25) | bit(28) | bit(29); // CROSSTALK, STREAK, HALO, SATELLITE_HALO
+const CROSSTALK_SRC = bit(20);
+const STREAK_SRC = bit(25);
+const HALO_SRC = bit(28) | bit(29); // HALO, SATELLITE_HALO
 
 /** Map a raw FLAGS int to FLAG_BITS (Uint8-sized). Unlisted source bits map to 0. */
 export function maskBits(raw: number): number {
@@ -166,6 +168,8 @@ export function maskBits(raw: number): number {
   if (raw & BAD_PIXEL_SRC) m |= FLAG_BITS.BAD_PIXEL;
   if (raw & TRANSIENT_SRC) m |= FLAG_BITS.TRANSIENT;
   if (raw & PERSIST_SRC) m |= FLAG_BITS.PERSIST;
-  if (raw & ARTIFACT_SRC) m |= FLAG_BITS.ARTIFACT;
+  if (raw & CROSSTALK_SRC) m |= FLAG_BITS.CROSSTALK;
+  if (raw & STREAK_SRC) m |= FLAG_BITS.STREAK;
+  if (raw & HALO_SRC) m |= FLAG_BITS.HALO;
   return m;
 }

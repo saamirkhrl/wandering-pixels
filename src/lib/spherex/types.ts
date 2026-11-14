@@ -24,6 +24,8 @@ export interface Exposure {
   bandwidthAtTarget: number | null;  // um, same null rule
   url: string;                      // https URL of the Level 2 FITS on S3
   release: 'dr1' | 'qr2' | 'qr3';
+  inStack?: boolean;                // absent or true = normal. false = small stray cluster: listed with
+                                    // its visit but left out of visit stacks (the target moves between them)
 }
 
 export interface Grid {
@@ -38,12 +40,13 @@ export interface Frame {
   grid: Grid;
   pixels: Float32Array;             // MJy/sr, zodi subtracted unless background:'none'
   variance: Float32Array;           // (MJy/sr)^2
-  flags: Uint8Array;                // 0 = good, non-zero = masked (bits in FLAG_BITS)
+  flags: Uint8Array;                // FLAG_BITS; pixel is NaN iff (flags & BAD_DATA_MASK) != 0
   w: number; h: number;
-  coverage: number;                 // 0..1 fraction of grid pixels with data
+  coverage: number;                 // 0..1 fraction of grid pixels that are not NaN
   wavelengthMap?: Float32Array;     // um per grid pixel (FrameOptions.wavelengthMap), NaN where no data
   bandwidthMap?: Float32Array;      // um per grid pixel, same rule
   bytes: number;                    // bytes transferred for this frame (incl. its header reads); 0 from cache
+  trackingDistanceAu?: number;      // set when resampled onto gridAt(grid, mjd, D): grid co-moves with a body at D au
 }
 
 export type MovieMode = 'visit-stack' | 'single';
@@ -61,6 +64,9 @@ export interface MovieFrame {
   nExposures: number;
   exposureIds: string[];
   targetXY: [number, number] | null;
+  backgroundFallback?: boolean;     // true if the masked background estimator had < 100 pixels and the
+                                    // plain clipped median was used for at least one member
+  backgroundLevel: number;          // MJy/sr subtracted per member before stacking (mean); 0 for background 'none'
 }
 
 export interface Movie {
@@ -69,6 +75,7 @@ export interface Movie {
   grid: Grid;
   frames: MovieFrame[];
   stretch: { lo: number; hi: number };
+  trackingDistanceAu?: number;      // members were tracked at this heliocentric distance (au)
 }
 
 export interface DifferenceImage {
@@ -86,12 +93,13 @@ export interface SpectrumPoint {
   exposureId: string;
   wavelength: number;
   bandwidth: number;
-  flux: number;                     // mJy
-  fluxErr: number;                  // mJy
+  flux: number;                     // mJy, aperture sum minus annulus median; NaN if no usable aperture pixel
+  fluxErr: number;                  // mJy; NaN when flux is NaN
   time: string; mjd: number;
   visitIndex: number;
   detector: Detector;
-  flagged: boolean;
+  flagged: boolean;                 // NaN or BAD_DATA_MASK pixel inside the aperture
+  advisory?: boolean;               // ADVISORY_MASK pixel inside the aperture (always set by spectrumAt)
 }
 
 export interface GaiaStar {
@@ -132,6 +140,8 @@ export interface FrameOptions extends CallOptions {
   background?: 'zodi' | 'none';
   wavelengthMap?: boolean;          // also fill Frame.wavelengthMap / bandwidthMap (not cached)
   target?: Target;                  // if given, wavelengthAtTarget uses positionAt(target, exposure.mjd)
+  distanceAu?: number;              // finite > 0: resample each exposure onto gridAt(grid, mjd, distanceAu, referenceMjd)
+  referenceMjd?: number;            // see gridAt
 }
 
 export type SpherexErrorCode =
@@ -151,17 +161,28 @@ export class SpherexError extends Error {
   }
 }
 
-// Bits of Frame.flags (Uint8). Each groups several source FLAGS bits of the Level 2 file.
-// Any non-zero value means the output pixel is masked (and its value is NaN).
-// Source bit numbers are those of the Level 2 FLAGS header (MSKNnnnn). Not mapped (pixel stays
-// usable): OVERFLOW (1, about half full well; it fires on unsaturated bright-star cores),
+// Bits of Frame.flags (Uint8). Each groups source FLAGS bits of the Level 2 file. Raw bit
+// names come from the MSKNnnnn keywords of the FLAGS HDU header (e.g. MSKN0026 = 'BLOOM'),
+// matching Table 16 of the SPHEREx Explanatory Supplement.
+// Two masks split the bits:
+// - BAD_DATA_MASK: the pixel value is bad. Such grid pixels are NaN in pixels/variance and are
+//   excluded from stacks, photometry and background estimates.
+// - ADVISORY_MASK: reported for overlays only. The pixel value and its variance weight are kept.
+// Not mapped at all: OVERFLOW (1, about half full well; fires on unsaturated bright-star cores),
 // FULLSAMPLE (12), OUTLIER (19), SOURCE (21), GHOST (22), GHOST_FPA (23), GHOST_EXT (24).
 // A grid pixel gets the OR of the bits of the source pixels used to interpolate it.
 export const FLAG_BITS = {
-  NO_DATA: 1,      // off the detector, or non-finite IMAGE/VARIANCE/ZODI
-  SATURATED: 2,    // NONLINEAR, BLOOM
-  BAD_PIXEL: 4,    // SUR_ERROR, NONFUNC, DICHROIC, MISSING_DATA, HOT, COLD, PHANMISS
-  TRANSIENT: 8,    // TRANSIENT, SNOWBALL
-  PERSIST: 16,     // PERSIST
-  ARTIFACT: 32,    // CROSSTALK, STREAK, HALO, SATELLITE_HALO
+  NO_DATA: 1,      // bad: off the detector, or non-finite IMAGE/VARIANCE/ZODI
+  SATURATED: 2,    // bad: NONLINEAR (15), BLOOM (26)
+  BAD_PIXEL: 4,    // bad: SUR_ERROR (2), NONFUNC (6), DICHROIC (7), MISSING_DATA (9), HOT (10), COLD (11), PHANMISS (14)
+  TRANSIENT: 8,    // bad: TRANSIENT (0), SNOWBALL (27)
+  PERSIST: 16,     // advisory: PERSIST (17)
+  CROSSTALK: 32,   // advisory: CROSSTALK (20)
+  STREAK: 64,      // advisory: STREAK (25)
+  HALO: 128,       // advisory: HALO (28), SATELLITE_HALO (29)
 } as const;
+
+export const BAD_DATA_MASK: number =
+  FLAG_BITS.NO_DATA | FLAG_BITS.SATURATED | FLAG_BITS.BAD_PIXEL | FLAG_BITS.TRANSIENT;
+export const ADVISORY_MASK: number =
+  FLAG_BITS.PERSIST | FLAG_BITS.CROSSTALK | FLAG_BITS.STREAK | FLAG_BITS.HALO;

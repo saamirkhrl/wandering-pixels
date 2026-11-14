@@ -114,6 +114,41 @@ describe('encode/decode', () => {
     expect(maxSigma).toBeLessThan(0.03);
   });
 
+  it('advisory-flagged pixel keeps its value and variance; bad-data pixel is NaN', () => {
+    const inp = makeInput();
+    const f = inp.frames[0];
+    f.pixels[100] = 12.5; f.variance[100] = 0.25; f.flags[100] = FLAG_BITS.CROSSTALK | FLAG_BITS.HALO;
+    f.pixels[101] = 7; f.variance[101] = 0.25; f.flags[101] = FLAG_BITS.STREAK | FLAG_BITS.SATURATED;
+    const e = encodeCache(inp);
+    const out = decodeCache(JSON.parse(e.manifestJson), e.bin).frames[0];
+    expect(out.pixels[100]).toBe(12.5);
+    expect(out.variance[100]).toBeGreaterThan(0.2);
+    expect(out.variance[100]).toBeLessThan(0.3);
+    expect(out.flags[100]).toBe(FLAG_BITS.CROSSTALK | FLAG_BITS.HALO);
+    expect(Number.isNaN(out.pixels[101])).toBe(true);
+    expect(out.flags[101]).toBe(FLAG_BITS.STREAK | FLAG_BITS.SATURATED);
+    // a NaN pixel with only advisory bits gets NO_DATA added
+    const inp2 = makeInput();
+    inp2.frames[0].pixels[200] = NaN; inp2.frames[0].variance[200] = NaN; inp2.frames[0].flags[200] = FLAG_BITS.PERSIST;
+    const e2 = encodeCache(inp2);
+    const o2 = decodeCache(JSON.parse(e2.manifestJson), e2.bin).frames[0];
+    expect(o2.flags[200]).toBe(FLAG_BITS.PERSIST | FLAG_BITS.NO_DATA);
+  });
+
+  it('round-trips Exposure.inStack (true, false, absent)', () => {
+    const inp = makeInput();
+    inp.exposures[0] = { ...inp.exposures[0], inStack: true };
+    inp.exposures[1] = { ...inp.exposures[1], inStack: false };
+    inp.frames[0].exposure = inp.exposures[0];
+    inp.frames[1].exposure = inp.exposures[1];
+    const e = encodeCache(inp);
+    const out = decodeCache(JSON.parse(e.manifestJson), e.bin);
+    expect(out.exposures[0].inStack).toBe(true);
+    expect(out.exposures[1].inStack).toBe(false);
+    expect('inStack' in out.exposures[2]).toBe(false);
+    expect(out.frames[1].exposure.inStack).toBe(false);
+  });
+
   it('rejects null wavelengths and mismatched frames', () => {
     const bad = makeInput();
     bad.exposures[0] = { ...bad.exposures[0], wavelengthAtTarget: null };

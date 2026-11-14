@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Frame, Grid, Exposure, Detector } from './types';
-import { SpherexError } from './types';
+import { SpherexError, BAD_DATA_MASK, FLAG_BITS } from './types';
 
 vi.mock('./wcs', () => ({
   positionAt: (t: { ra: number; dec: number }) => ({ ra: t.ra, dec: t.dec }),
   worldToGrid: (_g: unknown, ra: number, dec: number) => [ra, dec],
 }));
 
-import { buildMovie, difference, summarize, channelBandwidth, pickBlinkPair } from './movie';
+import { buildMovie, difference, summarize, channelBandwidth, pickBlinkPair, frameBackground } from './movie';
 
 const grid: Grid = { ra0: 10, dec0: 10, w: 65, h: 65, scaleArcsec: 6.15, epochMjd: 60000 };
 
@@ -45,7 +45,7 @@ describe('buildMovie', () => {
   it('stacks with inverse-variance weights', () => {
     const a = frame(exp('a', 2, 0, 60000, 1.0), 10, 1);
     const b = frame(exp('b', 2, 0, 60000.2, 1.2), 20, 4);
-    const m = buildMovie([a, b], 'visit-stack', 2, { ra: 30, dec: 31 });
+    const m = buildMovie([a, b], 'visit-stack', 2, { ra: 30, dec: 31 }, { background: 'none' });
     expect(m.frames).toHaveLength(1);
     const f = m.frames[0];
     // weights 1 and 0.25 -> (10 + 5) / 1.25 = 12
@@ -67,7 +67,7 @@ describe('buildMovie', () => {
     b.flags[1] = 1; // b masked at 1
     a.flags[2] = 4; b.variance[2] = 0; // none contributes at 2
     a.variance[3] = NaN;
-    const m = buildMovie([a, b], 'visit-stack', 2);
+    const m = buildMovie([a, b], 'visit-stack', 2, undefined, { background: 'none' });
     const p = m.frames[0].pixels;
     expect(p[0]).toBeCloseTo(20);
     expect(p[1]).toBeCloseTo(10);
@@ -96,13 +96,125 @@ describe('buildMovie', () => {
   });
 });
 
+function rng(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+function noisy(e: Exposure, offset: number, seed: number): Frame {
+  const f = frame(e, 0, 0.0001);
+  const r = rng(seed);
+  for (let i = 0; i < f.pixels.length; i++) {
+    // sum of 4 uniforms, roughly gaussian, sd ~0.01
+    f.pixels[i] = offset + (r() + r() + r() + r() - 2) * 0.017;
+  }
+  star(f, 20, 20, 5);
+  star(f, 40, 30, 3);
+  star(f, 10, 50, 8);
+  return f;
+}
+
+describe('background removal', () => {
+  const mk = () => [
+    noisy(exp('a', 2, 0, 60000, 1.0), 0.05, 1),
+    noisy(exp('b', 2, 0, 60000.1, 1.0), 0.11, 2),
+  ];
+
+  it('median subtraction brings stacked background near zero and reports the level', () => {
+    const [a, b] = mk();
+    const m = buildMovie([a, b], 'visit-stack', 2);
+    const f = m.frames[0];
+    const sorted = Array.from(f.pixels).sort((x, y) => x - y);
+    expect(Math.abs(sorted[Math.floor(sorted.length / 2)])).toBeLessThan(0.005);
+    expect(f.backgroundLevel).toBeGreaterThan(0.07);
+    expect(f.backgroundLevel).toBeLessThan(0.09);
+    const single = buildMovie([a, b], 'single', 2);
+    expect(single.frames[0].backgroundLevel).toBeCloseTo(0.05, 2);
+    expect(single.frames[1].backgroundLevel).toBeCloseTo(0.11, 2);
+    for (const sf of single.frames) {
+      const s2 = Array.from(sf.pixels).sort((x, y) => x - y);
+      expect(Math.abs(s2[Math.floor(s2.length / 2)])).toBeLessThan(0.005);
+    }
+  });
+
+  it('does not mutate inputs', () => {
+    const fs = mk();
+    const copies = fs.map((f) => ({ p: f.pixels.slice(), v: f.variance.slice(), g: f.flags.slice() }));
+    buildMovie(fs, 'visit-stack', 2);
+    buildMovie(fs, 'single', 2);
+    fs.forEach((f, i) => {
+      expect(Array.from(f.pixels)).toEqual(Array.from(copies[i].p));
+      expect(Array.from(f.variance)).toEqual(Array.from(copies[i].v));
+      expect(Array.from(f.flags)).toEqual(Array.from(copies[i].g));
+    });
+  });
+
+  it("'none' reproduces the plain inverse-variance stack bit for bit", () => {
+    const fs = mk();
+    fs[0].variance.fill(0.0004);
+    fs[1].variance.fill(0.0009);
+    fs[1].flags[7] = 4;
+    fs[0].pixels[9] = NaN;
+    const m = buildMovie(fs, 'visit-stack', 2, undefined, { background: 'none' });
+    const f = m.frames[0];
+    expect(f.backgroundLevel).toBe(0);
+    for (let i = 0; i < 65 * 65; i++) {
+      let sw = 0;
+      let swx = 0;
+      for (const fr of fs) {
+        const p = fr.pixels[i];
+        const v = fr.variance[i];
+        if ((fr.flags[i] & BAD_DATA_MASK) !== 0 || !Number.isFinite(p) || !Number.isFinite(v) || !(v > 0)) continue;
+        sw += 1 / v;
+        swx += (1 / v) * p;
+      }
+      const ep = sw > 0 ? Math.fround(swx / sw) : NaN;
+      const ev = sw > 0 ? Math.fround(1 / sw) : NaN;
+      if (Number.isNaN(ep)) expect(Number.isNaN(f.pixels[i])).toBe(true);
+      else {
+        expect(f.pixels[i]).toBe(ep);
+        expect(f.variance[i]).toBe(ev);
+      }
+    }
+  });
+
+  it('stacks advisory-flagged pixels with normal weight', () => {
+    const a = frame(exp('a', 2, 0, 60000, 1), 10, 1);
+    const b = frame(exp('b', 2, 0, 60001, 1), 20, 1);
+    b.flags[5] = FLAG_BITS.HALO;
+    b.flags[6] = FLAG_BITS.HALO | FLAG_BITS.STREAK;
+    b.flags[7] = FLAG_BITS.SATURATED;
+    const m = buildMovie([a, b], 'visit-stack', 2, undefined, { background: 'none' });
+    expect(m.frames[0].pixels[5]).toBe(15);
+    expect(m.frames[0].variance[5]).toBe(0.5);
+    expect(m.frames[0].pixels[6]).toBe(15);
+    expect(m.frames[0].pixels[7]).toBe(10);
+  });
+
+  it('subtracts 0 when fewer than 100 usable pixels', () => {
+    const a = frame(exp('a', 2, 0, 60000, 1), 3, 1);
+    a.flags.fill(1);
+    for (let i = 0; i < 99; i++) a.flags[i] = 0;
+    const m = buildMovie([a], 'single', 2);
+    expect(m.frames[0].backgroundLevel).toBe(0);
+    expect(m.frames[0].pixels[0]).toBe(3);
+    a.flags[99] = 0; // now exactly 100 usable
+    const m2 = buildMovie([a], 'single', 2);
+    expect(m2.frames[0].backgroundLevel).toBe(3);
+    expect(m2.frames[0].pixels[0]).toBe(0);
+  });
+});
+
 describe('difference', () => {
   it('computes b - a with symmetric stretch and snr', () => {
     const fa = frame(exp('a', 2, 0, 60000, 1.393), 0, 1);
     const fb = frame(exp('b', 2, 1, 60100, 1.394), 0, 3);
     star(fa, 20, 20, 50);
     star(fb, 22, 20, 50);
-    const m = buildMovie([fa, fb], 'visit-stack', 2);
+    const m = buildMovie([fa, fb], 'visit-stack', 2, undefined, { background: 'none' });
     const d = difference(m.frames[0], m.frames[1]);
     const i = 20 * 65 + 22;
     const expected = 50 - 50 * Math.exp(-4 / (2 * 0.36));
@@ -146,14 +258,89 @@ describe('channelBandwidth', () => {
   });
 });
 
+describe('summarize outOfStack', () => {
+  it('counts inStack === false per detector', () => {
+    const a = exp('a', 2, 0, 1, 1);
+    const b = { ...exp('b', 2, 1, 2, 1), inStack: false };
+    const c = { ...exp('c', 3, 1, 2, 1), inStack: true };
+    expect(summarize([a, b, c])).toEqual([
+      { detector: 2, visits: [0, 1], count: 2, outOfStack: 1 },
+      { detector: 3, visits: [1], count: 1, outOfStack: 0 },
+    ]);
+  });
+});
+
+describe('inStack', () => {
+  it('visit-stack skips inStack false, single keeps them', () => {
+    const a = frame(exp('a', 2, 0, 60000, 1), 5, 1);
+    const b = frame({ ...exp('b', 2, 0, 60001, 1), inStack: false }, 7, 1);
+    const c = frame({ ...exp('c', 2, 1, 60100, 1), inStack: false }, 9, 1);
+    const m = buildMovie([a, b, c], 'visit-stack', 2, undefined, { background: 'none' });
+    expect(m.frames).toHaveLength(1);
+    expect(m.frames[0].exposureIds).toEqual(['a']);
+    expect(m.frames[0].pixels[10]).toBe(5);
+    const s = buildMovie([a, b, c], 'single', 2, undefined, { background: 'none' });
+    expect(s.frames.map((f) => f.exposureIds[0])).toEqual(['a', 'b', 'c']);
+    const none = buildMovie([c], 'visit-stack', 2);
+    expect(none.frames).toEqual([]);
+  });
+});
+
+describe('frameBackground (masked)', () => {
+  it('ignores a saturated blob wing and a bright source that plain median would feel', () => {
+    const f = frame(exp('a', 2, 0, 60000, 1), 0.1, 1);
+    const r = rng(5);
+    for (let i = 0; i < f.pixels.length; i++) f.pixels[i] = 0.1 + (r() - 0.5) * 0.02;
+    // broad skirt around a saturated core: elevated pixels within ~8 px
+    for (let y = 0; y < 65; y++)
+      for (let x = 0; x < 65; x++) {
+        const d = Math.hypot(x - 30, y - 30);
+        if (d < 8) f.pixels[y * 65 + x] += 0.02;
+      }
+    f.flags[30 * 65 + 30] = 2;
+    f.pixels[30 * 65 + 30] = NaN;
+    const bg = frameBackground(f);
+    expect(bg.fallback).toBe(false);
+    expect(bg.level).toBeGreaterThan(0.095);
+    expect(bg.level).toBeLessThan(0.105);
+    expect(bg.plain).toBeGreaterThan(0.095);
+    expect(bg.nUsed).toBeLessThan(65 * 65 - 150);
+  });
+
+  it('masks a bright unsaturated source with its 3 px dilation', () => {
+    const f = frame(exp('a', 2, 0, 60000, 1), 0, 1);
+    const r = rng(9);
+    for (let i = 0; i < f.pixels.length; i++) f.pixels[i] = (r() - 0.5) * 0.02;
+    f.pixels[20 * 65 + 20] = 100;
+    const bg = frameBackground(f);
+    expect(bg.nUsed).toBe(65 * 65 - 49);
+  });
+
+  it('falls back to the plain median when the zones leave < 100 pixels', () => {
+    const f = frame(exp('a', 2, 0, 60000, 1), 0.2, 1);
+    f.flags[32 * 65 + 32] = 2;
+    // huge blob: radius = max(8, 3*sqrt(npix/pi)) covers the whole frame
+    for (let y = 10; y < 55; y++) for (let x = 10; x < 55; x++) f.flags[y * 65 + x] = 2;
+    for (let y = 0; y < 65; y++) for (let x = 0; x < 65; x++) if (f.flags[y * 65 + x] === 0) f.pixels[y * 65 + x] = 0.2;
+    const hasData = f.flags.filter((v) => v === 0).length;
+    expect(hasData).toBeGreaterThan(100);
+    const bg = frameBackground(f);
+    expect(bg.fallback).toBe(true);
+    expect(bg.level).toBeCloseTo(0.2, 6);
+    const m = buildMovie([f], 'single', 2);
+    expect(m.frames[0].backgroundFallback).toBe(true);
+    expect(buildMovie([f], 'single', 2, undefined, { background: 'none' }).frames[0].backgroundFallback).toBeUndefined();
+  });
+});
+
 describe('summarize', () => {
   it('groups by detector', () => {
     const r = summarize([
       exp('a', 3, 1, 1, 1), exp('b', 2, 0, 1, 1), exp('c', 2, 2, 1, 1), exp('d', 2, 0, 1, 1),
     ]);
     expect(r).toEqual([
-      { detector: 2, visits: [0, 2], count: 3 },
-      { detector: 3, visits: [1], count: 1 },
+      { detector: 2, visits: [0, 2], count: 3, outOfStack: 0 },
+      { detector: 3, visits: [1], count: 1, outOfStack: 0 },
     ]);
     expect(summarize([])).toEqual([]);
   });

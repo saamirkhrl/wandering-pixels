@@ -7,7 +7,7 @@ import { clearWaveCache } from './wavelength';
 import { loadFrame, loadFrames } from './frame';
 import { positionAt } from './wcs';
 import type { Exposure, Grid, Target } from './types';
-import { FLAG_BITS } from './types';
+import { BAD_DATA_MASK, FLAG_BITS } from './types';
 
 const DIR = '/Users/samir/Desktop/spaceapps/research/samples/spherex-tests/';
 const FILE = DIR + '2025W35_2A_0221_2_D2.fits';
@@ -84,7 +84,7 @@ describe('loadFrame', () => {
     expect(bad).toBeGreaterThan(0);
     expect(bad).toBeLessThan(10);
     for (let j = 0; j < f.flags.length; j++) {
-      if (f.flags[j] !== 0) {
+      if ((f.flags[j] & BAD_DATA_MASK) !== 0) {
         expect(Number.isNaN(f.pixels[j])).toBe(true);
         expect(Number.isNaN(f.variance[j])).toBe(true);
       }
@@ -146,7 +146,7 @@ describe('loadFrame wavelength options', () => {
     }
     expect(checked).toBeGreaterThanOrEqual(3);
     for (let j = 0; j < f.flags.length; j++) {
-      if (f.flags[j] !== 0) {
+      if ((f.flags[j] & BAD_DATA_MASK) !== 0) {
         expect(Number.isNaN(f.wavelengthMap![j])).toBe(true);
         expect(Number.isNaN(f.bandwidthMap![j])).toBe(true);
       } else {
@@ -159,7 +159,7 @@ describe('loadFrame wavelength options', () => {
     const f = await loadFrame({ ...exposure, url: URL_NAN }, grid, { wavelengthMap: true });
     let masked = 0;
     for (let j = 0; j < f.flags.length; j++) {
-      if (f.flags[j] !== 0) {
+      if ((f.flags[j] & BAD_DATA_MASK) !== 0) {
         masked++;
         expect(Number.isNaN(f.wavelengthMap![j])).toBe(true);
       }

@@ -100,11 +100,13 @@ describe('maskBits', () => {
     expect(maskBits(1 << 0)).toBe(FLAG_BITS.TRANSIENT);
     expect(maskBits(1 << 27)).toBe(FLAG_BITS.TRANSIENT);
     expect(maskBits(1 << 17)).toBe(FLAG_BITS.PERSIST);
-    expect(maskBits(1 << 20)).toBe(FLAG_BITS.ARTIFACT);
-    expect(maskBits(1 << 29)).toBe(FLAG_BITS.ARTIFACT);
+    expect(maskBits(1 << 20)).toBe(FLAG_BITS.CROSSTALK);
+    expect(maskBits(1 << 25)).toBe(FLAG_BITS.STREAK);
+    expect(maskBits(1 << 28)).toBe(FLAG_BITS.HALO);
+    expect(maskBits(1 << 29)).toBe(FLAG_BITS.HALO);
     // ignored bits: OVERFLOW, FULLSAMPLE, OUTLIER, SOURCE, GHOST*
     expect(maskBits((1 << 1) | (1 << 12) | (1 << 19) | (1 << 21) | (1 << 22) | (1 << 23) | (1 << 24))).toBe(0);
     expect(maskBits((1 << 15) | (1 << 17))).toBe(FLAG_BITS.SATURATED | FLAG_BITS.PERSIST);
-    expect(maskBits(-1)).toBe(63 - FLAG_BITS.NO_DATA);
+    expect(maskBits(-1)).toBe(255 - FLAG_BITS.NO_DATA);
   });
 });

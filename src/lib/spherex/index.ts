@@ -11,5 +11,6 @@ export { annotateWavelengths } from './wavelength';
 export { buildMovie, difference, summarize, pickBlinkPair } from './movie';
 export { spectrumAt } from './spectrum';
 export { loadCached, listCached } from './cache';
-export { loadFirstLook } from './firstlook';
+export { loadFirstLook, loadBestPair } from './firstlook';
 export { saturatedSources } from './saturation';
+export { parallaxOffset, positionAtDistance, gridAt, trackingTolerance } from './parallax';

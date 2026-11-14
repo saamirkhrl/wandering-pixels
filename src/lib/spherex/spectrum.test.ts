@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Frame, Grid } from './types';
+import { FLAG_BITS } from './types';
 
 vi.mock('./wcs', () => ({
   positionAt: (t: { ra: number; dec: number }) => ({ ra: t.ra, dec: t.dec }),
@@ -51,12 +52,39 @@ describe('spectrumAt', () => {
     const b = mk('b', 1.0, 0, 10);
     b.pixels[32 * 65 + 32] = NaN;
     const c = mk('c', 1.5, 0, 10);
-    c.flags[32 * 65 + 33] = 4;
+    c.flags[32 * 65 + 33] = FLAG_BITS.BAD_PIXEL;
     const r = spectrumAt([a, b, c], 32, 32, 3 * 6.15);
     expect(r.map((x) => x.exposureId)).toEqual(['b', 'c', 'a']);
     expect(r.map((x) => x.flagged)).toEqual([true, true, false]);
     expect(Number.isFinite(r[0].flux)).toBe(true);
     expect(spectrumAt([a], 200, 200)).toEqual([]);
+  });
+
+  it('advisory bits set advisory but not flagged, and keep the pixel in flux and background', () => {
+    const a = mk('a', 1.0, 0, 10);
+    const base = spectrumAt([a], 32, 32, 3 * 6.15)[0];
+    const b = mk('b', 1.0, 0, 10);
+    b.flags[32 * 65 + 33] = FLAG_BITS.CROSSTALK | FLAG_BITS.HALO; // aperture pixel
+    b.flags[32 * 65 + 40] = FLAG_BITS.STREAK; // annulus pixel
+    const [p] = spectrumAt([b], 32, 32, 3 * 6.15);
+    expect(p.flagged).toBe(false);
+    expect(p.advisory).toBe(true);
+    expect(p.flux).toBeCloseTo(base.flux, 12);
+    expect(base.advisory).toBe(false);
+  });
+
+  it('bad-data bits set flagged and are excluded from the annulus', () => {
+    const b = mk('b', 1.0, 3, 0);
+    // aperture radius 3 px, annulus 6..10 px
+    for (let x = 37; x <= 41; x++) b.pixels[32 * 65 + x] = 1000;
+    const [dirty] = spectrumAt([b], 32, 32, 3 * 6.15);
+    for (let x = 37; x <= 41; x++) b.flags[32 * 65 + x] = FLAG_BITS.SATURATED;
+    const [masked] = spectrumAt([b], 32, 32, 3 * 6.15);
+    expect(Math.abs(masked.flux)).toBeLessThan(1e-9);
+    expect(masked.flagged).toBe(false); // bad pixels are in the annulus only
+    expect(Number.isFinite(dirty.flux)).toBe(true);
+    b.flags[32 * 65 + 32] = FLAG_BITS.BAD_PIXEL;
+    expect(spectrumAt([b], 32, 32, 3 * 6.15)[0].flagged).toBe(true);
   });
 
   it('null wavelength gives NaN', () => {

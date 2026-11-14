@@ -16,42 +16,103 @@ interface ExposuresResponse {
 }
 
 const MJD_UNIX_EPOCH = 40587;
-const VISIT_GAP_DAYS = 30;
+export const VISIT_GAP_DAYS = 30;
 const RELEASE_RANK: Record<string, number> = { dr1: 0, qr3: 1, qr2: 2 };
 
 export function mjdToIso(mjd: number): string {
   return new Date((mjd - MJD_UNIX_EPOCH) * 86400000).toISOString();
 }
 
-const VISIT_MAX_SPAN_DAYS = 45;
-const VISIT_BIN_DAYS = 30;
+export const VISIT_MAX_SPAN_DAYS = 90;
+export const VISIT_BIN_DAYS = 60;
 
-// Returns new objects sorted by mjd with visitIndex set. A gap over 30 days starts a
-// new visit. A visit spanning more than 45 days (continuous coverage near the ecliptic
-// poles) is split into consecutive 30-day bins measured from its first exposure.
-export function assignVisits(exposures: Exposure[]): Exposure[] {
-  const sorted = [...exposures].sort((a, b) => a.mjd - b.mjd);
-  const groups: Exposure[][] = [];
+export const SUBCLUSTER_GAP_DAYS = 7;
+export const MIN_STACK_EXPOSURES = 12;
+
+function splitByGap(sorted: Exposure[], gapDays: number): Exposure[][] {
+  const out: Exposure[][] = [];
   for (let i = 0; i < sorted.length; i++) {
-    if (i === 0 || sorted[i].mjd - sorted[i - 1].mjd > VISIT_GAP_DAYS) groups.push([]);
-    groups[groups.length - 1].push(sorted[i]);
-  }
-  const out: Exposure[] = [];
-  let visit = -1;
-  for (const g of groups) {
-    const t0 = g[0].mjd;
-    const split = g[g.length - 1].mjd - t0 > VISIT_MAX_SPAN_DAYS;
-    let lastBin = -1;
-    for (const e of g) {
-      const bin = split ? Math.floor((e.mjd - t0) / VISIT_BIN_DAYS) : 0;
-      if (bin !== lastBin) {
-        visit++;
-        lastBin = bin;
-      }
-      out.push({ ...e, visitIndex: visit });
-    }
+    if (i === 0 || sorted[i].mjd - sorted[i - 1].mjd > gapDays) out.push([]);
+    out[out.length - 1].push(sorted[i]);
   }
   return out;
+}
+
+interface VisitGroup {
+  members: Exposure[];
+  binned: boolean;
+}
+
+// Returns new objects sorted by mjd with visitIndex and inStack set.
+// 1. A gap over 30 days starts a new visit. A visit spanning more than 90 days
+//    (continuous coverage near the ecliptic poles) is split into consecutive 60-day
+//    bins measured from its first exposure.
+// 2. Within an unbinned visit, exposures are sub-clustered with a 7-day gap. If every
+//    sub-cluster other than the largest has fewer than 12 exposures, those small ones
+//    get inStack false (the target moves between them and the main cluster).
+// 3. A whole visit with fewer than 12 exposures is merged into the nearest visit in
+//    time, with inStack false, as long as some visit has 12 or more.
+export function assignVisits(exposures: Exposure[]): Exposure[] {
+  const sorted = [...exposures].sort((a, b) => a.mjd - b.mjd);
+  const visits: VisitGroup[] = [];
+  for (const g of splitByGap(sorted, VISIT_GAP_DAYS)) {
+    const t0 = g[0].mjd;
+    if (g[g.length - 1].mjd - t0 > VISIT_MAX_SPAN_DAYS) {
+      let lastBin = -1;
+      for (const e of g) {
+        const bin = Math.floor((e.mjd - t0) / VISIT_BIN_DAYS);
+        if (bin !== lastBin) {
+          visits.push({ members: [], binned: true });
+          lastBin = bin;
+        }
+        visits[visits.length - 1].members.push(e);
+      }
+    } else {
+      visits.push({ members: g, binned: false });
+    }
+  }
+
+  const outOfStack = new Set<Exposure>();
+  for (const v of visits) {
+    if (v.binned) continue;
+    const subs = splitByGap(v.members, SUBCLUSTER_GAP_DAYS);
+    if (subs.length < 2) continue;
+    const main = subs.reduce((a, b) => (b.length > a.length ? b : a));
+    if (subs.every((s) => s === main || s.length < MIN_STACK_EXPOSURES)) {
+      for (const s of subs) if (s !== main) for (const e of s) outOfStack.add(e);
+    }
+  }
+
+  const big = visits.filter((v) => v.members.length >= MIN_STACK_EXPOSURES);
+  const kept = big.length > 0 ? big : visits;
+  if (big.length > 0) {
+    for (const v of visits) {
+      if (v.members.length >= MIN_STACK_EXPOSURES) continue;
+      const lo = v.members[0].mjd;
+      const hi = v.members[v.members.length - 1].mjd;
+      let best = big[0];
+      let bestDist = Infinity;
+      for (const b of big) {
+        const blo = b.members[0].mjd;
+        const bhi = b.members[b.members.length - 1].mjd;
+        const d = blo > hi ? blo - hi : lo > bhi ? lo - bhi : 0;
+        if (d < bestDist) {
+          bestDist = d;
+          best = b;
+        }
+      }
+      for (const e of v.members) {
+        outOfStack.add(e);
+        best.members.push(e);
+      }
+    }
+  }
+
+  const index = new Map<Exposure, number>();
+  kept.forEach((v, i) => {
+    for (const e of v.members) index.set(e, i);
+  });
+  return sorted.map((e) => ({ ...e, visitIndex: index.get(e) ?? 0, inStack: !outOfStack.has(e) }));
 }
 
 export function rowsToExposures(rows: ExposureRow[]): Exposure[] {

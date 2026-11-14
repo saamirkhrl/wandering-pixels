@@ -32,15 +32,16 @@
 //     (7.5 decades of variance) gives step 0.0984, sigma error at most 1.7 percent.
 //     A range of 12 octaves gives step 0.047 and sigma error 0.8 percent.
 //     Values at the very minimum or maximum are exact to the step grid.
-//   flags: lossless. On decode, NaN pixels get FLAG_BITS.NO_DATA if flags is 0, and
-//     any non-zero flag forces the pixel to NaN (the library's masking rule).
+//   flags: lossless. On decode, a pixel with any BAD_DATA_MASK bit is forced to NaN (the
+//     library's masking rule). A NaN pixel with no BAD_DATA bit gets FLAG_BITS.NO_DATA added.
+//     Advisory bits (ADVISORY_MASK) never blank a pixel: its value and variance round-trip.
 //
 // encodeCache uses no Node APIs, so a Node build script and the browser share it.
 
 import type {
   CachedSlug, CachedTarget, CallOptions, Exposure, Frame, GaiaStar, Grid, Target,
 } from './types';
-import { FLAG_BITS, SpherexError } from './types';
+import { BAD_DATA_MASK, FLAG_BITS, SpherexError } from './types';
 import { floatToHalf, halfToFloat } from './f16';
 import type { WiseSource } from './wise';
 
@@ -212,8 +213,8 @@ export function decodeCache(manifest: CacheManifest, bin: Uint8Array): CachedTar
     for (let j = 0; j < per; j++) {
       let p = halfToFloat(dv.getUint16(px.offset + (base + j) * 2, true));
       let f = bin[fl.offset + base + j];
-      if (f !== 0) p = NaN;
-      else if (p !== p) f = FLAG_BITS.NO_DATA;
+      if ((f & BAD_DATA_MASK) !== 0) p = NaN;
+      else if (p !== p) f |= FLAG_BITS.NO_DATA;
       pixels[j] = p;
       flags[j] = f;
       variance[j] = lut[bin[va.offset + base + j]];

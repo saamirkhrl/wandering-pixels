@@ -5,6 +5,7 @@
 import { SpherexError } from './types';
 import type { CallOptions, Target } from './types';
 import { fetchJson, relayUrl } from './net';
+import { positionAt } from './wcs';
 
 export type ChallengeSlug = 'barnards-star' | 'eps-indi-b' | 'wise-0855' | 'rw-aur' | 'r-dra';
 
@@ -138,8 +139,53 @@ export function slugForName(text: string): ChallengeSlug | null {
 function entryToTarget(e: ChallengeEntry): Target {
   return {
     ra: e.ra, dec: e.dec, pmra: e.pmra, pmdec: e.pmdec,
-    epoch: e.epoch, name: e.name, source: e.source,
+    epoch: e.epoch, name: e.name, source: 'cache', cachedSlug: e.slug,
   };
+}
+
+// ---- position match to the built-in targets ------------------------------------------------
+
+const D2R = Math.PI / 180;
+/** A typed position within this many arcsec of a built-in target counts as that target. */
+export const MATCH_RADIUS_ARCSEC = 60;
+const MJD_J2000 = 51544.5;
+const MJD_UNIX_EPOCH = 40587;
+
+/** Great-circle separation in arcsec (haversine). */
+function separationArcsec(ra1: number, dec1: number, ra2: number, dec2: number): number {
+  const p1 = dec1 * D2R, p2 = dec2 * D2R;
+  const dp = p2 - p1, dl = (ra2 - ra1) * D2R;
+  const h = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  return 2 * Math.asin(Math.min(1, Math.sqrt(h))) * (180 / Math.PI) * 3600;
+}
+
+/** MJD of the current moment. */
+export function mjdNow(): number {
+  return MJD_UNIX_EPOCH + Date.now() / 86400000;
+}
+
+/**
+ * The built-in target a position belongs to, or null. A position matches when it lies within
+ * 60 arcsec of ANY of: the proper-motion-corrected position at `mjd` (today), the catalogue
+ * epoch position (Gaia 2016.0), or the J2000 position (what SIMBAD and Sesame print). It is an
+ * OR on purpose: people type whichever epoch the source they copied from used, and the fast
+ * movers (Barnard's Star, 10 arcsec/yr) are 2 to 3 arcmin apart between those epochs.
+ */
+export function matchCachedTarget(ra: number, dec: number, mjd: number = mjdNow()): Target | null {
+  let best: { e: ChallengeEntry; sep: number } | null = null;
+  for (const e of CHALLENGE_TARGETS) {
+    const base = entryToTarget(e);
+    const spots = [
+      positionAt(base, mjd),
+      { ra: e.ra, dec: e.dec },
+      positionAt(base, MJD_J2000),
+    ];
+    for (const p of spots) {
+      const sep = separationArcsec(ra, dec, p.ra, p.dec);
+      if (sep <= MATCH_RADIUS_ARCSEC && (!best || sep < best.sep)) best = { e, sep };
+    }
+  }
+  return best ? entryToTarget(best.e) : null;
 }
 
 // ---- coordinates ---------------------------------------------------------------------------
@@ -246,6 +292,7 @@ async function trySesame(name: string, signal: AbortSignal | undefined): Promise
 // ---- relay ---------------------------------------------------------------------------------
 
 interface RelayResolve {
+  found?: boolean;       // false: unknown name (HTTP 200). Absent in old-style bodies, meaning found.
   name?: string;
   ra: number;
   dec: number;
@@ -256,6 +303,9 @@ interface RelayResolve {
 }
 
 function relayToTarget(r: RelayResolve, fallbackName: string): Target {
+  if (r && r.found === false) {
+    throw new SpherexError('NOT_FOUND', `Could not find "${fallbackName}". Try another name or enter coordinates.`);
+  }
   if (!r || typeof r.ra !== 'number' || typeof r.dec !== 'number' || !Number.isFinite(r.ra) || !Number.isFinite(r.dec)) {
     throw new SpherexError('UPSTREAM_ERROR', 'Name resolver returned no position.');
   }
@@ -288,6 +338,8 @@ export async function resolveTarget(text: string, opts: CallOptions = {}): Promi
   const coords = parseCoordinates(input);
   if (coords) {
     report(1, 'Coordinates read');
+    const hit = matchCachedTarget(coords.ra, coords.dec);
+    if (hit) return hit;
     return { ra: coords.ra, dec: coords.dec, epoch: 2000, name: input, source: 'coordinates' };
   }
 
@@ -301,19 +353,25 @@ export async function resolveTarget(text: string, opts: CallOptions = {}): Promi
   if (signal?.aborted) throw new SpherexError('ABORTED', 'Request was cancelled');
   if ('target' in ses) {
     report(1, `Found ${input}`);
-    return { ...ses.target, name: input };
+    return matchCachedTarget(ses.target.ra, ses.target.dec) ?? { ...ses.target, name: input };
+  }
+  if (ses.nothing) {
+    // Sesame SNV already searches SIMBAD, NED and VizieR, so the relay (Sesame, then SIMBAD)
+    // cannot know more: a definitive "Nothing found" ends here with no second request.
+    throw new SpherexError('NOT_FOUND', `Could not find "${input}". Try another name or enter coordinates.`);
   }
 
   try {
     const r = await fetchJson<RelayResolve>(relayUrl('/api/resolve', { name: input }), {
       signal, onProgress, stage: 'resolve', retries: 1, timeoutMs: 15000, label: 'Name lookup',
     });
-    const t = relayToTarget(r, input);
+    const rt = relayToTarget(r, input);
+    const t = matchCachedTarget(rt.ra, rt.dec) ?? rt;
     report(1, `Found ${t.name}`);
     return t;
   } catch (e) {
     if (e instanceof SpherexError && e.code === 'ABORTED') throw e;
-    if (ses.nothing || (e instanceof SpherexError && e.code === 'NOT_FOUND')) {
+    if (e instanceof SpherexError && e.code === 'NOT_FOUND') {
       throw new SpherexError('NOT_FOUND', `Could not find "${input}". Try another name or enter coordinates.`, { cause: e });
     }
     throw e;

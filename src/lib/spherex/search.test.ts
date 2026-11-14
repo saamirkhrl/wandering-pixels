@@ -82,6 +82,53 @@ describe('findExposures', () => {
   });
 });
 
+describe('findExposures partial results', () => {
+  const resp = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+  afterEach(() => vi.useRealTimers());
+
+  it('reports a partial result and re-requests once; a complete second answer replaces the first', async () => {
+    vi.useFakeTimers();
+    const f = vi.fn()
+      .mockResolvedValueOnce(resp({ partial: ['spherex_dr1'], exposures: [row('A', 60000)] }))
+      .mockResolvedValueOnce(resp({ partial: [], exposures: [row('A', 60000), row('B', 60001)] }));
+    vi.stubGlobal('fetch', f);
+    const msgs: string[] = [];
+    const p = findExposures(1, 2, { onProgress: (x) => msgs.push(x.message) });
+    await vi.advanceTimersByTimeAsync(3000);
+    const out = await p;
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(f.mock.calls[0][0]).toBe(f.mock.calls[1][0]);
+    expect(out).toHaveLength(2);
+    expect(msgs).toContain('The archive is slow; showing a partial result');
+  });
+  it('keeps the first answer when the second is still partial or fails, and asks only once', async () => {
+    vi.useFakeTimers();
+    const f = vi.fn()
+      .mockResolvedValueOnce(resp({ partial: ['spherex_qr3'], exposures: [row('A', 60000)] }))
+      .mockResolvedValueOnce(resp({ partial: ['spherex_qr3'], exposures: [row('A', 60000), row('B', 60001)] }));
+    vi.stubGlobal('fetch', f);
+    const p = findExposures(1, 2);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await p).toHaveLength(1);
+    expect(f).toHaveBeenCalledTimes(2);
+
+    const g = vi.fn()
+      .mockResolvedValueOnce(resp({ partial: ['spherex_qr3'], exposures: [row('A', 60000)] }))
+      .mockResolvedValueOnce(new Response('{}', { status: 400 }));
+    vi.stubGlobal('fetch', g);
+    const q = findExposures(1, 2);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await q).toHaveLength(1);
+    expect(g).toHaveBeenCalledTimes(2);
+  });
+  it('does not re-request a complete answer', async () => {
+    const f = vi.fn().mockResolvedValue(resp({ partial: [], exposures: [row('A', 60000)] }));
+    vi.stubGlobal('fetch', f);
+    await findExposures(1, 2);
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('assignVisits fragments', () => {
   let n = 0;
   const mk = (mjd: number): Exposure => ({

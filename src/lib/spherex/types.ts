@@ -9,6 +9,8 @@ export interface Target {
   epoch?: number;        // Julian year of ra/dec, default 2000.0 (Gaia DR3 rows use 2016.0)
   name?: string;         // display name as resolved
   source?: 'cache' | 'gaia' | 'simbad' | 'sesame' | 'coordinates';
+  /** Slug of the built-in cached target this resolves to, if any. */
+  cachedSlug?: CachedSlug;
 }
 
 export type Detector = 1 | 2 | 3 | 4 | 5 | 6;

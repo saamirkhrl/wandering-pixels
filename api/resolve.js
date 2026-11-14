@@ -1,8 +1,9 @@
-// GET /api/resolve?name=  - object name to ICRS J2000 position and proper motion.
+// GET /api/resolve?name=  - an unknown name answers 200 { found: false } (400 only for malformed names).
+// Object name to ICRS J2000 position and proper motion.
 // Sesame (CfA VizieR mirror) is primary because it answers in about 0.3 s and accepts the
 // aliases people actually type; SIMBAD TAP is the fallback. Positions are epoch 2000.
-import { handler, fetchUpstream, json, errorJson, options, RelayError } from './_lib/http.js';
-import { validateName, sesameUrl, simbadUrl, parseSesame, parseSimbad } from './_lib/upstreams.js';
+import { handler, fetchUpstream, json, options, RelayError } from './_lib/http.js';
+import { validateName, sesameUrl, simbadUrl, parseSesame, parseSimbad, resolveBody } from './_lib/upstreams.js';
 
 async function viaSesame(name) {
   const res = await fetchUpstream(sesameUrl(name), { attemptTimeoutMs: 8000, budgetMs: 10000, maxAttempts: 2 });
@@ -36,9 +37,10 @@ export const GET = handler(async (url) => {
     }
   }
   if (!hit) {
-    return errorJson('NOT_FOUND', `no object found for "${name}"`, 404);
+    // Unknown name: HTTP 200 { found: false }, cached briefly, so browsers log no console error.
+    return json(resolveBody(name, null, source), 200, 3600);
   }
-  return json({ name, ra: hit.ra, dec: hit.dec, pmra: hit.pmra, pmdec: hit.pmdec, epoch: 2000, source }, 200, 604800);
+  return json(resolveBody(name, hit, source), 200, 604800);
 });
 
 export function OPTIONS() {

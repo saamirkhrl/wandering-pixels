@@ -274,3 +274,15 @@ export function parseSesame(xml) {
   }
   return null;
 }
+
+/**
+ * Body of a /api/resolve answer. An unknown name is a normal outcome, so it is answered with
+ * HTTP 200 and { found: false } (a non-2xx fetch would log a browser console error).
+ * @param {string} name
+ * @param {{ra:number,dec:number,pmra:number|null,pmdec:number|null}|null} hit
+ * @param {'sesame'|'simbad'} source
+ */
+export function resolveBody(name, hit, source) {
+  if (!hit) return { found: false };
+  return { found: true, name, ra: hit.ra, dec: hit.dec, pmra: hit.pmra, pmdec: hit.pmdec, epoch: 2000, source };
+}

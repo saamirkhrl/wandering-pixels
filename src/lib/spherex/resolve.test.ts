@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CHALLENGE_TARGETS, parseSesameXml, resolveTarget, slugForName } from './resolve';
+import { CHALLENGE_TARGETS, matchCachedTarget, mjdNow, parseSesameXml, resolveTarget, slugForName } from './resolve';
+import { positionAt } from './wcs';
 import { SpherexError } from './types';
 import type { Progress } from './types';
 
@@ -63,9 +64,9 @@ async function code(p: Promise<unknown>): Promise<string> {
 
 describe('coordinates', () => {
   it('decimal degrees', async () => {
-    for (const s of ['269.45 4.69', '269.45, +4.69', '269.45,4.69', '  269.45   +4.69 ']) {
+    for (const s of ['109.45 4.69', '109.45, +4.69', '109.45,4.69', '  109.45   +4.69 ']) {
       const t = await resolveTarget(s);
-      expect(t.ra).toBeCloseTo(269.45, 9);
+      expect(t.ra).toBeCloseTo(109.45, 9);
       expect(t.dec).toBeCloseTo(4.69, 9);
       expect(t.source).toBe('coordinates');
       expect(t.epoch).toBe(2000);
@@ -76,14 +77,14 @@ describe('coordinates', () => {
   });
 
   it('sexagesimal in several spellings', async () => {
-    const ra = (17 + 57 / 60 + 48.5 / 3600) * 15;
+    const ra = (7 + 57 / 60 + 48.5 / 3600) * 15;
     const dec = 4 + 41 / 60 + 36 / 3600;
     for (const s of [
-      '17 57 48.5 +04 41 36',
-      '17:57:48.5 +04:41:36',
-      '17h57m48.5s +04d41m36s',
-      '17 57 48.5, +04 41 36',
-      '17:57:48.5 04:41:36',
+      '07 57 48.5 +04 41 36',
+      '07:57:48.5 +04:41:36',
+      '07h57m48.5s +04d41m36s',
+      '07 57 48.5, +04 41 36',
+      '07:57:48.5 04:41:36',
     ]) {
       const t = await resolveTarget(s);
       expect(t.ra).toBeCloseTo(ra, 9);
@@ -141,7 +142,8 @@ describe('built-in table', () => {
         expect(t.pmra).toBe(e.pmra);
         expect(t.pmdec).toBe(e.pmdec);
         expect(t.epoch).toBe(e.epoch);
-        expect(t.source).toBe(e.source);
+        expect(t.source).toBe('cache');
+        expect(t.cachedSlug).toBe(slug);
         expect(t.name).toBe(e.name);
       }
     }
@@ -228,21 +230,37 @@ describe('name resolvers', () => {
     expect(t.epoch).toBe(2000);
   });
 
-  it('NOT_FOUND when nothing knows the name', async () => {
+  it('NOT_FOUND when the relay answers 404 (old relay)', async () => {
     fetchMock.mockImplementation(async (url: unknown) =>
       String(url).includes('nph-sesame')
-        ? xmlResponse(NOTHING_XML)
+        ? xmlResponse('busy', 503)
         : jsonResponse({ error: { code: 'NOT_FOUND', message: 'no such object' } }, 404),
     );
     expect(await code(resolveTarget('zzzznotanobject'))).toBe('NOT_FOUND');
   });
 
-  it('NOT_FOUND when Sesame says nothing and the relay is down', async () => {
+  it('Sesame "Nothing found" is definitive: NOT_FOUND with no relay call', async () => {
     fetchMock.mockImplementation(async (url: unknown) => {
       if (String(url).includes('nph-sesame')) return xmlResponse(NOTHING_XML);
-      return jsonResponse({}, 500);
+      throw new Error('relay must not be called');
     });
     expect(await code(resolveTarget('zzzznotanobject'))).toBe('NOT_FOUND');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('relay { found: false } is NOT_FOUND with no extra calls', async () => {
+    fetchMock.mockImplementation(async (url: unknown) =>
+      String(url).includes('nph-sesame') ? xmlResponse('busy', 503) : jsonResponse({ found: false }),
+    );
+    expect(await code(resolveTarget('zzzznotanobject'))).toBe('NOT_FOUND');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('relay { found: true } and old bodies without found both resolve', async () => {
+    fetchMock.mockImplementation(async (url: unknown) =>
+      String(url).includes('nph-sesame') ? xmlResponse('busy', 503) : jsonResponse({ found: true, name: 'X', ra: 1, dec: 2 }),
+    );
+    expect((await resolveTarget('some star')).ra).toBe(1);
   });
 
   it('keeps the relay error when both resolvers just failed', async () => {
@@ -258,5 +276,49 @@ describe('name resolvers', () => {
     ctl.abort();
     expect(await code(resolveTarget('Vega', { signal: ctl.signal }))).toBe('ABORTED');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('position match to built-in targets', () => {
+  const barnard = CHALLENGE_TARGETS.find((e) => e.slug === 'barnards-star')!;
+  const asTarget = { ra: barnard.ra, dec: barnard.dec, pmra: barnard.pmra, pmdec: barnard.pmdec, epoch: barnard.epoch };
+
+  it('Barnard typed as its J2000 sexagesimal position', async () => {
+    const t = await resolveTarget('17 57 48.5 +04 41 36');
+    expect(t.cachedSlug).toBe('barnards-star');
+    expect(t.source).toBe('cache');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('Barnard typed as its current proper-motion-corrected decimal position', async () => {
+    const p = positionAt(asTarget, mjdNow());
+    const t = await resolveTarget(`${p.ra.toFixed(5)} ${p.dec.toFixed(5)}`);
+    expect(t.cachedSlug).toBe('barnards-star');
+    expect(t.ra).toBe(barnard.ra);
+  });
+
+  it('matchCachedTarget uses the injected date', () => {
+    const mjd = 61000;
+    const p = positionAt(asTarget, mjd);
+    expect(matchCachedTarget(p.ra, p.dec, mjd)?.cachedSlug).toBe('barnards-star');
+    expect(matchCachedTarget(barnard.ra, barnard.dec, mjd)?.cachedSlug).toBe('barnards-star');
+  });
+
+  it('a position 2 arcmin away does not match', async () => {
+    // Barnard moves almost due north, so offset in RA: far from its 2016, J2000 and today spots.
+    const ra = barnard.ra + 120 / 3600 / Math.cos((barnard.dec * Math.PI) / 180);
+    expect(matchCachedTarget(ra, barnard.dec, 61000)).toBeNull();
+    const t = await resolveTarget(`${ra.toFixed(5)} ${barnard.dec.toFixed(5)}`);
+    expect(t.cachedSlug).toBeUndefined();
+    expect(t.source).toBe('coordinates');
+  });
+
+  it('a name resolved by Sesame at a built-in position returns the built-in target', async () => {
+    fetchMock.mockImplementation(async () =>
+      xmlResponse(VEGA_XML.replace('279.23473479', String(barnard.ra)).replace('38.78368896', String(barnard.dec))),
+    );
+    const t = await resolveTarget('Gliese 699b');
+    expect(t.cachedSlug).toBe('barnards-star');
+    expect(t.source).toBe('cache');
   });
 });

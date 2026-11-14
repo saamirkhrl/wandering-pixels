@@ -1,6 +1,6 @@
 import { SpherexError } from './types';
 import type { CallOptions, Detector, Exposure } from './types';
-import { fetchJson, relayUrl } from './net';
+import { fetchJson, relayUrl, sleep } from './net';
 
 export interface ExposureRow {
   obsId: string;
@@ -13,7 +13,14 @@ export interface ExposureRow {
 
 interface ExposuresResponse {
   exposures?: ExposureRow[];
+  partial?: string[];
 }
+
+// When the relay reports collections it could not reach, wait a moment and ask once more. Partial
+// answers are served uncached, so the second call reaches the archive again. Extra time is bounded
+// by the delay plus the timeout.
+export const PARTIAL_RETRY_DELAY_MS = 2000;
+export const PARTIAL_RETRY_TIMEOUT_MS = 8000;
 
 const MJD_UNIX_EPOCH = 40587;
 export const VISIT_GAP_DAYS = 30;
@@ -148,10 +155,28 @@ export async function findExposures(ra: number, dec: number, opts: CallOptions =
   ra = ((ra % 360) + 360) % 360;
   const { signal, onProgress } = opts;
   onProgress?.({ stage: 'search', done: 0, total: 0, message: 'Searching the SPHEREx archive' });
-  const body = await fetchJson<ExposuresResponse>(relayUrl('/api/exposures', { ra, dec }), {
+  const url = relayUrl('/api/exposures', { ra, dec });
+  const body = await fetchJson<ExposuresResponse>(url, {
     signal, onProgress, stage: 'search', label: 'Exposure search',
   });
-  const out = rowsToExposures(body.exposures ?? []);
+  let final = body;
+  if ((body.partial?.length ?? 0) > 0) {
+    onProgress?.({
+      stage: 'search', done: 0, total: 0, message: 'The archive is slow; showing a partial result',
+    });
+    try {
+      await sleep(PARTIAL_RETRY_DELAY_MS, signal);
+      const again = await fetchJson<ExposuresResponse>(url, {
+        signal, onProgress, stage: 'search', label: 'Exposure search',
+        retries: 0, timeoutMs: PARTIAL_RETRY_TIMEOUT_MS,
+      });
+      if ((again.partial?.length ?? 0) === 0) final = again;
+    } catch (e) {
+      if (signal?.aborted || (e instanceof SpherexError && e.code === 'ABORTED')) throw e;
+      // keep the first, partial answer
+    }
+  }
+  const out = rowsToExposures(final.exposures ?? []);
   if (out.length === 0) {
     throw new SpherexError('NO_COVERAGE', 'No SPHEREx exposures cover this position');
   }

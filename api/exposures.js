@@ -5,12 +5,24 @@ import { COLLECTIONS, buildSiaUrl, parseVotable, queryStatus, rowsToExposures, d
 const CACHE_SECONDS = 21600;
 
 const TOTAL_BUDGET_MS = 25000;
+// Optional collections (qr2, the deep ones) answer in under a second when healthy, so they get a
+// short budget and never hold up the response.
+const OPTIONAL_BUDGET_MS = 9000;
+// IRSA's front end often answers 502 within 0.3 s and succeeds on the next try, so retry quickly.
+const MAX_ATTEMPTS = 6;
+// Once one required collection has answered, the other gets this long to follow before the
+// response is sent without it (listed in `partial`). Keeps a flaky collection from costing 25 s.
+const GRACE_MS = 10000;
+const BACKOFF_MS = 300;
 
 /** One fetch plus body read; the body read can fail separately from the headers. */
-async function fetchOnce(collection, ra, dec, deadline) {
+async function fetchOnce(collection, ra, dec, deadline, signal) {
   const res = await fetchUpstream(buildSiaUrl(collection, ra, dec, 5000), {
     init: { headers: { Accept: 'application/x-votable+xml, text/xml' } },
     attemptTimeoutMs: 15000,
+    maxAttempts: MAX_ATTEMPTS,
+    backoffMs: BACKOFF_MS,
+    signal,
     budgetMs: Math.max(deadline - Date.now(), 1000),
   });
   if (res.status !== 200) {
@@ -20,18 +32,18 @@ async function fetchOnce(collection, ra, dec, deadline) {
   return res.text();
 }
 
-/** @param {string} collection @param {number} ra @param {number} dec */
-async function queryCollection(collection, ra, dec) {
-  const deadline = Date.now() + TOTAL_BUDGET_MS;
+/** @param {string} collection @param {number} ra @param {number} dec @param {number} budgetMs @param {AbortSignal} signal */
+async function queryCollection(collection, ra, dec, budgetMs, signal) {
+  const deadline = Date.now() + budgetMs;
   let xml = '';
   for (let attempt = 0; ; attempt++) {
     try {
-      xml = await fetchOnce(collection, ra, dec, deadline);
+      xml = await fetchOnce(collection, ra, dec, deadline, signal);
       break;
     } catch (e) {
       // RelayErrors already went through retries; a stalled body read gets one more try.
       if (e instanceof RelayError) throw e;
-      if (attempt >= 1 || deadline - Date.now() < 4000) {
+      if (signal.aborted || attempt >= 1 || deadline - Date.now() < 4000) {
         throw new RelayError('UPSTREAM_ERROR', `${collection} response could not be read`, 502);
       }
     }
@@ -47,33 +59,49 @@ const run = handler(async (url) => {
   if (ra >= 360) throw new RelayError('BAD_INPUT', 'parameter ra must be between 0 and 360', 400);
   const dec = numberParam(url.searchParams, 'dec', -90, 90);
 
-  const settled = await Promise.allSettled(COLLECTIONS.map((c) => queryCollection(c.name, ra, dec)));
+  const stop = new AbortController();
+  let graceTimer = null;
+  const settled = await Promise.allSettled(
+    COLLECTIONS.map((c) =>
+      queryCollection(c.name, ra, dec, c.required ? TOTAL_BUDGET_MS : OPTIONAL_BUDGET_MS, stop.signal).then((v) => {
+        if (c.required && !graceTimer) graceTimer = setTimeout(() => stop.abort(), GRACE_MS);
+        return v;
+      }),
+    ),
+  );
+  clearTimeout(graceTimer ?? undefined);
 
+  // A collection that failed is listed in `partial`. Only when every required collection failed is
+  // the whole answer an error, because then there is nothing trustworthy to show.
   const partial = [];
   const all = [];
+  let requiredOk = 0;
   let requiredFailure = null;
   settled.forEach((r, i) => {
     const c = COLLECTIONS[i];
     if (r.status === 'fulfilled') {
       all.push(...r.value);
-    } else if (c.required) {
+      if (c.required) requiredOk++;
+      return;
+    }
+    partial.push(c.name);
+    if (c.required) {
       const busy = r.reason instanceof RelayError && r.reason.code === 'UPSTREAM_BUSY';
       if (!requiredFailure || busy) requiredFailure = r.reason;
-    } else {
-      partial.push(c.name);
     }
   });
-  if (requiredFailure) {
+  if (requiredOk === 0) {
     throw requiredFailure instanceof RelayError
       ? requiredFailure
       : new RelayError('UPSTREAM_ERROR', 'upstream failed', 502);
   }
 
   const exposures = dedupe(all);
+  // A partial answer must not be cached (edge or browser) so that a retry reaches IRSA again.
   return json(
     { ra: Number(ra.toFixed(6)), dec: Number(dec.toFixed(6)), count: exposures.length, partial, exposures },
     200,
-    CACHE_SECONDS,
+    partial.length > 0 ? 0 : CACHE_SECONDS,
   );
 });
 

@@ -118,3 +118,15 @@ describe('Sesame and SIMBAD parsing', () => {
     expect(u.parseSimbad('main_id,ra,dec,pmra,pmdec\n')).toBeNull();
   });
 });
+
+describe('resolveBody', () => {
+  it('unknown name is { found: false } only', () => {
+    expect(u.resolveBody('zzzz', null, 'sesame')).toEqual({ found: false });
+  });
+  it('a hit keeps the existing fields and adds found: true', () => {
+    const hit = { ra: 279.2, dec: 38.7, pmra: 200.9, pmdec: null };
+    expect(u.resolveBody('Vega', hit, 'simbad')).toEqual({
+      found: true, name: 'Vega', ra: 279.2, dec: 38.7, pmra: 200.9, pmdec: null, epoch: 2000, source: 'simbad',
+    });
+  });
+});

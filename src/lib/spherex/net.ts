@@ -52,7 +52,7 @@ function anySignal(a: AbortSignal | undefined, b: AbortSignal): { signal: AbortS
   };
 }
 
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(aborted());
     const onAbort = () => {

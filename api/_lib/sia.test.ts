@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 // @ts-expect-error plain JS module without declarations
 import { parseVotable, rowsToExposures, dedupe, queryStatus, buildSiaUrl } from './sia.js';
+// @ts-expect-error plain JS module without declarations
+import { GET } from '../exposures.js';
 // @ts-expect-error plain JS module without declarations
 import { numberParam, RelayError } from './http.js';
 
@@ -99,5 +101,91 @@ describe('numberParam', () => {
         expect((e as { code: string }).code).toBe('BAD_INPUT');
       }
     }
+  });
+});
+
+
+describe('GET /api/exposures degradation', () => {
+  const ok = () => new Response(FIXTURE, { status: 200 });
+  const empty = () =>
+    new Response('<VOTABLE><RESOURCE><INFO name="QUERY_STATUS" value="OK"/></RESOURCE></VOTABLE>', { status: 200 });
+  const bad = () => new Response('<html>502 Proxy Error</html>', { status: 502 });
+  const req = () => new Request('https://x.test/api/exposures?ra=150&dec=2');
+
+  /** Stub fetch: `by` maps a collection name to a response factory. */
+  function stub(by: Record<string, () => Response | Promise<Response>>) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const c = /COLLECTION=([a-z0-9_]+)/.exec(String(url))![1];
+        return Promise.resolve((by[c] ?? empty)());
+      }),
+    );
+  }
+  async function call() {
+    const p = GET(req());
+    await vi.advanceTimersByTimeAsync(40000);
+    return p;
+  }
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('is 200 with partial [] and a long cache when every collection answers', async () => {
+    vi.useFakeTimers();
+    stub({ spherex_dr1: ok, spherex_qr3: ok });
+    const res = await call();
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.partial).toEqual([]);
+    expect(res.headers.get('Cache-Control')).toContain('s-maxage=21600');
+  });
+  it('is 200 with an empty list (not 404) when nothing covers the position', async () => {
+    vi.useFakeTimers();
+    stub({});
+    const res = await call();
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ count: 0, partial: [], exposures: [] });
+  });
+  it('returns 200 partial when one required collection keeps failing', async () => {
+    vi.useFakeTimers();
+    stub({ spherex_dr1: bad, spherex_qr3: ok });
+    const res = await call();
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.partial).toEqual(['spherex_dr1']);
+    expect(body.count).toBeGreaterThan(0);
+  });
+  it('returns 503 UPSTREAM_BUSY only when both required collections fail', async () => {
+    vi.useFakeTimers();
+    stub({ spherex_dr1: bad, spherex_qr3: bad });
+    const res = await call();
+    expect(res.status).toBe(503);
+    expect((await res.json()).error.code).toBe('UPSTREAM_BUSY');
+  });
+  it('returns 200 partial naming a deep collection that is too slow', async () => {
+    vi.useFakeTimers();
+    stub({
+      spherex_dr1: ok,
+      spherex_qr3: ok,
+      spherex_dr1_deep: () => new Promise<Response>((_, rej) => setTimeout(() => rej(new Error('stalled')), 20000)) as never,
+    });
+    const t0 = Date.now();
+    const p = GET(req());
+    await vi.advanceTimersByTimeAsync(40000);
+    const res = await p;
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.partial).toEqual(['spherex_dr1_deep']);
+    expect(Date.now() - t0).toBeLessThan(60000);
+  });
+  it('does not cache a partial response at the edge or in the browser', async () => {
+    vi.useFakeTimers();
+    stub({ spherex_dr1: ok, spherex_qr3: ok, spherex_qr2: bad });
+    const res = await call();
+    expect((await res.json()).partial).toEqual(['spherex_qr2']);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
   });
 });

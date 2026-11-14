@@ -27,7 +27,13 @@ plus about 200 MB of calibration files) and keeps about 1.8 GB on disk.
 | 4. Registration precision | `uv run python scripts/03_registration.py --field all` | results sections `registration_<field>`; figures `registration_pairs_*.png`, `registration_vs_mag_*.png` |
 | 5. IMAGE minus ZODI flatness | `uv run python scripts/04_zodi.py --field all` | results section `zodi_flatness`; figures `zodi_residual_*.png` |
 
-Steps 3 to 5 only need the cache from steps 1 and 2. Re-running any step with a warm cache
+| 6. Grid products P1, P2, M1, kernels (Barnard) | `uv run python scripts/05_grid_products.py --field barnard` | `data/phaseb/barnard/fluxes_{P1,P2,M1}.ecsv`, results `phaseb_pixel_barnard`, figures `phaseb_panels_*`, `phaseb_kernels_*` |
+| 7. Forced photometry, M2 and controls | `uv run python scripts/06_forced_phot.py --field barnard` (then `--field epsindi`) | `data/phaseb/<field>/fluxes_{M2,P1native,M2flat,M2unmatched}.ecsv`, results `phaseb_forced_<field>` |
+| 8. Product metrics | `uv run python scripts/07_metrics.py --field all` | results `phaseb_metrics_<field>`, `psf_vs_wavelength`; figures `phaseb_z_hist_*`, `phaseb_frac_vs_color_*`, `phaseb_p1_vs_gap_*`, `phaseb_psf_vs_lambda` |
+| 9. Controls, paired stack, error study | `uv run python scripts/07b_phaseb_controls.py --field all` | results `phaseb_controls_<field>`; figures `phaseb_gap_full_*`, `phaseb_controls_*`, `phaseb_errors_*` |
+| 10. Port test vectors | `uv run python scripts/09_algorithm_vectors.py` | `docs/algorithm_test_vectors.json` (spec: `docs/algorithm.md`) |
+
+Steps 3 onward only need the cache from steps 1 and 2 (step 10 needs step 7). Re-running any step with a warm cache
 gives identical numbers (fixed random seeds).
 
 ## Layout

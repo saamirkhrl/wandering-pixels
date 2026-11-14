@@ -1,6 +1,21 @@
 # Method and validation
 
-Status: phase A (registration precision and wavelength sampling). Later sections are placeholders.
+Status: phases A and B done (registration, wavelength sampling, plain versus spectrally matched
+differences). Injection-recovery and known movers are placeholders.
+
+## Three results in brief
+
+1. A plain pair of SPHEREx exposures misreads a constant star as changed more often the further
+   apart the two exposures' wavelengths are. Comparing each star's own spectrum, fitted per visit
+   and evaluated at the same wavelength, removes that dependence completely. Most of its gain in
+   raw scatter comes from using more exposures, but about a third is the wavelength matching.
+   (Section "Spectrally matched differencing".)
+2. The archive's sky coordinates register different exposures to each other to 0.04 to 0.06
+   pixel (0.22 to 0.39 arcsec per pair), the same within a visit and across 6, 12 and 18 months.
+   We found no published figure for this. (Section "Registration precision".)
+3. For point-source photometry, the archive's error bars are too small: differences of a constant
+   star scatter 1.2 to 1.4 times more than the stated errors predict. A missing error of about
+   2 percent of the star's flux explains it. (Section "Error bars".)
 Every number below is in `docs/results.json`, with its sample size and the script that produced
 it. Commands to reproduce: `validation/README.md`.
 
@@ -102,7 +117,118 @@ VARIANCE prediction, probably from Eps Indi A's halo; not investigated.
 
 ## Spectrally matched differencing
 
-Results: to be written (phase B).
+In plain words: SPHEREx sees a star at a different wavelength in every exposure. Subtracting two
+exposures taken at different wavelengths makes a constant star look changed, simply because stars
+are brighter at some wavelengths than others. We measured how often this happens and tested a fix:
+for each visit, fit a short straight line through the star's own brightness against wavelength,
+read both visits off at the same wavelength, and compare. On 70 constant stars (Barnard's Star
+field) and 49 (Eps Indi field), the plain comparison gets steadily worse as the wavelength gap
+grows; the matched comparison does not change with the gap at all. Doing the same thing on
+resampled images, pixel by pixel, did not work.
+
+All numbers below are robust widths (1.4826 x MAD) with bootstrap errors over stars (300 to 1000
+resamples). z = flux difference divided by its propagated error (1.0 if errors are right and the
+star constant); "scatter" = robust scatter of the fractional flux difference. Pairs from the
+6-month and 12-month classes are pooled unless stated; per-class values are in results.json.
+
+### Result 1: plain pairs degrade with the wavelength gap, matched photometry does not
+
+Every same-detector exposure pair of the same star between two visits (Barnard, 70 stars):
+
+| gap (channels) | N pairs | plain z width | plain scatter | matched (M2) z width |
+|---|---|---|---|---|
+| 0 - 0.5 | 16,411 | 1.43 | 4.8 % | 1.42 |
+| 0.5 - 1 | 11,984 | 1.59 | 5.9 % | 1.45 |
+| 1 - 2 | 27,104 | 2.04 | 7.9 % | 1.42 |
+| 2 - 4 | 48,891 | 2.93 | 12.4 % | 1.42 |
+| 4 - 7 | 60,514 | 4.63 | 20.1 % | 1.42 |
+| 7 - 10 | 44,521 | 6.57 | 28.6 % | 1.42 |
+| > 10 | 40,323 | 8.66 | 38.5 % | 1.45 |
+
+Slope of z width with gap: plain +0.64 +/- 0.09 per channel, matched +0.001 +/- 0.001 (Barnard);
+plain +0.18 +/- 0.02, matched +0.000 +/- 0.001 (Eps Indi). Pairs inside one visit show the same
+trend (gap > 10 channels: 9.3), so it is the wavelength, not the time between visits. At gaps
+under half a channel the plain pair is as good as the matched one; the matched method's gain is
+that it does not need such a pair. (Script 07b, figure phaseb_gap_full_*.png.)
+
+### Result 2: products compared on the same stars (Barnard, mask prereg unless stated)
+
+| product | z width | scatter |
+|---|---|---|
+| P1 website pair, resampled (bilinear, browser mask) | 1.85 +/- 0.07 | 5.5 +/- 0.2 % |
+| P1 website pair, resampled (bilinear) | 1.76 +/- 0.06 | 5.8 +/- 0.3 % |
+| P1native: same pairs, native pixels | 1.56 +/- 0.06 | 5.7 +/- 0.3 % |
+| P2 visit stack minus visit stack | 4.76 +/- 0.34 | 4.4 +/- 0.2 % |
+| M1 per-pixel matched on the grid (six detectors) | 2.77 +/- 0.16 | 6.5 +/- 0.3 % |
+| M1 per-pixel matched, 3.075" grid | 2.22 +/- 0.10 | 4.6 +/- 0.2 % |
+| M2 per-star matched (six detectors) | 1.44 +/- 0.05 | 2.6 +/- 0.1 % |
+| M2 per-star matched (one detector) | 1.42 +/- 0.05 | 2.6 +/- 0.2 % |
+
+Eps Indi: M2 1.26 / 4.9 %, P1native 1.29 / 11.4 % (fainter stars; full table in results.json).
+None of the plain or grid products meets the pre-registered "clean" test (width < 1.5); M2 meets it
+in both fields, with colour slopes consistent with zero (+0.2 +/- 0.3 and +0.05 +/- 0.3 percent per
+mag BP-RP, Barnard and Eps Indi). P2 is the worst in z because a visit stack mixes about 20
+wavelengths whose mix differs between visits. M1 is worse than the plain pair: resampling each
+undersampled exposure to a grid and fitting across exposures with different pixel phases adds
+more error than matching removes.
+
+### What the gain is made of (controls on identical comparisons, one detector, prereg)
+
+| product (Barnard) | z width | scatter |
+|---|---|---|
+| P1native (one plain pair) | 1.46 +/- 0.06 | 5.7 +/- 0.3 % |
+| P1avg (plain pairs averaged over M2's window: more data, no matching) | 1.69 +/- 0.08 | 3.7 +/- 0.2 % |
+| M2flat (matched window, constant instead of a line) | 1.69 +/- 0.08 | 3.5 +/- 0.1 % |
+| M2unmatched (M2 averaging, plain pair's wavelength gap) | 1.71 +/- 0.09 | 3.7 +/- 0.1 % |
+| M2 | 1.39 +/- 0.05 | 2.7 +/- 0.2 % |
+
+All M2-minus-control differences are significant in Barnard (2.4 to 19 sigma). Of the drop in
+scatter from P1native to M2, averaging alone (P1avg) reproduces 67 +/- 3 % (Barnard) and
+71 +/- 3 % (Eps Indi); the remaining third is the wavelength matching. In Eps Indi the straight
+line is no better than a constant in scatter (1.0 sigma) and M2 is not better than the best plain
+pair in z width (1.1 sigma).
+
+Paired stack (PS): each visit-A exposure paired with the nearest-wavelength visit-B exposure of the
+same detector within one channel (each used once), differences averaged. Per star, detector and
+visit pair, PS scatter minus M2 scatter: Barnard one detector +0.43 +/- 0.08 percentage points
+(M2 better, significant); Barnard six detectors +0.13 (1.9 sigma); Eps Indi +0.28 +/- 0.20 (one)
+and +0.15 (six), not significant. PS keeps 78 % (Barnard) and 50 % (Eps Indi) of visit-A
+measurements at one channel. So PS is nearly as good and simpler; M2 is measurably better only
+with one detector in the denser Barnard field.
+
+### Kernels and grid (P1, Barnard)
+
+Median dipole level (RMS of the difference within 3 px of G 12.0-13.5 stars over the star's peak;
+no bootstrap error computed, N = 300 to 1700 comparisons): bilinear 0.077 to 0.080, exact
+(flux-conserving) 0.077 to 0.080, Lanczos-3 0.076 to 0.078, adaptive 0.042 to 0.046 (it smooths
+the image, so the peak drops too), 3.075" grid bilinear 0.068 to 0.071; P2 0.023 to 0.028, M1
+0.043 to 0.050. Photometric z widths: bilinear 1.76 +/- 0.06, exact 1.75 +/- 0.06, adaptive
+1.87 +/- 0.05, Lanczos-3 1.95 +/- 0.07 (Lanczos also loses about 60 % of comparisons to NaN
+spreading near masked pixels). Recommendation for the website: keep bilinear; no kernel tested
+removes the dipoles, and the 3" grid helps only slightly.
+
+### Error bars
+
+Single-exposure fluxes of a star scatter about that visit's own smooth spectrum more than the
+pipeline variance predicts: width 1.40 (Barnard) and 1.22 (Eps Indi). The excess grows with
+brightness (Barnard: 1.02 at G = 15.9, 2.47 at G = 12.4), does not depend on where the star falls
+inside a pixel, is not explained by crowding and is not a few variable stars (removing the worst
+10 % of stars changes 1.40 to 1.33). Adding a term of 2 percent of the star's flux in quadrature
+(var' = var + (0.02 F)^2) brings every brightness bin and detector close to 1 (residual spread
+0.07 in log width, against 0.25 for a constant factor). We adopt this inflation downstream. Its
+physical cause (flat field, PSF or aperture loss, pointing jitter) was not identified. Background
+pixels of difference images also scatter 1.15 to 1.30 times the propagated error.
+
+### Limits
+
+Two fields, 70 and 49 stars, G 12 to 16.5, isolated, not Gaia-variable. Saturated stars are not
+handled: RW Aur, a test target, is saturated or bloomed in detectors 2 to 6 and in most detector
+1 frames, so it cannot settle whether its detector 2 versus 6 change is variability (17 of 334
+frames usable). The SOURCE flag covers about 97 percent of pixels, so excluding SOURCE pixels from
+the local background is effectively impossible; the background falls back to a clipped annulus
+median in about 80 percent of cases. The matched model is a straight line over +/- 2.5 bandwidths;
+across that window the PSF width changes by 0.1 to 2 percent, which we neglect. The 2 percent
+error term is empirical.
 
 ### Choices fixed before any phase B result was computed (2026-11-14, 09:52 CST; see git history)
 

@@ -26,6 +26,14 @@ function meanOf(v: number[]): number {
 export interface BuildMovieOptions {
   /** 'median' (default): subtract each frame's sigma-clipped median before stacking. 'none': leave pixels as is. */
   background?: 'median' | 'none';
+  /**
+   * How members of one stack are combined per pixel. 'mean': inverse-variance mean. 'clipped':
+   * iterative 3-sigma rejection about the median (up to 3 rounds, needs >= 3 usable members),
+   * then the inverse-variance mean of the survivors. Default: 'clipped' when the frames carry
+   * trackingDistanceAu (co-moving frames, where passing stars and stray sources must be rejected),
+   * else 'mean'.
+   */
+  combine?: 'mean' | 'clipped';
 }
 
 const BG_MAX_SAMPLES = 20000;
@@ -89,15 +97,26 @@ export function frameBackground(frame: Frame): { level: number; fallback: boolea
   return { level, fallback: false, plain, nUsed: kept.length };
 }
 
+/** Median of the first n entries of a (scratch) array; reorders them. */
+function medianOfFirst(a: Float64Array, n: number): number {
+  const s = a.subarray(0, n).sort();
+  return n % 2 ? s[(n - 1) >> 1] : 0.5 * (s[n / 2 - 1] + s[n / 2]);
+}
+
+const CLIP_SIGMA = 3;
+const CLIP_ITERATIONS = 3;
+
 function stackFrames(
   members: Frame[],
   visitIndex: number,
   detector: Detector,
   target: Target | undefined,
   background: 'median' | 'none',
+  combine: 'mean' | 'clipped',
+  tracked: boolean,
 ): MovieFrame {
   const first = members[0];
-  const { w, h, grid } = first;
+  const { w, h } = first;
   const n = w * h;
   const pixels = new Float32Array(n);
   const variance = new Float32Array(n);
@@ -111,24 +130,86 @@ function stackFrames(
     for (let i = 0; i < c.length; i++) c[i] = f.pixels[i] - lv;
     return c;
   });
-  for (let i = 0; i < n; i++) {
-    let sw = 0;
-    let swx = 0;
-    for (let k = 0; k < members.length; k++) {
-      const f = members[k];
-      const p = srcs[k][i];
-      const v = f.variance[i];
-      if ((f.flags[i] & BAD_DATA_MASK) !== 0 || !Number.isFinite(p) || !Number.isFinite(v) || !(v > 0)) continue;
-      const wt = 1 / v;
-      sw += wt;
-      swx += wt * p;
+  if (combine === 'mean') {
+    for (let i = 0; i < n; i++) {
+      let sw = 0;
+      let swx = 0;
+      for (let k = 0; k < members.length; k++) {
+        const f = members[k];
+        const p = srcs[k][i];
+        const v = f.variance[i];
+        if ((f.flags[i] & BAD_DATA_MASK) !== 0 || !Number.isFinite(p) || !Number.isFinite(v) || !(v > 0)) continue;
+        const wt = 1 / v;
+        sw += wt;
+        swx += wt * p;
+      }
+      if (sw > 0) {
+        pixels[i] = swx / sw;
+        variance[i] = 1 / sw;
+      } else {
+        pixels[i] = NaN;
+        variance[i] = NaN;
+      }
     }
-    if (sw > 0) {
-      pixels[i] = swx / sw;
-      variance[i] = 1 / sw;
-    } else {
-      pixels[i] = NaN;
-      variance[i] = NaN;
+  } else {
+    const K = members.length;
+    const val = new Float64Array(K);
+    const vr = new Float64Array(K);
+    const alive = new Uint8Array(K);
+    const scratch = new Float64Array(K);
+    for (let i = 0; i < n; i++) {
+      let m = 0;
+      for (let k = 0; k < K; k++) {
+        const f = members[k];
+        const p = srcs[k][i];
+        const v = f.variance[i];
+        if ((f.flags[i] & BAD_DATA_MASK) !== 0 || !Number.isFinite(p) || !Number.isFinite(v) || !(v > 0)) continue;
+        val[m] = p;
+        vr[m] = v;
+        alive[m] = 1;
+        m++;
+      }
+      if (m >= 3) {
+        for (let it = 0; it < CLIP_ITERATIONS; it++) {
+          let c = 0;
+          for (let j = 0; j < m; j++) if (alive[j]) scratch[c++] = val[j];
+          if (c < 3) break;
+          const med = medianOfFirst(scratch, c);
+          c = 0;
+          for (let j = 0; j < m; j++) if (alive[j]) scratch[c++] = Math.abs(val[j] - med);
+          let sigma = 1.4826 * medianOfFirst(scratch, c);
+          if (!(sigma > 0)) {
+            c = 0;
+            for (let j = 0; j < m; j++) if (alive[j]) scratch[c++] = vr[j];
+            sigma = Math.sqrt(medianOfFirst(scratch, c));
+          }
+          if (!(sigma > 0)) break;
+          const lim = CLIP_SIGMA * sigma;
+          let rejected = false;
+          for (let j = 0; j < m; j++) {
+            if (alive[j] && Math.abs(val[j] - med) > lim) {
+              alive[j] = 0;
+              rejected = true;
+            }
+          }
+          if (!rejected) break;
+        }
+      }
+      let sw = 0;
+      let swx = 0;
+      for (let j = 0; j < m; j++) {
+        if (!alive[j]) continue;
+        const wt = 1 / vr[j];
+        sw += wt;
+        swx += wt * val[j];
+      }
+      if (sw > 0) {
+        pixels[i] = swx / sw;
+        variance[i] = 1 / sw;
+      } else {
+        pixels[i] = NaN;
+        variance[i] = NaN;
+      }
     }
   }
   const mjd = meanOf(members.map((f) => f.exposure.mjd));
@@ -136,11 +217,18 @@ function stackFrames(
     .map((f) => f.exposure.wavelengthAtTarget)
     .filter((x): x is number => x !== null && Number.isFinite(x));
   const wavelength = meanOf(waves);
-  const targetXY: [number, number] | null = target
-    ? (() => {
-        const p = positionAt(target, mjd);
-        return worldToGrid(grid, p.ra, p.dec);
-      })()
+  // Grid of the member nearest the stack's mean time (the first one on a tie).
+  let near = first;
+  for (const f of members) if (Math.abs(f.exposure.mjd - mjd) < Math.abs(near.exposure.mjd - mjd)) near = f;
+  const grid = near.grid;
+  // Tracked frames are cut out around the target: it sits at the cutout centre.
+  const targetXY: [number, number] | null = tracked
+    ? [(w - 1) / 2, (h - 1) / 2]
+    : target
+      ? (() => {
+          const p = positionAt(target, mjd);
+          return worldToGrid(grid, p.ra, p.dec);
+        })()
     : null;
   return {
     grid,
@@ -179,13 +267,25 @@ export function buildMovie(
 ): Movie {
   const background = opts.background ?? 'median';
   const sel = frames.filter((f) => f.exposure.detector === detector);
+  // Selected frames may differ in grid centre (tracked frames) but not in shape or tracking distance.
+  for (const f of sel) {
+    if (f.w !== sel[0].w || f.h !== sel[0].h || f.trackingDistanceAu !== sel[0].trackingDistanceAu) {
+      throw new SpherexError(
+        'BAD_INPUT',
+        `buildMovie: frames differ in shape or trackingDistanceAu (${f.exposure.id} vs ${sel[0].exposure.id})`,
+      );
+    }
+  }
+  const trackingDistanceAu = sel.length ? sel[0].trackingDistanceAu : undefined;
+  const tracked = trackingDistanceAu !== undefined;
+  const combine = opts.combine ?? (tracked ? 'clipped' : 'mean');
   const grid = sel.length ? sel[0].grid : frames.length ? frames[0].grid : { ra0: 0, dec0: 0, w: 0, h: 0, scaleArcsec: 6.15, epochMjd: 0 };
   if (sel.length === 0) {
     return { mode, detector, grid, frames: [], stretch: { lo: 0, hi: 1 } };
   }
   const out: MovieFrame[] = [];
   if (mode === 'single') {
-    for (const f of sel) out.push(stackFrames([f], f.exposure.visitIndex, detector, target, background));
+    for (const f of sel) out.push(stackFrames([f], f.exposure.visitIndex, detector, target, background, combine, tracked));
   } else {
     const groups = new Map<number, Frame[]>();
     for (const f of sel) {
@@ -194,13 +294,22 @@ export function buildMovie(
       if (g) g.push(f);
       else groups.set(f.exposure.visitIndex, [f]);
     }
-    for (const [vi, members] of groups) out.push(stackFrames(members, vi, detector, target, background));
+    for (const [vi, members] of groups) out.push(stackFrames(members, vi, detector, target, background, combine, tracked));
   }
   out.sort((a, b) => a.mjd - b.mjd);
   const [lo, hi] = robustPercentiles(out.map((m) => m.pixels), [1, 99.5]);
-  return { mode, detector, grid, frames: out, stretch: widen(lo, hi) };
+  // Movie.grid is the grid of the first (earliest) movie frame; tracked frames each carry their own.
+  return {
+    mode,
+    detector,
+    grid: out.length ? out[0].grid : grid,
+    frames: out,
+    stretch: widen(lo, hi),
+    ...(tracked ? { trackingDistanceAu } : {}),
+  };
 }
 
+/** b minus a. Frames need the same w and h, not the same grid centre. Result grid = b.grid. */
 export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
   if (a.w !== b.w || a.h !== b.h) {
     throw new SpherexError('BAD_INPUT', `difference: grid size mismatch ${a.w}x${a.h} vs ${b.w}x${b.h}`);
@@ -220,7 +329,7 @@ export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
   const sym = Number.isFinite(s) && s > 0 ? s : 1;
   const bw = (channelBandwidth(a.detector, a.wavelength) + channelBandwidth(b.detector, b.wavelength)) / 2;
   return {
-    grid: a.grid,
+    grid: b.grid,
     pixels,
     variance,
     snr,

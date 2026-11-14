@@ -7,7 +7,8 @@ import { loadFrame } from './frame';
 import { makeGrid, positionAt, worldToGrid } from './wcs';
 import type { Exposure, Frame, Target } from './types';
 
-const DIR = '/Users/samir/Desktop/spaceapps/research/samples/spherex-tests/';
+import { SPHEREX_TESTS_DIR } from './testdata';
+const DIR = SPHEREX_TESTS_DIR + '/';
 const keys = JSON.parse(readFileSync(DIR + 'keys.json', 'utf8'));
 const gaia = JSON.parse(readFileSync(DIR + 'gaia_stars.json', 'utf8'));
 const oracle = JSON.parse(readFileSync(DIR + 'oracle.json', 'utf8'));

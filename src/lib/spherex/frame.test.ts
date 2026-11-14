@@ -1,15 +1,24 @@
 // Unit tests for loadFrame using a real local Level 2 file served by a fake Range fetch.
 // @ts-ignore node types are not installed
 import { readFileSync } from 'node:fs';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { bytesTransferred, clearHeaderCaches, setFetch, walkHdus } from './fits';
 import { clearWaveCache } from './wavelength';
 import { loadFrame, loadFrames } from './frame';
+import { gridAt } from './parallax';
 import { positionAt } from './wcs';
 import type { Exposure, Grid, Target } from './types';
 import { BAD_DATA_MASK, FLAG_BITS } from './types';
 
-const DIR = '/Users/samir/Desktop/spaceapps/research/samples/spherex-tests/';
+// Mocked tracking grid: shifts ra0 by 0.002 deg per day from the base epoch (about one pixel per day).
+vi.mock('./parallax', () => ({
+  gridAt: vi.fn((base: { ra0: number; epochMjd: number }, mjd: number) => ({
+    ...base, ra0: base.ra0 + 0.002 * (mjd - base.epochMjd),
+  })),
+}));
+
+import { SPHEREX_TESTS_DIR } from './testdata';
+const DIR = SPHEREX_TESTS_DIR + '/';
 const FILE = DIR + '2025W35_2A_0221_2_D2.fits';
 const URL_OK = 'https://test.invalid/a.fits';
 const URL_NAN = 'https://test.invalid/nan.fits';
@@ -235,5 +244,61 @@ describe('frame.bytes and progress bytes', () => {
     expect(sum).toBe(bytesTransferred() - b0);
     expect(prog[prog.length - 1]).toBe(sum);
     for (let i = 1; i < prog.length; i++) expect(prog[i]!).toBeGreaterThanOrEqual(prog[i - 1]!);
+  }, 60000);
+});
+
+describe('distance tracking', () => {
+  const gridAtMock = vi.mocked(gridAt);
+
+  it('resamples each exposure onto gridAt(grid, mjd, D, ref) and flags the frame', async () => {
+    gridAtMock.mockClear();
+    const e2: Exposure = { ...exposure, id: 'y', mjd: exposure.mjd + 1 };
+    const f1 = await loadFrame(exposure, grid, { distanceAu: 3, referenceMjd: 60900 });
+    const f2 = await loadFrame(e2, grid, { distanceAu: 3, referenceMjd: 60900 });
+    expect(gridAtMock).toHaveBeenCalledWith(grid, exposure.mjd, 3, 60900);
+    expect(gridAtMock).toHaveBeenCalledWith(grid, e2.mjd, 3, 60900);
+    expect(f1.trackingDistanceAu).toBe(3);
+    expect(f2.trackingDistanceAu).toBe(3);
+    expect(f1.grid.ra0).toBeCloseTo(grid.ra0, 9);
+    expect(f2.grid.ra0).toBeCloseTo(grid.ra0 + 0.002, 9);
+    expect(f2.grid).not.toBe(grid);
+    expect(f1.coverage).toBeGreaterThan(0.5);
+  }, 60000);
+
+  it('wavelengthMap and centre wavelength use the tracked grid; target wavelength is unchanged', async () => {
+    const e2: Exposure = { ...exposure, mjd: exposure.mjd + 1 };
+    const f = await loadFrame(e2, grid, { distanceAu: 2, wavelengthMap: true });
+    expect(f.wavelengthMap!.length).toBe(21 * 21);
+    expect(f.exposure.wavelengthAtTarget).toBeGreaterThan(1.3);
+    expect(f.exposure.wavelengthAtTarget).toBeLessThan(1.5);
+    const t = await loadFrame(e2, grid, { distanceAu: 2, target: BARNARD });
+    const plain = await loadFrame(e2, grid, { target: BARNARD });
+    expect(t.exposure.wavelengthAtTarget).toBe(plain.exposure.wavelengthAtTarget);
+  }, 60000);
+
+  it('an off-detector tracked frame still reports the tracking distance', async () => {
+    const f = await loadFrame(exposure, { ...grid, ra0: 100, dec0: -30 }, { distanceAu: 5 });
+    expect(f.coverage).toBe(0);
+    expect(f.trackingDistanceAu).toBe(5);
+  }, 60000);
+
+  it('without a usable distance the grid is untouched and gridAt is not called', async () => {
+    gridAtMock.mockClear();
+    for (const d of [undefined, 0, -1, NaN, Infinity]) {
+      const f = await loadFrame(exposure, grid, { distanceAu: d });
+      expect(f.grid).toBe(grid);
+      expect(f.trackingDistanceAu).toBeUndefined();
+    }
+    expect(gridAtMock).not.toHaveBeenCalled();
+  }, 60000);
+
+  it('loadFrames passes distanceAu and referenceMjd through', async () => {
+    gridAtMock.mockClear();
+    const e2: Exposure = { ...exposure, id: 'y', mjd: exposure.mjd + 1 };
+    const r = await loadFrames([exposure, e2], grid, { distanceAu: 4, referenceMjd: 60800, concurrency: 1 });
+    expect(r.frames.length).toBe(2);
+    expect(r.frames.every((f) => f.trackingDistanceAu === 4)).toBe(true);
+    expect(r.frames[0].grid.ra0).not.toBe(r.frames[1].grid.ra0);
+    expect(gridAtMock).toHaveBeenCalledWith(grid, e2.mjd, 4, 60800);
   }, 60000);
 });

@@ -4,7 +4,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { readFlagsBlock } from './flags';
 import { bytesTransferred, setFetch } from './fits';
 
-const DIR = '/Users/samir/Desktop/spaceapps/research/samples/spherex-tests';
+import { SPHEREX_TESTS_DIR } from './testdata';
+const DIR = SPHEREX_TESTS_DIR;
 const ORACLE = `${DIR}/flags_oracle.json`;
 const URL =
   'https://nasa-irsa-spherex.s3.amazonaws.com/dr1/level2/2025W35_2A/l2b-v27-2026-231/2/' +

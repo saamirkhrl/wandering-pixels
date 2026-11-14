@@ -86,6 +86,16 @@ describe('loadFirstLook visit choice', () => {
     expect('detector' in opts).toBe(false);
     expect(mocked.mock.calls[0][1]).toBe(grid);
   });
+  it('passes distanceAu and referenceMjd through to loadFrame', async () => {
+    mockLoad();
+    await loadFirstLook(target, [ex('a', 1, 0, 1), ex('b', 1, 1, 50)], grid, { distanceAu: 3.2, referenceMjd: 60500 });
+    expect(mocked.mock.calls.length).toBe(2);
+    for (const c of mocked.mock.calls) {
+      const o = c[2] as unknown as Record<string, unknown>;
+      expect(o.distanceAu).toBe(3.2);
+      expect(o.referenceMjd).toBe(60500);
+    }
+  });
   it('uses one exposure when there is one visit', async () => {
     mockLoad();
     const r = await loadFirstLook(target, [ex('b', 1, 0, 2), ex('a', 1, 0, 1)], grid);
@@ -173,6 +183,17 @@ describe('loadFirstLook low-coverage retry', () => {
 });
 
 describe('loadBestPair', () => {
+  it('passes distanceAu and referenceMjd through to loadFrame', async () => {
+    mockLoad();
+    const exps = [ex('a1', 2, 0, 1, 1.0), ex('b1', 2, 1, 50, 1.01)];
+    await loadBestPair(target, exps, grid, { distanceAu: 2.5, referenceMjd: 60400 });
+    expect(mocked.mock.calls.length).toBeGreaterThan(0);
+    for (const c of mocked.mock.calls) {
+      const o = c[2] as unknown as Record<string, unknown>;
+      expect(o.distanceAu).toBe(2.5);
+      expect(o.referenceMjd).toBe(60400);
+    }
+  });
   const pairExps = [
     ex('a1', 2, 0, 1, 1.0), ex('a2', 2, 0, 2, 1.5),
     ex('b1', 2, 1, 50, 1.01), ex('b2', 2, 1, 51, 1.49), ex('b3', 2, 1, 52, 2.0),

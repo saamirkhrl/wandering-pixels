@@ -5,7 +5,8 @@ import { setFetch, getHdu, readHduData, clearHeaderCaches, bytesTransferred } fr
 import { annotateWavelengths, clearWaveCache, parseWaveTable, readWaveTable, waveAt } from './wavelength';
 import type { Exposure, Target } from './types';
 
-const DIR = '/Users/samir/Desktop/spaceapps/research/samples/spherex-tests/';
+import { SPHEREX_TESTS_DIR } from './testdata';
+const DIR = SPHEREX_TESTS_DIR + '/';
 const keys = JSON.parse(readFileSync(DIR + 'keys.json', 'utf8'));
 const oracle = JSON.parse(readFileSync(DIR + 'oracle.json', 'utf8'));
 const OBS = ['2025W35_2A_0221_2', '2026W34_2A_0233_3'];

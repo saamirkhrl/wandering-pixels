@@ -4,9 +4,14 @@ import { SpherexError, BAD_DATA_MASK, FLAG_BITS } from './types';
 
 vi.mock('./wcs', () => ({
   positionAt: (t: { ra: number; dec: number }) => ({ ra: t.ra, dec: t.dec }),
-  worldToGrid: (_g: unknown, ra: number, dec: number) => [ra, dec],
+  // Grids with epochMjd === 1 use a simple linear tangent-plane stand-in; all others return [ra, dec].
+  worldToGrid: (g: { ra0: number; dec0: number; w: number; h: number; scaleArcsec: number; epochMjd: number }, ra: number, dec: number) =>
+    g.epochMjd === 1
+      ? [(g.w - 1) / 2 - ((ra - g.ra0) * 3600) / g.scaleArcsec, (g.h - 1) / 2 - ((dec - g.dec0) * 3600) / g.scaleArcsec]
+      : [ra, dec],
 }));
 
+import { worldToGrid } from './wcs';
 import { buildMovie, difference, summarize, channelBandwidth, pickBlinkPair, frameBackground } from './movie';
 
 const grid: Grid = { ra0: 10, dec0: 10, w: 65, h: 65, scaleArcsec: 6.15, epochMjd: 60000 };
@@ -379,5 +384,171 @@ describe('pickBlinkPair', () => {
   it('orders the pair by time', () => {
     const r = pickBlinkPair([exp('late', 2, 1, 99, 1.0), exp('early', 2, 0, 5, 1.0)]);
     expect(r!.map((e) => e.id)).toEqual(['early', 'late']);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Tracked (co-moving) frames and clipped combine
+// ---------------------------------------------------------------------------------------------
+
+function trackedFrame(e: Exposure, g: Grid, fill: number, varFill: number, au: number | undefined): Frame {
+  const f = frame(e, fill, varFill);
+  f.grid = g;
+  if (au !== undefined) f.trackingDistanceAu = au;
+  return f;
+}
+
+function centroid(f: { pixels: Float32Array; w: number; h: number }, cx: number, cy: number, r: number): [number, number] {
+  let s = 0, sx = 0, sy = 0;
+  for (let j = Math.max(0, Math.round(cy) - r); j <= Math.min(f.h - 1, Math.round(cy) + r); j++)
+    for (let i = Math.max(0, Math.round(cx) - r); i <= Math.min(f.w - 1, Math.round(cx) + r); i++) {
+      const v = f.pixels[j * f.w + i];
+      s += v; sx += v * i; sy += v * j;
+    }
+  return [sx / s, sy / s];
+}
+
+describe('clipped combine', () => {
+  function sixMembers(au: number | undefined): Frame[] {
+    const fs: Frame[] = [];
+    for (let k = 0; k < 6; k++) fs.push(trackedFrame(exp('m' + k, 2, 0, 60000 + k * 0.1, 1), grid, 0, 1, au));
+    star(fs[2], 30, 30, 100);
+    return fs;
+  }
+
+  it('rejects a bright source in 1 of 6 members; mean keeps it', () => {
+    const fs = sixMembers(5);
+    const i = 30 * 65 + 30;
+    const clipped = buildMovie(fs, 'visit-stack', 2, undefined, { background: 'none', combine: 'clipped' });
+    const mean = buildMovie(fs, 'visit-stack', 2, undefined, { background: 'none', combine: 'mean' });
+    expect(clipped.frames[0].pixels[i]).toBeCloseTo(0, 6);
+    expect(clipped.frames[0].variance[i]).toBeCloseTo(1 / 5, 6);
+    expect(mean.frames[0].pixels[i]).toBeCloseTo(100 / 6, 4);
+  });
+
+  it('defaults to clipped for tracked frames and mean for untracked', () => {
+    const i = 30 * 65 + 30;
+    const t = buildMovie(sixMembers(5), 'visit-stack', 2, undefined, { background: 'none' });
+    const u = buildMovie(sixMembers(undefined), 'visit-stack', 2, undefined, { background: 'none' });
+    expect(t.frames[0].pixels[i]).toBeCloseTo(0, 6);
+    expect(u.frames[0].pixels[i]).toBeCloseTo(100 / 6, 4);
+    expect(t.trackingDistanceAu).toBe(5);
+    expect('trackingDistanceAu' in u).toBe(false);
+  });
+
+  it('uses the plain inverse-variance mean with fewer than 3 members', () => {
+    const a = trackedFrame(exp('a', 2, 0, 60000, 1), grid, 10, 1, 5);
+    const b = trackedFrame(exp('b', 2, 0, 60000.2, 1), grid, 20, 4, 5);
+    const m = buildMovie([a, b], 'visit-stack', 2, undefined, { background: 'none' });
+    expect(m.frames[0].pixels[100]).toBeCloseTo(12, 5);
+    expect(m.frames[0].variance[100]).toBeCloseTo(0.8, 5);
+  });
+
+  it('falls back to the variance scale when the MAD is zero', () => {
+    const fs: Frame[] = [];
+    for (let k = 0; k < 5; k++) fs.push(trackedFrame(exp('z' + k, 2, 0, 60000 + k, 1), grid, 2, 0.25, 5));
+    fs[4].pixels[7] = 50;
+    const m = buildMovie(fs, 'visit-stack', 2, undefined, { background: 'none' });
+    expect(m.frames[0].pixels[7]).toBeCloseTo(2, 6);
+    expect(m.frames[0].variance[7]).toBeCloseTo(0.25 / 4, 6);
+  });
+
+  it('300 frames of 65x65 combine in under 1 s', () => {
+    const fs: Frame[] = [];
+    for (let k = 0; k < 300; k++) {
+      const f = trackedFrame(exp('t' + k, 2, 0, 60000 + k * 0.01, 1), grid, 0, 1, 5);
+      for (let i = 0; i < f.pixels.length; i++) f.pixels[i] = Math.sin(k * 7919 + i * 31) * 0.5;
+      fs.push(f);
+    }
+    const t0 = performance.now();
+    buildMovie(fs, 'visit-stack', 2, undefined, { background: 'none' });
+    const dt = performance.now() - t0;
+    console.log('clipped 300x65x65 ms', Math.round(dt));
+    expect(dt).toBeLessThan(1000);
+  });
+});
+
+describe('tracked movies', () => {
+  const gA: Grid = { ra0: 100, dec0: 20, w: 65, h: 65, scaleArcsec: 6.15, epochMjd: 1 };
+  const gB: Grid = { ra0: 100.01, dec0: 20.005, w: 65, h: 65, scaleArcsec: 6.15, epochMjd: 1 };
+  const starRa = 100.002, starDec = 20.02;
+
+  function visit(g: Grid, vi: number, mjd0: number, au: number | undefined): Frame[] {
+    const out: Frame[] = [];
+    for (let k = 0; k < 3; k++) {
+      const f = trackedFrame(exp(`v${vi}k${k}`, 2, vi, mjd0 + k * 0.1, 1), g, 0, 1, au);
+      star(f, 32, 32, 100); // co-moving source at the cutout centre
+      const [sx, sy] = worldToGrid(f.grid, starRa, starDec);
+      star(f, sx, sy, 80); // fixed star
+      out.push(f);
+    }
+    return out;
+  }
+
+  it('builds with different centres, nearest-member grid, targetXY at the centre', () => {
+    const near: Grid = { ...gA, ra0: 100.0002 };
+    const a = trackedFrame(exp('a', 2, 0, 60000, 1), gA, 0, 1, 5);
+    const b = trackedFrame(exp('b', 2, 0, 60000.1, 1), near, 0, 1, 5);
+    const c = trackedFrame(exp('c', 2, 0, 60000.5, 1), gB, 0, 1, 5);
+    // mean mjd = 60000.2, nearest is b
+    const m = buildMovie([a, b, c], 'visit-stack', 2, { ra: 1, dec: 2 }, { background: 'none' });
+    expect(m.frames[0].grid).toBe(near);
+    expect(m.grid).toBe(near);
+    expect(m.frames[0].targetXY).toEqual([32, 32]);
+    expect(m.trackingDistanceAu).toBe(5);
+  });
+
+  it('throws BAD_INPUT on mismatched trackingDistanceAu or shape', () => {
+    const a = trackedFrame(exp('a', 2, 0, 60000, 1), gA, 0, 1, 5);
+    const b = trackedFrame(exp('b', 2, 0, 60001, 1), gA, 0, 1, 6);
+    const c = trackedFrame(exp('c', 2, 0, 60001, 1), gA, 0, 1, undefined);
+    const d = { ...trackedFrame(exp('d', 2, 0, 60001, 1), gA, 0, 1, 5), w: 64 };
+    for (const bad of [b, c, d]) {
+      try {
+        buildMovie([a, bad], 'visit-stack', 2);
+        expect.unreachable();
+      } catch (e) {
+        expect(e).toBeInstanceOf(SpherexError);
+        expect((e as SpherexError).code).toBe('BAD_INPUT');
+      }
+    }
+  });
+
+  it('difference works on tracked frames with different centres and returns b.grid', () => {
+    const m = buildMovie([...visit(gA, 0, 60000, 5), ...visit(gB, 1, 60100, 5)], 'visit-stack', 2, undefined, { background: 'none' });
+    const d = difference(m.frames[0], m.frames[1]);
+    expect(d.grid).toBe(m.frames[1].grid);
+    expect(d.grid.ra0).toBe(gB.ra0);
+    expect(d.w).toBe(65);
+  });
+
+  it('co-moving source stays at the centre; the fixed star moves by the grid-centre shift', () => {
+    const m = buildMovie([...visit(gA, 0, 60000, 5), ...visit(gB, 1, 60100, 5)], 'visit-stack', 2, undefined, { background: 'none' });
+    expect(m.frames).toHaveLength(2);
+    for (const f of m.frames) {
+      const [cx, cy] = centroid(f, 32, 32, 3);
+      expect(Math.hypot(cx - 32, cy - 32)).toBeLessThan(0.2);
+    }
+    const [ax, ay] = worldToGrid(gA, starRa, starDec);
+    const [bx, by] = worldToGrid(gB, starRa, starDec);
+    const ca = centroid(m.frames[0], ax, ay, 4);
+    const cb = centroid(m.frames[1], bx, by, 4);
+    expect(cb[0] - ca[0]).toBeCloseTo(bx - ax, 1);
+    expect(cb[1] - ca[1]).toBeCloseTo(by - ay, 1);
+    expect(Math.abs(bx - ax)).toBeGreaterThan(5); // the shift is real
+  });
+
+  it('untracked shared grid with a moving source shows it far off-centre', () => {
+    const mk = (vi: number, mjd0: number, x: number) =>
+      [0, 1, 2].map((k) => {
+        const f = frame(exp(`u${vi}${k}`, 2, vi, mjd0 + k * 0.1, 1), 0, 1);
+        star(f, x, 32, 100);
+        return f;
+      });
+    const m = buildMovie([...mk(0, 60000, 32), ...mk(1, 60100, 44)], 'visit-stack', 2, undefined, { background: 'none' });
+    const [cx0] = centroid(m.frames[0], 32, 32, 4);
+    const [cx1] = centroid(m.frames[1], 44, 32, 4);
+    expect(Math.abs(cx0 - 32)).toBeLessThan(0.2);
+    expect(Math.abs(cx1 - 32)).toBeGreaterThan(10);
   });
 });

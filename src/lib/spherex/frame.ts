@@ -6,6 +6,7 @@ import { readWaveTable, waveAt } from './wavelength';
 import { parseWcs, skyToPix, gridToWorld, positionAt } from './wcs';
 import { BAD_DATA_MASK, FLAG_BITS, SpherexError } from './types';
 import type { Exposure, Frame, FrameOptions, Grid } from './types';
+import { gridAt } from './parallax';
 
 function abortIf(signal?: AbortSignal): void {
   if (signal?.aborted) throw new SpherexError('ABORTED', 'Aborted');
@@ -51,11 +52,16 @@ export function loadFrame(exposure: Exposure, grid: Grid, opts: FrameOptions = {
 
 async function loadFrameCounted(
   exposure: Exposure,
-  grid: Grid,
+  baseGrid: Grid,
   opts: FrameOptions,
   extraOnBytes?: (n: number) => void,
 ): Promise<Frame> {
   const { signal, onProgress } = opts;
+  // Distance tracking: the grid co-moves with a body at distanceAu, per exposure.
+  const tracking = typeof opts.distanceAu === 'number' && Number.isFinite(opts.distanceAu) && opts.distanceAu > 0;
+  const grid: Grid = tracking
+    ? gridAt(baseGrid, exposure.mjd, opts.distanceAu as number, opts.referenceMjd)
+    : baseGrid;
   let bytes = 0;
   const ro: ReadOptions = {
     signal,
@@ -93,7 +99,11 @@ async function loadFrameCounted(
         if (py > by1) by1 = py;
       }
     }
-    if (!(bx1 >= bx0)) return emptyFrame({ ...exposure }, grid, opts.wavelengthMap === true, bytes);
+    if (!(bx1 >= bx0)) {
+      const ef = emptyFrame({ ...exposure }, grid, opts.wavelengthMap === true, bytes);
+      if (tracking) ef.trackingDistanceAu = opts.distanceAu;
+      return ef;
+    }
     const x0 = Math.max(0, Math.floor(bx0) - 2);
     const x1 = Math.min(nx, Math.ceil(bx1) + 3);
     const y0 = Math.max(0, Math.floor(by0) - 2);
@@ -184,6 +194,7 @@ async function loadFrameCounted(
     }
     onProgress?.({ stage: 'reproject', done: 1, total: 1, message: 'Resampled', bytes });
     const frame: Frame = { exposure: exp, grid, pixels, variance, flags, w, h, coverage: good / n, bytes };
+    if (tracking) frame.trackingDistanceAu = opts.distanceAu;
     if (wavelengthMap && bandwidthMap) {
       frame.wavelengthMap = wavelengthMap;
       frame.bandwidthMap = bandwidthMap;
@@ -218,6 +229,7 @@ export async function loadFrames(
       try {
         const f = await loadFrameCounted(exposures[i], grid, {
           background: opts.background, signal, wavelengthMap: opts.wavelengthMap, target: opts.target,
+          distanceAu: opts.distanceAu, referenceMjd: opts.referenceMjd,
         }, count);
         results[i] = f;
         onFrame?.(f);

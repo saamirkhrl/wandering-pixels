@@ -47,6 +47,44 @@ describe('fetchJson', () => {
     expect(f).toHaveBeenCalledTimes(4);
   });
 
+  it('network error every time -> 2 calls, UPSTREAM_ERROR, one retrying progress', async () => {
+    const f = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', f);
+    const seen: Progress[] = [];
+    const p = fetchJson('/x', { onProgress: (q) => seen.push(q) });
+    const assertion = expect(p).rejects.toMatchObject({
+      code: 'UPSTREAM_ERROR',
+      message: expect.stringContaining('relay could not be reached'),
+    });
+    await vi.advanceTimersByTimeAsync(10000);
+    await assertion;
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(seen.filter((q) => q.retrying === true)).toHaveLength(1);
+  });
+
+  it('network error then 200 -> success after 2 calls', async () => {
+    const f = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(json(200, { ok: 2 }));
+    vi.stubGlobal('fetch', f);
+    const p = fetchJson<{ ok: number }>('/x');
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(await p).toEqual({ ok: 2 });
+    expect(f).toHaveBeenCalledTimes(2);
+  });
+
+  it('network error, then 503 x4 -> counted separately: 5 calls, UPSTREAM_BUSY', async () => {
+    const f = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockImplementation(async () => json(503, {}));
+    vi.stubGlobal('fetch', f);
+    const p = fetchJson('/x');
+    const assertion = expect(p).rejects.toMatchObject({ code: 'UPSTREAM_BUSY' });
+    await vi.advanceTimersByTimeAsync(30000);
+    await assertion;
+    expect(f).toHaveBeenCalledTimes(5);
+  });
+
   it('abort during backoff -> ABORTED promptly', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => json(503, {})));
     const ctl = new AbortController();

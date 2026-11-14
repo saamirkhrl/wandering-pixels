@@ -293,11 +293,11 @@ export async function loadCached(slug: CachedSlug, opts: LoadCachedOptions = {})
 }
 
 const CACHED: { slug: CachedSlug; name: string; blurb: string }[] = [
-  { slug: 'barnards-star', name: "Barnard's Star", blurb: 'Red dwarf about 6 light years away with the largest known proper motion of any star.' },
-  { slug: 'eps-indi-b', name: 'Epsilon Indi B', blurb: 'Nearby brown dwarf, one of a close pair (Ba and Bb) orbiting the star Epsilon Indi A.' },
-  { slug: 'wise-0855', name: 'WISE 0855-0714', blurb: 'Coldest known brown dwarf (roughly 250 to 285 K), a near neighbour of the Sun that is very faint in the infrared.' },
-  { slug: 'rw-aur', name: 'RW Aurigae', blurb: 'Young, variable star with a circumstellar disk, in the Taurus-Auriga star-forming region.' },
-  { slug: 'r-dra', name: 'R Draconis', blurb: 'Mira variable: a pulsating red giant whose brightness changes by several magnitudes over about 245 days.' },
+  { slug: 'barnards-star', name: "Barnard's Star", blurb: 'Red dwarf with the fastest proper motion of any star, 10.4 arcsec per year; its saturated core is masked and it moves about 1.7 px per year across the frame.' },
+  { slug: 'eps-indi-b', name: 'Epsilon Indi B', blurb: 'Nearby pair of brown dwarfs (Ba and Bb, unresolved here) that is clearly visible and moves between visits.' },
+  { slug: 'wise-0855', name: 'WISE 0855-0714', blurb: 'Very cold brown dwarf at or below the single-exposure limit, with only a marginal signal in the longest-wavelength band; the faint short-wavelength source at the marker is probably a background object.' },
+  { slug: 'rw-aur', name: 'RW Aurigae', blurb: 'Young variable star whose brightness changes between visits; it is not a fast mover.' },
+  { slug: 'r-dra', name: 'R Draconis', blurb: 'Bright, saturated variable star in the continuously observed north deep field; 300 of about 2500 exposures are cached.' },
 ];
 
 export function listCached(): { slug: CachedSlug; name: string; blurb: string }[] {

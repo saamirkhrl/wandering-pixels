@@ -94,25 +94,30 @@ async function errorFromResponse(res: Response, label: string): Promise<SpherexE
   return new SpherexError(mapped, message ?? `${label} failed (HTTP ${res.status})`);
 }
 
+const NETWORK_RETRIES = 1;
+const NETWORK_BACKOFF_MS = 300;
+
+// Retry policy. Two independent budgets:
+// - HTTP 502/503/504: up to `retries` retries with 1 s, 2 s, 4 s backoff (Retry-After honored).
+// - Network errors (fetch rejected, not an abort or our timeout): the relay is likely down, so only
+//   NETWORK_RETRIES retry with a short backoff, then fail fast.
+// Each budget is counted separately across a mixed sequence, so a network blip followed by 503s
+// still gets the full HTTP budget, and neither kind can extend the other beyond its own limit.
 export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Promise<T> {
   const { signal, onProgress, stage = 'search', timeoutMs = 30000, retries = 3, label = 'Request' } = opts;
-  let lastError: SpherexError | null = null;
-  let waitHint: number | null = null;
+  let httpRetriesUsed = 0;
+  let netRetriesUsed = 0;
+  let pending: { delay: number; message: string } | null = null;
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  for (;;) {
     if (signal?.aborted) throw aborted();
 
-    if (attempt > 0) {
-      const base = 1000 * 2 ** (attempt - 1);
-      const delay = waitHint ?? base + Math.random() * 250;
-      onProgress?.({
-        stage, done: 0, total: 0,
-        message: `IRSA is busy, retrying (${attempt} of ${retries})`,
-        retrying: true,
-      });
-      await sleep(delay, signal);
+    if (pending) {
+      onProgress?.({ stage, done: 0, total: 0, message: pending.message, retrying: true });
+      const wait = pending.delay;
+      pending = null;
+      await sleep(wait, signal);
     }
-    waitHint = null;
 
     const timeoutCtl = new AbortController();
     let timedOut = false;
@@ -134,8 +139,14 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
       }
       const err = await errorFromResponse(res, label);
       if (res.status === 502 || res.status === 503 || res.status === 504) {
-        lastError = err;
-        waitHint = retryAfterMs(res);
+        if (httpRetriesUsed >= retries) throw err;
+        const hint = retryAfterMs(res);
+        httpRetriesUsed++;
+        const base = 1000 * 2 ** (httpRetriesUsed - 1);
+        pending = {
+          delay: hint ?? base + Math.random() * 250,
+          message: `IRSA is busy, retrying (${httpRetriesUsed} of ${retries})`,
+        };
         continue;
       }
       throw err;
@@ -145,11 +156,17 @@ export async function fetchJson<T>(url: string, opts: FetchJsonOptions = {}): Pr
       if (timedOut) {
         throw new SpherexError('UPSTREAM_ERROR', `${label} timed out after ${Math.round(timeoutMs / 1000)} s`, { cause: e });
       }
-      lastError = new SpherexError('UPSTREAM_ERROR', `${label} failed: network error`, { cause: e });
+      if (netRetriesUsed >= NETWORK_RETRIES) {
+        throw new SpherexError('UPSTREAM_ERROR', `${label} failed: the relay could not be reached`, { cause: e });
+      }
+      netRetriesUsed++;
+      pending = {
+        delay: NETWORK_BACKOFF_MS + Math.random() * 100,
+        message: `Relay not reachable, retrying (${netRetriesUsed} of ${NETWORK_RETRIES})`,
+      };
     } finally {
       clearTimeout(timer);
       cleanup();
     }
   }
-  throw lastError ?? new SpherexError('UPSTREAM_ERROR', `${label} failed`);
 }

@@ -76,6 +76,8 @@ export interface PanelHandlers {
   setDiffSource: (s: DiffSource) => void;
   goBack: () => void;
   openPrepared: () => void;
+  recheck: () => void;
+  loadLive: () => void;
 }
 
 export type RestState =
@@ -97,6 +99,8 @@ export interface Panel {
   // Section headings with every control disabled, shown while data downloads.
   showSkeleton: () => void;
   setHeader: (name: string, meta: string) => void;
+  setPreparedNote: (name: string | null) => void;
+  setRecheck: (on: boolean) => void;
   setTitleNote: (text: string | null) => void;
   setMatchNote: (text: string | null) => void;
   setProgress: (p: Progress | null, stageWord?: string) => void;
@@ -385,7 +389,13 @@ export function createPanel(hd: PanelHandlers): Panel {
     helpList.append(h('dt', '', k), h('dd', '', d));
   }
   help.append(helpList);
-  secShare.append(shareRow, copied, help);
+  const fallbackBox = h('label', 'v-field v-copyfield');
+  fallbackBox.hidden = true;
+  const fallbackInput = h('input', 'v-input');
+  fallbackInput.type = 'text';
+  fallbackInput.readOnly = true;
+  fallbackBox.append(h('span', 'v-lab', 'Copy it from here'), fallbackInput);
+  secShare.append(shareRow, copied, fallbackBox, help);
 
   let copiedTimer: ReturnType<typeof setTimeout> | null = null;
   async function copyLink(): Promise<void> {
@@ -410,9 +420,20 @@ export function createPanel(hd: PanelHandlers): Panel {
       t.remove();
       bCopy.focus();
     }
-    copied.textContent = ok ? 'Link copied' : 'Could not copy. Copy the address from the browser bar.';
     if (copiedTimer !== null) clearTimeout(copiedTimer);
+    if (ok) {
+      bCopy.textContent = 'Link copied';
+      copied.textContent = 'Link copied';
+      fallbackBox.hidden = true;
+    } else {
+      copied.textContent = 'Could not copy automatically.';
+      fallbackInput.value = url;
+      fallbackBox.hidden = false;
+      fallbackInput.focus();
+      fallbackInput.select();
+    }
     copiedTimer = setTimeout(() => {
+      bCopy.textContent = 'Copy link';
       copied.textContent = '';
     }, 2000);
   }
@@ -442,7 +463,9 @@ export function createPanel(hd: PanelHandlers): Panel {
   backRow.append(backBtn);
   const skyRow = h('div', 'v-top v-skyline');
   skyRow.hidden = true;
-  el.append(backRow, skyRow, head, status, matchLine, restBox, empty, controls);
+  const recheckRow = h('div', 'v-top v-skyline');
+  recheckRow.hidden = true;
+  el.append(backRow, skyRow, recheckRow, head, status, matchLine, restBox, empty, controls);
 
   let frames: FrameInfo[] = [];
 
@@ -616,8 +639,14 @@ export function createPanel(hd: PanelHandlers): Panel {
       progress = { root, word, counts, bar, msg, retry };
     }
     progress.word.textContent = stageWord ?? STAGE_WORDS[p.stage];
-    progress.counts.textContent = p.total > 0 ? `${p.done} of ${p.total}` : '';
-    progress.counts.hidden = p.total <= 0;
+    const byteTotal = p.total >= 100_000;
+    const mbText = (n: number): string => (n / 1e6).toFixed(1);
+    let counts = '';
+    if (byteTotal) counts = `${mbText(p.done)} of ${mbText(p.total)} MB`;
+    else if (p.total > 0) counts = `${p.done} of ${p.total}` + (p.bytes ? `, ${mbText(p.bytes)} MB so far` : '');
+    else if (p.bytes) counts = `${mbText(p.bytes)} MB so far`;
+    progress.counts.textContent = counts;
+    progress.counts.hidden = counts === '';
     if (p.total > 0) {
       progress.bar.max = p.total;
       progress.bar.value = p.done;
@@ -763,6 +792,18 @@ export function createPanel(hd: PanelHandlers): Panel {
       if (name !== null) {
         skyRow.append(h('span', '', `This is ${name}. `), btn('Open the prepared set', 'v-linkbtn', hd.openPrepared));
       }
+    },
+    setPreparedNote: (name) => {
+      skyRow.replaceChildren();
+      skyRow.hidden = name === null;
+      if (name !== null) {
+        skyRow.append(h('span', '', `Showing the prepared set for ${name}. `), btn('Load this position live instead', 'v-linkbtn', hd.loadLive));
+      }
+    },
+    setRecheck: (on) => {
+      recheckRow.replaceChildren();
+      recheckRow.hidden = !on;
+      if (on) recheckRow.append(h('span', '', 'The archive gave a partial list. '), btn('Check again for more images', 'v-linkbtn', hd.recheck));
     },
     setPairMarks: (indices) => timeline.setPairMarks(indices),
     attach: (spectrum, quality, planet) => {

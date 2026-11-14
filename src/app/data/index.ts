@@ -47,6 +47,7 @@ export const cacheIsMock = cache === (mock as unknown);
 export const isMock = liveIsMock && cacheIsMock;
 
 export const resolveTarget = live.resolveTarget;
+export { matchCachedTarget } from '../../lib/spherex';
 export const positionAt = live.positionAt;
 export const findExposures = live.findExposures;
 export const makeGrid = live.makeGrid;

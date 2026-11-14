@@ -135,6 +135,7 @@ export const mount: Mount = (root, ctx) => {
 
   let disposed = false;
   let loaded: Loaded | null = null;
+  let askedAt: { ra: number; dec: number } | null = null;
   let movie: Movie | null = null;
   let mode: MovieMode = params.mode;
   let det: Detector | null = params.det;
@@ -328,6 +329,11 @@ export const mount: Mount = (root, ctx) => {
     goBack: () => {
       if (params.from) ctx.go(params.from, params.fromParams);
     },
+    loadLive: () => {
+      const at = askedAt ?? (loaded ? loaded.target : null);
+      if (at) ctx.go('viewer', { ra: String(at.ra), dec: String(at.dec) });
+    },
+    recheck: () => startLoad(),
     openPrepared: () => {
       if (skyName) ctx.go('viewer', { q: skyName });
     },
@@ -828,13 +834,13 @@ export const mount: Mount = (root, ctx) => {
       const caption = `${base}, ${wl(f.wavelength)}`;
       const detail =
         m.mode === 'visit-stack'
-          ? f.nExposures > 1
-            ? `${f.nExposures} exposures averaged${
+          ? f.nExposures <= 3
+            ? `${f.nExposures} ${f.nExposures === 1 ? 'image' : 'images'}, noisier`
+            : `${f.nExposures} exposures averaged${
                 f.wavelengthMax - f.wavelengthMin >= 0.005
                   ? `, ${wl(f.wavelengthMin).replace(' um', '')} to ${wl(f.wavelengthMax)}`
                   : ''
               }`
-            : '1 exposure'
           : `Detector ${m.detector}`;
       return {
         caption,
@@ -1329,10 +1335,20 @@ export const mount: Mount = (root, ctx) => {
     lastPick = [fx, fy];
     stage.setPick([fx, fy]);
     stage.redraw();
-    spectrum.show(pts, w, (v) => {
-      const mjd = dates.get(v);
-      return `Visit ${v + 1}${mjd !== undefined ? ', ' + formatDate(mjd) : ''}`;
-    });
+    const order = Array.from(new Set(movie.frames.map((f) => f.visitIndex))).sort((x, y) => x - y);
+    const visitNo = (vi: number): number => {
+      const k = order.indexOf(vi);
+      return k >= 0 ? k + 1 : vi + 1;
+    };
+    spectrum.show(
+      pts,
+      w,
+      (vi) => {
+        const mjd = dates.get(vi);
+        return `Visit ${visitNo(vi)}${mjd !== undefined ? ', ' + formatDate(mjd) : ''}`;
+      },
+      visitNo,
+    );
   });
 
   function clearPick(): void {
@@ -1411,7 +1427,9 @@ export const mount: Mount = (root, ctx) => {
       params.q ?? (params.ra !== null && params.dec !== null ? `${params.ra}, ${params.dec}` : 'Viewer');
     if (!target) {
       panel.setTitleNote(null);
-      panel.setHeader(fallback, '');
+      const nq = normalizeName(params.q ?? '');
+      const hit = nq ? listCached().find((c) => normalizeName(c.name) === nq || normalizeName(c.slug) === nq) : undefined;
+      panel.setHeader(hit ? hit.name : fallback, hit ? hit.blurb : '');
       return;
     }
     const name = target.name ?? fallback;
@@ -1554,6 +1572,7 @@ export const mount: Mount = (root, ctx) => {
       });
   }
 
+  let loadT0 = performance.now();
   let loadBytes: LoadingBytes = { bytes: null, total: null };
 
   function loadName(): string {
@@ -1564,7 +1583,10 @@ export const mount: Mount = (root, ctx) => {
     stage.setNote(loadingLine(loadName(), loadBytes));
   }
 
+  let sawPartial = false;
+
   function onLoadProgress(p: Progress): void {
+    if (/partial result/i.test(p.message)) sawPartial = true;
     const b = bytesFromProgress(p);
     if (b.bytes !== null) loadBytes = b;
     showLoadingNote();
@@ -1596,11 +1618,16 @@ export const mount: Mount = (root, ctx) => {
     panel.showSkeleton();
     headerFor(null);
     loadBytes = { bytes: null, total: null };
+    loadT0 = performance.now();
     showLoadingNote();
   }
 
   function handleResult(res: LoadResult): void {
     panel.setProgress(null);
+    console.info(`[load] ${res.cached ? 'prepared set' : 'first look'} ready at ${Math.round(performance.now() - loadT0)} ms`);
+    panel.setRecheck(sawPartial && !res.cached);
+    askedAt = res.asked ?? null;
+    panel.setPreparedNote(res.viaPosition && res.cachedData ? (res.target.name ?? res.cachedData.slug) : null);
     panel.setMockLine(res.cached && res.cachedData ? isSimulated(res.cachedData) : liveIsMock);
     search = res.search ?? search;
     cachedData = res.cachedData;
@@ -1655,6 +1682,7 @@ export const mount: Mount = (root, ctx) => {
     refineBest(res.target, search ? search.exposures : lv.detExposures, lv.grid, res.det, signal)
       .then((r) => {
         if (disposed || mine !== token) return;
+        console.info(`[load] best pair ready at ${Math.round(performance.now() - loadT0)} ms`);
         const have = new Set(pairFrames.map((f) => f.exposure.id));
         if (r.frames.length >= 2 && !(have.has(r.frames[0].exposure.id) && have.has(r.frames[1].exposure.id))) {
           pairFrames = r.frames;
@@ -1676,6 +1704,7 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function handleError(e: unknown): void {
+    console.info(`[load] stopped: ${(e as { code?: string } | null)?.code ?? 'unknown'}`);
     panel.showControls(false);
     const code = (e as { code?: string } | null)?.code;
     if (code === 'ABORTED') {
@@ -1696,6 +1725,8 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function startLoad(): void {
+    console.info('[load] start');
+    sawPartial = false;
     resetForLoad();
     search = null;
     cachedData = null;

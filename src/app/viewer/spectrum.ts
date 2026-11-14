@@ -177,7 +177,7 @@ export function createSpectrumPanel(): SpectrumPanel {
     body.replaceChildren(el('p', 'v-hint', EMPTY_TEXT));
   };
 
-  const show: SpectrumPanel['show'] = (points, where, visitLabel) => {
+  const show: SpectrumPanel['show'] = (points, where, visitLabel, visitNo = (v) => v + 1) => {
     body.replaceChildren();
     const pos = `RA ${fileNum(where.ra)}, Dec ${fileNum(where.dec)} degrees`;
     if (points.length === 0) {
@@ -312,7 +312,7 @@ export function createSpectrumPanel(): SpectrumPanel {
         svg('line', { x1: cx, x2: cx, y1: y0, y2: y1, 'stroke-width': 1.5, fill: 'none' }, g);
         svg('circle', { cx, cy, r: 3.5, 'stroke-width': 1.5 }, g);
         const t = svg('title', {}, g);
-        t.textContent = pointTitle(p, p.visitIndex + 1);
+        t.textContent = pointTitle(p, visitNo(p.visitIndex));
       }
       const wrap = el('div', 'v-spec-wrap');
       wrap.appendChild(chart);
@@ -359,7 +359,7 @@ export function createSpectrumPanel(): SpectrumPanel {
     const tbody = el('tbody');
     for (const p of points) {
       const tr = el('tr');
-      tr.appendChild(el('td', undefined, String(p.visitIndex + 1)));
+      tr.appendChild(el('td', undefined, String(visitNo(p.visitIndex))));
       tr.appendChild(el('td', undefined, fmtNum(p.wavelength, 3)));
       tr.appendChild(el('td', undefined, fmtNum(p.flux, 2)));
       tr.appendChild(el('td', undefined, fmtNum(p.fluxErr, 2)));

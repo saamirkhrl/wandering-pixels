@@ -824,3 +824,29 @@
   gap: 6px;
   margin-top: 8px;
 }
+
+/* Phone tap targets: whole row at least 44 px tall. */
+@media (max-width: 899px) {
+  .viewer .v-qual-list li {
+    padding: 0;
+  }
+  .viewer .v-qual-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .viewer .v-qual-sum,
+  .viewer .v-check,
+  .viewer .v-linkbtn {
+    min-height: 44px;
+  }
+  .viewer .v-check input {
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+  }
+}
+.v-copyfield input {
+  width: 100%;
+}

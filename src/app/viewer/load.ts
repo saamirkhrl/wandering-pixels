@@ -60,6 +60,10 @@ export interface LoadResult {
   total: number;
   cached: boolean;
   matched: boolean;
+  // true when a prepared set was chosen because the query sits at a prepared target, not by its name
+  viaPosition: boolean;
+  // the position the visitor asked for, when it routed to a prepared set
+  asked?: { ra: number; dec: number };
 }
 
 export const DET_BANDS: Record<Detector, [number, number]> = {
@@ -73,7 +77,7 @@ export const DET_BANDS: Record<Detector, [number, number]> = {
 
 export const STAGE_WORDS: Record<Progress['stage'], string> = {
   resolve: 'Finding the star',
-  search: 'Asking the SPHEREx archive',
+  search: 'Finding exposures',
   headers: 'Reading image headers',
   pixels: 'Downloading images',
   reproject: 'Lining up the images',
@@ -93,28 +97,20 @@ function matchCachedName(q: string): CachedSlug | null {
   return null;
 }
 
-function sepArcsec(ra1: number, dec1: number, ra2: number, dec2: number): number {
-  const r = Math.PI / 180;
-  const d1 = dec1 * r;
-  const d2 = dec2 * r;
-  const dr = (ra1 - ra2) * r;
-  const c = Math.sin(d1) * Math.sin(d2) + Math.cos(d1) * Math.cos(d2) * Math.cos(dr);
-  return Math.acos(Math.min(1, Math.max(-1, c))) * (180 / Math.PI) * 3600;
-}
-
+// Sky click offer: the library checks today's, catalogue-epoch and J2000 positions within 60 arcsec
+// when it reads coordinates, and reports a prepared target as cachedSlug (no network needed).
 export async function findCachedByPosition(
   ra: number,
   dec: number,
 ): Promise<{ slug: CachedSlug; name: string } | null> {
-  for (const c of listCached()) {
-    try {
-      const t = await resolveTarget(c.name);
-      if (sepArcsec(ra, dec, t.ra, t.dec) <= 60) return { slug: c.slug, name: c.name };
-    } catch {
-      // a cached name failing to resolve just means no match
-    }
+  try {
+    const t = await resolveTarget(`${ra} ${dec}`);
+    if (!t.cachedSlug) return null;
+    const hit = listCached().find((c) => c.slug === t.cachedSlug);
+    return hit ? { slug: hit.slug, name: hit.name } : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 export function normalizeName(s: string): string {
@@ -142,10 +138,17 @@ function abortedError(): SpherexError {
   return new SpherexError('ABORTED', 'Loading stopped');
 }
 
-export async function searchLive(req: LoadRequest, cb: LoadCallbacks, signal: AbortSignal): Promise<LiveSearch> {
+export async function searchLive(
+  req: LoadRequest,
+  cb: LoadCallbacks,
+  signal: AbortSignal,
+  resolved: Target | null = null,
+): Promise<LiveSearch> {
   const stage = (s: Progress['stage'], message: string) => cb.onStage({ stage: s, done: 0, total: 0, message });
   let target: Target;
-  if (req.q) {
+  if (resolved) {
+    target = resolved;
+  } else if (req.q) {
     stage('resolve', 'Looking up the name');
     target = await resolveTarget(req.q, { signal, onProgress: cb.onStage });
   } else {
@@ -190,6 +193,7 @@ export async function loadFirst(
     total: 2,
     cached: false,
     matched: first.matched,
+    viaPosition: false,
   };
 }
 
@@ -217,7 +221,20 @@ export async function loadFrameSet(
 }
 
 export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: AbortSignal): Promise<LoadResult> {
-  const slug = req.q ? matchCachedName(req.q) : null;
+  let slug = req.q ? matchCachedName(req.q) : null;
+  let viaPosition = false;
+  let resolved: Target | null = null;
+  if (!slug && req.q) {
+    // A name or coordinates within about a minute of a prepared target (J2000 or proper-motion
+    // corrected) goes straight to the prepared set. The library reports the match as cachedSlug.
+    cb.onStage({ stage: 'resolve', done: 0, total: 0, message: 'Looking up the name' });
+    resolved = await resolveTarget(req.q, { signal, onProgress: cb.onStage });
+    if (signal.aborted) throw abortedError();
+    if (resolved.cachedSlug) {
+      slug = resolved.cachedSlug;
+      viaPosition = true;
+    }
+  }
   if (slug) {
     const c = await loadCached(slug, { signal, onProgress: cb.onStage });
     if (signal.aborted) throw abortedError();
@@ -235,9 +252,11 @@ export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: Ab
       total: c.frames.length,
       cached: true,
       matched: true,
+      viaPosition,
+      asked: resolved ? { ra: resolved.ra, dec: resolved.dec } : undefined,
     };
   }
-  const search = await searchLive(req, cb, signal);
+  const search = await searchLive(req, cb, signal, resolved);
   return loadFirst(search, req.det, req.size ?? DEFAULT_SIZE, cb, signal);
 }
 

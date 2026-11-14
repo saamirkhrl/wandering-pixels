@@ -100,9 +100,55 @@ ZODI level). A constant offset cancels in a difference or is removed by a local 
 it does not affect registration. One Eps Indi detector 1 frame shows pixel noise 5 times its
 VARIANCE prediction, probably from Eps Indi A's halo; not investigated.
 
-## Plain versus spectrally matched differences
+## Spectrally matched differencing
 
-To be written (phase B).
+Results: to be written (phase B).
+
+### Choices fixed before any phase B result was computed (2026-11-14, 10:00 CST)
+
+These are written down first so that the comparison wavelength and the star sample cannot be
+chosen after seeing which makes the matched method look best.
+
+1. Field and visits. Barnard's Star first, its three full visits (index visits 0, 2, 4):
+   pairs 0-2 and 2-4 are 6-month pairs, 0-4 is the 12-month pair. Eps Indi second if time
+   allows, all visit pairs by the same time classes.
+2. Common grid. Gnomonic (TAN) projection centred on the field centre (Gaia position at
+   2026.0), north up, 6.15 arcsec pixels, 200 x 200 pixels. Variant: 3.075 arcsec pixels,
+   400 x 400.
+3. Star sample. The phase A registration selection (Gaia DR3 G 12.0 to 16.5, RUWE < 1.4, no
+   neighbour with G < G_star + 3 within 20 arcsec, nothing brighter than G = 9 within 3 arcmin),
+   plus Gaia DR3 phot_variable_flag not equal to VARIABLE, plus at least 8 grid pixels from the
+   grid edge. Positions propagated to each exposure's epoch. A star-exposure measurement is
+   dropped if the central 5 x 5 native pixels carry any phase A rejection flag; the same rule
+   for every product.
+4. Aperture. Radius 2.0 pixels of 6.15 arcsec (12.3 arcsec), exact pixel overlap; local
+   background is the median in an annulus of 4 to 7 pixels.
+5. Products.
+   P1: one exposure of the earlier visit minus the same-detector exposure of the later visit
+   nearest in wavelength at the field centre (what the website shows), resampled to the grid.
+   P2: per detector, inverse-variance mean of each visit's exposures on the grid, visit minus
+   visit.
+   M1: per grid pixel, a smooth spectral model per visit, both evaluated at a common wavelength.
+   M2: forced aperture photometry on native pixels at the Gaia positions in every exposure,
+   per-star spectral model per visit, both evaluated at a common wavelength.
+6. Common wavelengths. For each visit pair (A earlier, B later), detector d and star or pixel:
+   the wavelengths at that position of visit A's detector-d exposures. P1 uses the same
+   visit-A exposures, so P1, M1 and M2 have the same number of comparisons.
+7. Spectral model (identical for M1 and M2). For an evaluation wavelength w0 with local
+   bandwidth b0, take that visit's samples with wavelength within w0 +/- 2.5 b0; require at least
+   3 samples, with at least one on each side of w0 (otherwise no value: no extrapolation);
+   variance-weighted straight-line fit in wavelength, one 4-sigma clipping pass, evaluate at w0
+   with its propagated variance. Two modes: "six" (samples from all detectors) and "one"
+   (only detector d).
+8. Metrics. z = (F_A - F_B) / sqrt(var_A + var_B) per star and comparison; report the robust
+   width of z (1.4826 x MAD), the robust scatter of the fractional difference
+   (F_A - F_B) / mean(F_A, F_B), and the slope of the fractional difference against BP-RP with a
+   bootstrap error (resampling stars). "Clean" means width below 1.5 and slope within 2 sigma of
+   zero. Pixel level: RMS of the difference within 3 pixels of stars with G 12.0 to 13.5 as a
+   fraction of the star's peak in the visit A image (dipole level); background RMS, more than
+   3 pixels from any Gaia source with G < 18, divided by the propagated sigma.
+9. Resampling kernels compared for P1: bilinear, Lanczos-3, and flux-conserving (reproject
+   adaptive and exact).
 
 ## Injection and recovery
 

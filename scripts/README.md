@@ -22,22 +22,10 @@ to re-run for one target.
 
 ### Cache format (wp-cache-2)
 
-Per target, in `public/cache/<slug>/`:
-
-- `index.json`: small, short cache. Format, target, grid, build info, default detector and the
-  rule used, per-detector summary, visits, and the names and byte sizes of the other files.
-- `preview.<hash>.bin`: first view for the default detector: the visit-stack movie, the year
-  and half-year blink pairs (frames with flags) and the visit difference images.
-- `stars.<hash>.json`: Gaia (brightest first, rounded) and WISE sources.
-- `exposures.d<N>.<hash>.json` and `frames.d<N>.<hash>.bin`: all cached exposures and frames of
-  detector N (f16 pixels, 8-bit log variance, flags).
-
-`<hash>` is 8 hex characters of FNV-1a 32 over the file bytes, so those files are served
-immutable for a year (`vercel.json`). Default detector: 2, except `wise-0855` which uses 6 (the
-only band with a marginal signal); a target without detector 2 data uses the detector with the
-most visits. The full layout is documented at the top of `src/lib/spherex/cache.ts`. A first
-view (index + preview + stars) is 180 to 300 KB raw, about 120 to 180 KB gzipped; the whole
-directory is about 5.4 MB per target.
+File layout, sizes and the first-view budget are described in `docs/data-pipeline.md` and at the top of
+`src/lib/spherex/cache.ts`. Default detector: 2, except `wise-0855` which uses 6 (the only band with a
+marginal signal); a target without detector 2 data uses the detector with the most visits. Hashed files
+(FNV-1a 32 of the bytes) are served immutable for a year (`vercel.json`).
 
 Convert an old format 1 cache (manifest.json + frames.bin) without downloading anything; the
 check compares every frame with format 1 and `--delete-v1` then removes the old files:

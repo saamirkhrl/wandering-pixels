@@ -26,3 +26,5 @@ export type { PhotometryStamp, ExposureMeasurement, MeasurementReason } from './
 export { compareVisits, isBlended, MIN_VISIT_EXPOSURES, Z_CHANGED } from './matched';
 export type { MatchedExposure, MatchedResult, MatchedFlag, Verdict, CompareOptions, WavelengthComparison, PairedStack } from './matched';
 export { matchCachedTarget } from './resolve';
+export { loadCachedReadouts, READOUTS_FORMAT } from './readouts';
+export type { CachedReadouts, StarReadout, PairReadout, ReadoutVisit, WavelengthReadout, CombinedReadout, PairedStackReadout, ReadoutsRef, LoadReadoutsOptions } from './readouts';

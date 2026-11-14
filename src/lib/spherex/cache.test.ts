@@ -5,7 +5,10 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync
 import { tmpdir } from 'node:os';
 // @ts-ignore
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// Encoding hundreds of synthetic frames is CPU-bound; allow for a busy machine.
+vi.setConfig({ testTimeout: 60000 });
 import { decodeCache, encodeCache, listCached, loadCached, loadCachedDetector, loadCachedPreview } from './cache';
 import { encodeCacheV2, fnv1a32, defaultDetectorFor } from './cache-encode';
 import type { CacheInput } from './cache';

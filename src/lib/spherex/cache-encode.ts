@@ -19,7 +19,7 @@ const VAR_CODES = 254;
 const TOP_STARS = 150;
 
 export const DEFAULT_DETECTOR_RULE =
-  'detector 2; wise-0855 uses detector 6 (the only band with a marginal signal); a target with no detector 2 data uses the detector with the most visits, then the most exposures';
+  'detector 2; wise-0855 uses detector 6 (the longest-wavelength band, where a cold brown dwarf would be brightest); a target with no detector 2 data uses the detector with the most visits, then the most exposures';
 
 export interface CacheInputV2 extends CacheInput {
   /** Free-form build info stored in index.json. */

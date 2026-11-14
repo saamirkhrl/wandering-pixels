@@ -1,0 +1,93 @@
+// Offline check of the per-star readouts in public/cache: loadCachedReadouts with fetch replaced by
+// a disk reader (any other URL throws). A target is skipped cleanly when its index.json or its
+// `readouts` entry is missing.
+import { describe, it, expect } from 'vitest';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { loadCachedReadouts, READOUTS_FORMAT } from '../src/lib/spherex/readouts';
+import type { ReadoutsRef } from '../src/lib/spherex/readouts';
+import { SpherexError } from '../src/lib/spherex/types';
+import type { CachedSlug } from '../src/lib/spherex/types';
+
+const CACHE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'cache');
+const ALL: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra'];
+
+function readIndex(slug: CachedSlug): { readouts?: ReadoutsRef } | null {
+  const p = join(CACHE_DIR, slug, 'index.json');
+  if (!existsSync(p)) return null;
+  return JSON.parse(readFileSync(p, 'utf8')) as { readouts?: ReadoutsRef };
+}
+
+const diskFetch = (async (input: unknown) => {
+  const url = String(input);
+  const m = /^\/cache\/([a-z0-9-]+)\/([a-z0-9.-]+)$/.exec(url);
+  if (!m) throw new Error(`network access not allowed: ${url}`);
+  const path = join(CACHE_DIR, m[1], m[2]);
+  if (!existsSync(path)) return new Response('missing', { status: 404 });
+  return new Response(readFileSync(path), { status: 200 });
+}) as typeof fetch;
+
+describe.each(ALL)('readouts %s', (slug) => {
+  const idx = readIndex(slug);
+  const ref = idx?.readouts;
+
+  describe.skipIf(!ref)('present', () => {
+    it('loads and matches the index entry', async () => {
+      const r = await loadCachedReadouts(slug, { fetchFn: diskFetch });
+      const entry = ref as ReadoutsRef;
+      expect(r.format).toBe(READOUTS_FORMAT);
+      expect(r.slug).toBe(slug);
+      expect(r.detector).toBe(entry.detector);
+      expect(readFileSync(join(CACHE_DIR, slug, entry.file)).length).toBe(entry.bytes);
+      expect(entry.file).toMatch(/^readouts\.d[1-6]\.[0-9a-f]{8}\.json$/);
+      expect(entry.bytes).toBeLessThan(150 * 1024);
+      expect(r.stars.reduce((n, s) => n + s.pairs.length, 0)).toBe(entry.count);
+      expect(r.stars.length).toBeGreaterThan(0);
+      expect(r.stars[0].isTarget).toBe(true);
+      expect(r.stars.filter((s) => s.isTarget).length).toBe(1);
+      expect(r.stars.length).toBeLessThanOrEqual(41);
+    });
+
+    it('has consistent pairs', async () => {
+      const r = await loadCachedReadouts(slug, { fetchFn: diskFetch });
+      const visits = new Map(r.visits.map((v) => [v.visit, v]));
+      for (const s of r.stars) {
+        expect(typeof s.id).toBe('string');
+        for (const p of s.pairs) {
+          expect(visits.has(p.a) && visits.has(p.b)).toBe(true);
+          expect(p.a).toBeLessThan(p.b);
+          expect(p.tA).toBeLessThan(p.tB);
+          expect(p.nA).toBeGreaterThanOrEqual(8);
+          expect(p.nB).toBeGreaterThanOrEqual(8);
+          expect(['changed', 'no significant change', 'no result']).toContain(p.verdict);
+          if (p.verdict === 'no result') {
+            expect(p.w.length).toBe(0);
+            expect(p.z).toBeNull();
+          } else {
+            expect(p.w.length).toBeGreaterThan(0);
+            expect(Number.isFinite(p.z as number)).toBe(true);
+            expect((p.verdict === 'changed') === (Math.abs(p.z as number) >= 3)).toBe(true);
+          }
+        }
+      }
+    });
+  });
+
+  describe.skipIf(!idx || !!ref)('absent', () => {
+    it('throws NOT_FOUND when the index has no readouts entry', async () => {
+      await expect(loadCachedReadouts(slug, { fetchFn: diskFetch })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(loadCachedReadouts(slug, { fetchFn: diskFetch })).rejects.toBeInstanceOf(SpherexError);
+    });
+  });
+});
+
+describe('readouts loader errors', () => {
+  it('rejects an unknown slug', async () => {
+    await expect(loadCachedReadouts('nope' as CachedSlug, { fetchFn: diskFetch })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+  it('refuses URLs outside the cache', async () => {
+    await expect(loadCachedReadouts('barnards-star', { baseUrl: 'https://example.invalid/', fetchFn: diskFetch })).rejects.toMatchObject({ code: 'UPSTREAM_ERROR' });
+  });
+});

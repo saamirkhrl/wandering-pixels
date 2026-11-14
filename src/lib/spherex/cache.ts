@@ -16,7 +16,7 @@
 //   detectors: mjd range and counts by detector), stars {file, bytes, gaia, wise, top},
 //   preview {file, bytes, arrays, movie, pairs, differences}, detectorFiles [{detector, nFrames,
 //   exposures {file, bytes}, frames {file, bytes, arrays}}].
-// Default detector rule: 2, except wise-0855 which gets 6 (the only band with a marginal signal);
+// Default detector rule: 2, except wise-0855 which gets 6 (the longest-wavelength band, where a cold brown dwarf would be brightest);
 //   a target with no detector 2 data gets the detector with the most visits (then most exposures).
 //
 // preview.bin: planar arrays listed in index.preview.arrays (name, type, offset, bytes, and
@@ -787,7 +787,7 @@ export async function loadCached(slug: CachedSlug, opts: LoadCachedOptions = {})
 const CACHED: { slug: CachedSlug; name: string; blurb: string }[] = [
   { slug: 'barnards-star', name: "Barnard's Star", blurb: 'Red dwarf with the fastest proper motion of any star, 10.4 arcsec per year; its saturated core is masked and it moves about 1.7 px per year across the frame.' },
   { slug: 'eps-indi-b', name: 'Epsilon Indi B', blurb: 'Nearby pair of brown dwarfs (Ba and Bb, unresolved here) that is clearly visible and moves between visits.' },
-  { slug: 'wise-0855', name: 'WISE 0855-0714', blurb: 'Very cold brown dwarf at or below the single-exposure limit, with only a marginal signal in the longest-wavelength band; the faint short-wavelength source at the marker is probably a background object.' },
+  { slug: 'wise-0855', name: 'WISE 0855-0714', blurb: 'This very cold brown dwarf is too faint for single SPHEREx images and is not detected here; the faint source at the marker is a background star (Gaia DR3 5756956644387831296).' },
   { slug: 'rw-aur', name: 'RW Aurigae', blurb: 'Young variable star whose brightness changes between visits; it is not a fast mover.' },
   { slug: 'r-dra', name: 'R Draconis', blurb: 'Bright, saturated variable star in the continuously observed north deep field; 300 of about 2500 exposures are cached.' },
 ];

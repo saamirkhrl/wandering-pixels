@@ -1,0 +1,16 @@
+:root {
+  --sky: #04060d;
+  --ink: #131a33;
+  --paper: #e4e9f1;
+  --paper-dim: #c3cbd9;
+  --rule: #8b96ad;
+  --signal: #f2c230;
+  --warm: #d9563a;
+
+  --font-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+
+  --bar-height: 56px;
+  --control-height: 44px;
+  --radius: 2px;
+}

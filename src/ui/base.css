@@ -1,0 +1,150 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sky);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+h1,
+h2,
+h3,
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-stretch: 85%;
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+.shell-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: var(--bar-height);
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 6px 16px;
+  background: var(--paper);
+  color: var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+.wordmark {
+  font-size: 1.25rem;
+  line-height: var(--control-height);
+  color: var(--ink);
+}
+
+.search {
+  display: flex;
+  gap: 8px;
+}
+
+.search input {
+  width: 280px;
+  max-width: 100%;
+  min-height: var(--control-height);
+  padding: 0 12px;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+}
+
+.search input::placeholder {
+  color: #4a5370;
+}
+
+.search button {
+  min-height: var(--control-height);
+  min-width: var(--control-height);
+  padding: 0 16px;
+  font: inherit;
+  color: var(--paper);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.view-root {
+  position: absolute;
+  top: var(--bar-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.view-root canvas {
+  display: block;
+}
+
+.panel {
+  max-width: 28rem;
+  margin: 24px 16px;
+  padding: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+}
+
+.panel h2 {
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+}
+
+.panel p {
+  margin: 0;
+}
+
+@media (max-width: 599px) {
+  .shell-bar {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+  }
+
+  .search {
+    width: 100%;
+  }
+
+  .search input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .view-root {
+    top: calc(var(--bar-height) + var(--control-height) + 6px);
+  }
+}

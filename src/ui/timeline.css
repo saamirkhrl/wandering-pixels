@@ -172,13 +172,14 @@
 
 .tl-caption {
   min-height: 1.5em;
-  margin: 4px 0 0;
-  font-size: 0.875rem;
+  margin: 12px 0 0;
+  font-size: 1rem;
   font-weight: 700;
+  line-height: 1.35;
 }
 
 .tl-hint {
-  margin: 4px 0 0;
+  margin: 8px 0 0;
   font-size: 0.8125rem;
   color: var(--ink-soft, #3b4466);
 }

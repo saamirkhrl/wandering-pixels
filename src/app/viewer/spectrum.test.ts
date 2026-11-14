@@ -27,6 +27,12 @@ describe('spectrumCsv', () => {
     expect(lines[2].endsWith(',1')).toBe(true);
   });
 
+  it('writes the 1-based visit number in the visit column', () => {
+    const col = (csv: string) => csv.trim().split('\n').slice(1).map((l) => l.split(',')[7]);
+    expect(col(spectrumCsv([pt(0, false), pt(2, false)]))).toEqual(['1', '3']);
+    expect(col(spectrumCsv([pt(0, false), pt(2, false)], (v) => v * 10 + 5))).toEqual(['5', '25']);
+  });
+
   it('returns only the header for no points', () => {
     expect(spectrumCsv([]).trim().split('\n')).toHaveLength(1);
   });

@@ -172,6 +172,7 @@ export const mount: Mount = (root, ctx) => {
   let trackCtrl: AbortController | null = null;
   let modeBeforeTrack: MovieMode | null = null;
   let lastPick: [number, number] | null = null;
+  let pickWaiting = false;
   let cursor: [number, number] | null = null;
   let shownGrid: Grid | null = null;
   let restoredTrack = false;
@@ -917,6 +918,7 @@ export const mount: Mount = (root, ctx) => {
         if (detLoad === entry) detLoad = null;
         detFrames.set(d, r.frames.slice().sort((x, y) => x.exposure.mjd - y.exposure.mjd));
         onDetLanded(d, sw);
+        if (pickWaiting && lastPick && everyReady()) onPickAt(lastPick[0], lastPick[1]);
       })
       .catch((e: unknown) => {
         if (disposed || mine !== token) return;
@@ -1551,11 +1553,13 @@ export const mount: Mount = (root, ctx) => {
     return `${v >= 0 ? '+' : ''}${v.toFixed(2)} MJy/sr`;
   });
 
-  stage.onPick((fx, fy) => {
+  const onPickAt = (fx: number, fy: number): void => {
+    pickWaiting = false;
     if (!loaded || !movie) return;
     const w = gridToWorld(shownGrid ?? movie.grid, fx, fy);
     if (!everyReady()) {
       lastPick = [fx, fy];
+      pickWaiting = true;
       stage.setPick([fx, fy]);
       stage.redraw();
       spectrum.wait('The spectrum needs every exposure. It is still loading.');
@@ -1588,10 +1592,19 @@ export const mount: Mount = (root, ctx) => {
         return `Visit ${visitNo(vi)}${mjd !== undefined ? ', ' + formatDate(mjd) : ''}`;
       },
       visitNo,
+      {
+        slug: cachedSlug,
+        exposures: (live ? live.detExposures : loadedExposures()).filter((e) => e.detector === det),
+        gaia: preview?.gaia ?? cachedData?.gaia ?? [],
+        pixelArcsec: (shownGrid ?? movie.grid).scaleArcsec,
+        target: positionAt(loaded.target, movie.grid.epochMjd),
+      },
     );
-  });
+  };
+  stage.onPick(onPickAt);
 
   function clearPick(): void {
+    pickWaiting = false;
     lastPick = null;
     stage.setPick(null);
     spectrum.clear();

@@ -1,4 +1,6 @@
 import type { SpectrumPoint } from '../data';
+import { renderChangeBlock } from './change';
+import type { ChangeBlockHandle, ChangeContext } from './change';
 import '../../ui/viewer-parts.css';
 
 export interface SpectrumPanel {
@@ -8,6 +10,7 @@ export interface SpectrumPanel {
     where: { ra: number; dec: number },
     visitLabel: (visitIndex: number) => string,
     visitNo?: (visitIndex: number) => number,
+    ctx?: ChangeContext,
   ): void;
   clear(): void;
   // a short reason in place of the spectrum, for example while every exposure is still loading
@@ -23,9 +26,10 @@ const W = 520;
 const H = 260;
 const M = { l: 56, r: 12, t: 10, b: 44 };
 
-export function visitColour(visitIndex: number): string {
+// keyed by the displayed 1-based visit number so a visit keeps its colour
+export function visitColour(visitNumber: number): string {
   const n = PALETTE.length;
-  return PALETTE[((Math.round(visitIndex) % n) + n) % n];
+  return PALETTE[((Math.round(visitNumber) - 1) % n + n) % n];
 }
 
 const CSV_HEAD = [
@@ -47,7 +51,7 @@ function csvCell(v: string | number | boolean): string {
   return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 
-export function spectrumCsv(points: SpectrumPoint[]): string {
+export function spectrumCsv(points: SpectrumPoint[], visitNo: (visitIndex: number) => number = (v) => v + 1): string {
   const lines = [CSV_HEAD.join(',')];
   for (const p of points) {
     lines.push(
@@ -59,7 +63,7 @@ export function spectrumCsv(points: SpectrumPoint[]): string {
         p.fluxErr,
         p.time,
         p.mjd,
-        p.visitIndex,
+        visitNo(p.visitIndex),
         p.detector,
         p.flagged ? 1 : 0,
       ]
@@ -151,39 +155,39 @@ function fileNum(v: number): string {
   return v.toFixed(5);
 }
 
-// Reserved block, below the spectrum: for each visit pair, the plain comparison and the
-// colour-matched comparison side by side as numbers with error bars. No computation yet; the
-// block renders only when this flag is switched on, and sits in the place described here so
-// nothing above it moves when it arrives.
-export const CHANGE_BLOCK_ENABLED = false;
-
-function changeBlock(): HTMLElement {
-  const box = el('div', 'v-changeblock');
-  box.appendChild(el('h4', 'v-subhead', 'Has it changed between visits?'));
-  const rows = el('div', 'v-changerows');
-  rows.append(el('div', 'v-changerow', 'Plain comparison'), el('div', 'v-changerow', 'Colour-matched comparison'));
-  box.appendChild(rows);
-  return box;
-}
+// Block below the spectrum: has this star changed between visits. Rendered only when this flag is on.
+export const CHANGE_BLOCK_ENABLED = true;
 
 export function createSpectrumPanel(): SpectrumPanel {
   const root = el('section', 'v-sec v-spec');
   root.appendChild(el('h3', 'v-h', 'Spectrum here'));
   const body = el('div', 'v-spec-body');
   root.appendChild(body);
-  if (CHANGE_BLOCK_ENABLED) root.appendChild(changeBlock());
+  const changeHost = el('div', 'v-changeblock');
+  changeHost.hidden = true;
+  let changeHandle: ChangeBlockHandle | null = null;
+  const dropChange = (): void => {
+    changeHandle?.dispose();
+    changeHandle = null;
+    changeHost.hidden = true;
+    changeHost.replaceChildren();
+  };
+  if (CHANGE_BLOCK_ENABLED) root.appendChild(changeHost);
   let urlToRevoke: string | null = null;
   let timer: number | null = null;
 
   const clear = (): void => {
+    dropChange();
     body.replaceChildren(el('p', 'v-hint', EMPTY_TEXT));
   };
 
   const wait = (text: string): void => {
+    dropChange();
     body.replaceChildren(el('p', 'v-hint', text));
   };
 
-  const show: SpectrumPanel['show'] = (points, where, visitLabel, visitNo = (v) => v + 1) => {
+  const show: SpectrumPanel['show'] = (points, where, visitLabel, visitNo = (v) => v + 1, ctx) => {
+    dropChange();
     body.replaceChildren();
     const pos = `RA ${fileNum(where.ra)}, Dec ${fileNum(where.dec)} degrees`;
     if (points.length === 0) {
@@ -306,7 +310,7 @@ export function createSpectrumPanel(): SpectrumPanel {
 
       // points
       for (const p of usable) {
-        const col = visitColour(p.visitIndex);
+        const col = visitColour(visitNo(p.visitIndex));
         const g = svg('g', { class: 'v-spec-pt', stroke: col, fill: p.flagged ? 'none' : col }, chart);
         const cx = sx(p.wavelength);
         const cy = sy(p.flux);
@@ -325,15 +329,19 @@ export function createSpectrumPanel(): SpectrumPanel {
       body.appendChild(wrap);
 
       // legend
-      const visits = Array.from(new Set(usable.map((p) => p.visitIndex))).sort((a, b) => a - b);
+      const byNo = new Map<number, number>();
+      for (const p of usable) {
+        const no = visitNo(p.visitIndex);
+        if (!byNo.has(no)) byNo.set(no, p.visitIndex);
+      }
       const legend = el('ul', 'v-spec-legend');
-      for (const v of visits) {
+      for (const no of Array.from(byNo.keys()).sort((a, b) => a - b)) {
         const li = el('li');
         const sw = el('span', 'v-spec-swatch');
-        sw.style.background = visitColour(v);
+        sw.style.background = visitColour(no);
         sw.setAttribute('aria-hidden', 'true');
         li.appendChild(sw);
-        li.appendChild(document.createTextNode(visitLabel(v)));
+        li.appendChild(document.createTextNode(visitLabel(byNo.get(no) as number)));
         legend.appendChild(li);
       }
       body.appendChild(legend);
@@ -377,12 +385,17 @@ export function createSpectrumPanel(): SpectrumPanel {
     det.appendChild(scroll);
     body.appendChild(det);
 
+    if (CHANGE_BLOCK_ENABLED && ctx) {
+      changeHost.hidden = false;
+      changeHandle = renderChangeBlock(changeHost, ctx, where.ra, where.dec);
+    }
+
     // download
     const row = el('div', 'v-row');
     const btn = el('button', 'v-btn', 'Download CSV');
     btn.type = 'button';
     btn.addEventListener('click', () => {
-      const blob = new Blob([spectrumCsv(points)], { type: 'text/csv;charset=utf-8' });
+      const blob = new Blob([spectrumCsv(points, visitNo)], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       urlToRevoke = url;
       const a = document.createElement('a');
@@ -412,6 +425,7 @@ export function createSpectrumPanel(): SpectrumPanel {
     clear,
     wait,
     dispose(): void {
+      dropChange();
       if (timer !== null) window.clearTimeout(timer);
       if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
       urlToRevoke = null;

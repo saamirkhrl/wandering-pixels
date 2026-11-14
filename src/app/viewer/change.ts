@@ -3,15 +3,19 @@ import {
   checkStarLive,
   estimateText,
   fieldFor,
+  comparisonFor,
   hasBrightNeighbour,
   liveAvailable,
   liveEstimate,
+  liveGaia,
   loadPreparedReadouts,
   measurableStars,
   matchPreparedStar,
   preparedAvailable,
 } from '../data/change';
 import type { ChangePair, ChangeStar, ChangeStat, PreparedReadouts, ReadoutFlag } from '../data/change';
+import { setMeasurableRings } from './change-rings';
+import type { RingStar } from './change-rings';
 import '../../ui/change.css';
 
 export interface ChangeContext {
@@ -20,11 +24,14 @@ export interface ChangeContext {
   gaia: GaiaStar[];
   pixelArcsec: number;
   target?: { ra: number; dec: number };
+  // the detector of the shown image, and a way to switch the viewer to another one
+  detector?: number;
+  setDetector?: (d: number) => void;
 }
 
 export const CHANGE_HEADING = 'Has it changed between visits?';
 export const CONNECTING_TEXT = 'This check is being connected.';
-export const NO_STAR_TEXT = 'No catalogued star within 2 pixels of this spot. Click on the centre of a star to check it.';
+export const NO_STAR_TEXT = 'No catalogued star within 4 pixels of this spot. Click on the centre of a star to check it.';
 export const SATURATED_STAR_TEXT = 'This star is too bright for a clean measurement. Try clicking a fainter star nearby.';
 
 export const SATURATED_TARGET_TEXT = 'Saturated in SPHEREx images, so brightness changes cannot be measured here.';
@@ -42,7 +49,14 @@ export const FIELD_NOTES: Readonly<Record<string, string>> = {
 export const SHOW_NUMBERS_TEXT = 'Show the numbers anyway';
 export const ECLIPSE_CAVEAT =
   'An eclipse lasts hours and a visit lasts weeks, so the size of the change depends on which exposures happened to fall in eclipse. Detectors can even disagree in sign.';
-export const DISAGREE_NOTE = 'The three estimates disagree.';
+export const DISAGREE_NOTE = 'The matched and paired estimates disagree here; treat the result with caution.';
+export const DISAGREE_SIGMA = 3;
+export const SHOW_NUMBERS_PLAIN = 'Show the numbers';
+export const Z_LEGEND =
+  'Difference / error (z) is the change divided by its error bar; 3 or more counts as a difference for the colour-matched estimate, 4 for the other two.';
+export const RINGS_HINT = 'They are ringed on the image; click one to open its readout.';
+export const COMPARE_TEXT = 'Compare with a steady neighbour';
+export const SNAP_PX = 4;
 export const VARIABLE_LINE = 'Catalogued as variable in Gaia DR3.';
 export const NONE_MEASURABLE_TEXT = 'No star in this field can be measured reliably.';
 export const EXAMPLE_SLUG = 'v391-oph';
@@ -59,15 +73,16 @@ export const FIELD_MAX_FRACTION = 0.15;
 export const WORD_CONSISTENT = 'Consistent between visits';
 export const WORD_DIFFERS = 'Differs between visits';
 export const WORD_CANNOT = 'Cannot be measured here';
-export const COLUMN_CONSISTENT = 'Consistent';
-export const COLUMN_DIFFERS = 'Differs';
+export const COLUMN_CONSISTENT = 'consistent';
+export const COLUMN_DIFFERS = 'differs';
 
 export const FIXED_LINES: readonly string[] = [
   'A difference here is a reason to look closer, not a discovery. On steady stars about 1 in 100 comparisons differ by chance in our tests, and more in crowded or saturated fields.',
+  'The 1 percent false-alarm rate holds for unblended, unsaturated stars of Gaia G 12 to 16.5, more than 3 arcminutes from any star brighter than G 9. Near saturated stars, or for blends, it can be tens of percent, and the site marks those results as not reliable.',
   "Each SPHEREx image sees a slightly different infrared colour, so we fit this star's colours within each visit and compare the visits at one shared colour.",
   'On steady stars this comparison scatters by about 2.6 percent; a single pair of images scatters by about 5.7 percent.',
   'A plain pair of images is trustworthy only when the two wavelengths nearly match. Each extra channel of gap makes a steady star look more changed.',
-  'Error bars widened by our measured factor.',
+  "Error bars include an extra 2 percent of the star's brightness, which we measured to be missing from the archive's own errors.",
 ];
 
 export const REASON_WORDS: Record<ReadoutFlag, string> = {
@@ -95,6 +110,7 @@ export interface PairExtras {
   fieldReliable?: boolean;
   fieldChangedFraction?: number;
   field?: { differ: number; measured: number };
+  plainGapBw?: number;
 }
 export type ShownPair = ChangePair & PairExtras;
 
@@ -105,15 +121,17 @@ export function columnVerdict(z: number | null | undefined, column: ColumnKind):
   return Math.abs(z) >= limit ? { kind: 'differs', word: COLUMN_DIFFERS } : { kind: 'consistent', word: COLUMN_CONSISTENT };
 }
 
-// true when any two available estimates differ by more than the sum of their errors
-export function DISAGREE(stats: (ChangeStat | null | undefined)[]): boolean {
-  const v = stats.map((x) => pctValue(x ?? null)).filter((x): x is { percent: number; error: number } => x !== null);
-  for (let i = 0; i < v.length; i++) {
-    for (let j = i + 1; j < v.length; j++) {
-      if (Math.abs(v[i].percent - v[j].percent) > v[i].error + v[j].error) return true;
-    }
-  }
-  return false;
+function sigmaApart(a: ChangeStat | null | undefined, b: ChangeStat | null | undefined): boolean {
+  const x = pctValue(a ?? null);
+  const y = pctValue(b ?? null);
+  if (!x || !y) return false;
+  return Math.abs(x.percent - y.percent) > DISAGREE_SIGMA * Math.hypot(x.error, y.error);
+}
+
+// matched against paired average, and (live results with a small gap) matched against the plain pair
+export function DISAGREE(pair: { matched: ChangeStat | null; ps?: ChangeStat | null; plain?: ChangeStat | null; plainGapBw?: number }): boolean {
+  if (sigmaApart(pair.matched, pair.ps)) return true;
+  return pair.plainGapBw !== undefined && pair.plainGapBw < 1 && sigmaApart(pair.matched, pair.plain);
 }
 
 // true when this pair's field is flagged as not reliable
@@ -152,8 +170,6 @@ export interface VerdictInput extends PairExtras {
   flags: ReadoutFlag[];
   // the caller found a bright star nearby; used only when the data layer gave no `reliable` field
   brightNeighbour?: boolean;
-  // the star carries a catalogue note, so disagreement between estimators is a small note, not a reason
-  catalogue?: boolean;
 }
 
 export function isBrightNeighbour(pair: VerdictInput): boolean {
@@ -176,7 +192,6 @@ function cannotReasons(pair: VerdictInput): string[] {
   if (over.length > 0) own.push(reasonWords(over));
   if (pair.flags.includes('too_few_samples') && (pair.w?.length ?? 3) < 3) own.push('too few wavelengths');
   if (columnVerdict(pair.matched?.z, 'matched') === null) own.push('no result');
-  else if (!pair.catalogue && DISAGREE([(pair.matched as ChangeStat | null) ?? null, pair.plain, pair.ps])) own.push('the three estimates disagree');
   if (own.length === 0 && pair.reliable === false) return ['flagged as unreliable'];
   return own;
 }
@@ -196,8 +211,8 @@ export function verdictLine(pair: VerdictInput): { kind: VerdictKind; text: stri
 }
 
 // shown beside a "Differs" headline for stars Gaia lists as variable
-export function variableLine(star: Pick<ChangeStar, 'variable'>, kind: VerdictKind): string | null {
-  return star.variable === true && kind === 'differs' ? VARIABLE_LINE : null;
+export function variableLine(star: Pick<ChangeStar, 'variable' | 'catalogueNote'>, kind: VerdictKind): string | null {
+  return star.variable === true && kind === 'differs' && !star.catalogueNote ? VARIABLE_LINE : null;
 }
 
 export type MeasurableEntry = PreparedReadouts['stars'][number];
@@ -207,13 +222,26 @@ export function measurableLabel(e: Pick<MeasurableEntry, 'id' | 'gmag' | 'isTarg
   return e.gmag === null ? `Gaia DR3 ${e.id}` : `Gaia DR3 ${e.id}, G ${e.gmag.toFixed(1)}`;
 }
 
+export function measuredLine(star: Pick<ChangeStar, 'id' | 'gmag' | 'isTarget'>): string {
+  if (star.isTarget) return 'Measured: the target.';
+  return star.gmag === null ? `Measured: Gaia DR3 ${star.id}.` : `Measured: Gaia DR3 ${star.id}, G magnitude ${star.gmag.toFixed(1)}.`;
+}
+
+export function pairSummary(tA: number, tB: number, headline: string): string {
+  return `${mjdToDate(tA)} to ${mjdToDate(tB)}: ${headline.toLowerCase()}`;
+}
+
+export function diffOverError(s: ChangeStat | null): string {
+  return s && s.z !== null && Number.isFinite(s.z) ? `difference / error: ${s.z.toFixed(1)}` : 'difference / error: no value';
+}
+
 export function measurableSummary(n: number): string {
   return `Show stars that can be measured here (${n})`;
 }
 
 export function fieldLine(pair: PairExtras): string | null {
   const f = pair.field;
-  return f ? `In this field ${f.differ} of ${f.measured} measured stars differ; about 1 in 100 is expected by chance.` : null;
+  return f ? `In this field ${f.differ} of ${f.measured} measured stars differ; for well-isolated stars about 1 in 100 is expected by chance (see the note below).` : null;
 }
 
 export function fewerNote(pair: { matched: { z: number | null } | null; flags: ReadoutFlag[]; w?: unknown[] }): string | null {
@@ -302,13 +330,13 @@ export function progressLine(bytes: number, estBytes: number, done: number, tota
   return `Read ${mb(bytes, 1)} MB of about ${mb(estBytes, 0)} MB, ${done} of ${total} images`;
 }
 
-// the Gaia star nearest the click, if it lies within two pixels
+// the Gaia star nearest the tap: within 2 pixels first, else within 4 (the nearest star overall when it is within 4)
 // epochYear: Julian year of the clicked image; Gaia positions (2016.0) are moved there by their proper motion
 export function nearestGaia(gaia: GaiaStar[], ra: number, dec: number, pixelArcsec: number, epochYear = 2016): GaiaStar | null {
   const cosd = Math.cos((dec * Math.PI) / 180);
   const dt = epochYear - 2016;
   let best: GaiaStar | null = null;
-  let bestD = 2 * pixelArcsec;
+  let bestD = SNAP_PX * pixelArcsec;
   for (const g of gaia) {
     let dr = g.ra + ((g.pmra ?? 0) * dt) / 3.6e6 / cosd - ra;
     if (dr > 180) dr -= 360;
@@ -344,12 +372,12 @@ function plotExtent(pairs: ChangePair[]): number {
 }
 
 function plot(pair: ChangePair, max: number): SVGSVGElement {
-  const W = 300;
+  const W = 380;
   const H = 76;
-  const L = 8;
-  const R = W - 8;
-  const mid = W / 2;
-  const sx = (v: number): number => mid + (v / max) * (mid - L);
+  const L = 98;
+  const R = W - 10;
+  const mid = (L + R) / 2;
+  const sx = (v: number): number => mid + (v / max) * ((R - L) / 2);
   const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('class', 'change-plot');
@@ -373,12 +401,13 @@ function plot(pair: ChangePair, max: number): SVGSVGElement {
     add('text', { x: sx(v), y: axisY + 13, 'text-anchor': v < 0 ? 'start' : v > 0 ? 'end' : 'middle', class: 'change-tick' }, t);
   }
   add('text', { x: mid, y: H - 3, 'text-anchor': 'middle', class: 'change-tick' }, 'Change in percent');
-  const rows: [ChangeStat | null, boolean, number][] = [
-    [pair.plain, false, 9],
-    [pair.ps, false, 22],
-    [pair.matched, true, 35],
+  const rows: [ChangeStat | null, boolean, number, string][] = [
+    [pair.plain, false, 9, 'Plain pair'],
+    [pair.ps, false, 22, 'Paired average'],
+    [pair.matched, true, 35, 'Colour-matched'],
   ];
-  for (const [s, strong, y] of rows) {
+  for (const [s, strong, y, label] of rows) {
+    add('text', { x: 4, y: y + 3, 'text-anchor': 'start', class: strong ? 'change-rowlabel change-rowlabel-strong' : 'change-rowlabel' }, label);
     const v = pctValue(s);
     if (!v) continue;
     const cls = strong ? 'change-strong' : 'change-light';
@@ -392,19 +421,36 @@ function plot(pair: ChangePair, max: number): SVGSVGElement {
   return svg;
 }
 
-function cell(name: string, s: ChangeStat | null, detail: string, strong: boolean, column: ColumnKind, missing?: string): HTMLElement {
-  const c = el('div', strong ? 'change-cell change-cell-strong' : 'change-cell');
+function cell(name: string, s: ChangeStat | null, column: ColumnKind, missing?: string): HTMLElement {
+  const c = el('div', column === 'matched' ? 'change-cell change-cell-strong' : 'change-cell');
   c.appendChild(el('div', 'change-cell-name', name));
   if (missing !== undefined) {
     c.appendChild(el('div', 'change-val', missing));
     return c;
   }
   c.appendChild(el('div', 'change-val', fmtPct(s)));
-  c.appendChild(el('div', 'change-z', fmtZ(s)));
   const cv = columnVerdict(s?.z, column);
   if (cv) c.appendChild(el('div', 'change-word', cv.word));
-  c.appendChild(el('div', 'change-detail', detail));
   return c;
+}
+
+// the z scores and detail lines for one pair, with the legend
+function numbersPanel(p: ChangePair): HTMLElement {
+  const box = el('div', 'change-numbers');
+  const rows: [string, ChangeStat | null, string][] = [
+    ['Plain pair', p.plain, p.plain ? plainDetail(p) : 'No matching pair'],
+    ['Paired average', p.ps, pairedDetail(p)],
+    ['Colour-matched', p.matched, matchedDetail(p)],
+  ];
+  for (const [name, st, detail] of rows) {
+    const r = el('div', 'change-numrow');
+    r.appendChild(el('div', 'change-cell-name', name));
+    if (st) r.appendChild(el('div', 'change-z', diffOverError(st)));
+    r.appendChild(el('div', 'change-detail', detail));
+    box.appendChild(r);
+  }
+  box.appendChild(el('p', 'change-note', Z_LEGEND));
+  return box;
 }
 
 export interface ResultsOptions {
@@ -420,10 +466,10 @@ export function renderResults(star: ChangeStar, opts: ResultsOptions = {}): HTML
   const max = plotExtent(star.pairs);
   if (star.pairs.length === 0) wrap.appendChild(el('p', 'change-note', 'No pair of visits covers this star.'));
   let calmShown = false;
-  for (const p of star.pairs as ShownPair[]) {
+  (star.pairs as ShownPair[]).forEach((p, idx) => {
     const sec = el('div', 'change-pair');
     sec.appendChild(el('h5', 'change-head', pairLabel(p.tA, p.tB)));
-    const input: VerdictInput = { ...p, brightNeighbour: opts.brightNeighbour, catalogue: !!star.catalogueNote };
+    const input: VerdictInput = { ...p, brightNeighbour: opts.brightNeighbour };
     const v = verdictLine(input);
     sec.appendChild(el('p', `change-verdict change-${v.kind}`, v.text));
     if (v.kind === 'calm' && !calmShown) {
@@ -433,32 +479,41 @@ export function renderResults(star: ChangeStar, opts: ResultsOptions = {}): HTML
     if (star.catalogueNote) {
       sec.appendChild(el('p', 'change-note', star.catalogueNote));
       sec.appendChild(el('p', 'change-note', ECLIPSE_CAVEAT));
-      if (columnVerdict(p.matched.z, 'matched') && DISAGREE([p.matched, p.plain, p.ps])) {
-        sec.appendChild(el('p', 'change-note', DISAGREE_NOTE));
-      }
     }
     const vl = variableLine(star, v.kind);
     if (vl) sec.appendChild(el('p', 'change-note', vl));
     const fl = v.kind === 'differs' ? fieldLine(p) : null;
     if (fl) sec.appendChild(el('p', 'change-note', fl));
+    if (columnVerdict(p.matched.z, 'matched') !== null && DISAGREE(p)) sec.appendChild(el('p', 'change-note', DISAGREE_NOTE));
     // numbers and plot; folded away in the calm bright-neighbour state
-    const body = v.kind === 'calm' ? el('details', 'change-fold') : sec;
-    if (v.kind === 'calm') body.appendChild(el('summary', 'change-fold-sum', SHOW_NUMBERS_TEXT));
+    const calm = v.kind === 'calm';
+    const body = calm ? el('details', 'change-fold') : sec;
+    if (calm) body.appendChild(el('summary', 'change-fold-sum', SHOW_NUMBERS_TEXT));
     const note = fewerNote(p);
     if (note) body.appendChild(el('p', 'change-note', note));
     const cells = el('div', 'change-cells');
-    cells.appendChild(
-      p.plain
-        ? cell('Plain pair', p.plain, plainDetail(p), false, 'single')
-        : cell('Plain pair', null, '', false, 'single', 'No matching pair'),
-    );
-    cells.appendChild(cell('Paired average', p.ps, pairedDetail(p), false, 'single'));
-    cells.appendChild(cell('Colour-matched', p.matched, matchedDetail(p), true, 'matched'));
+    cells.appendChild(p.plain ? cell('Plain pair', p.plain, 'single') : cell('Plain pair', null, 'single', 'No matching pair'));
+    cells.appendChild(cell('Paired average', p.ps, 'single'));
+    cells.appendChild(cell('Colour-matched', p.matched, 'matched'));
     body.appendChild(cells);
     body.appendChild(plot(p, max));
+    if (calm) body.appendChild(numbersPanel(p));
+    else {
+      const nums = el('details', 'change-fold');
+      nums.appendChild(el('summary', 'change-fold-sum', SHOW_NUMBERS_PLAIN));
+      nums.appendChild(numbersPanel(p));
+      body.appendChild(nums);
+    }
     if (body !== sec) sec.appendChild(body);
-    wrap.appendChild(sec);
-  }
+    if (idx === 0) {
+      wrap.appendChild(sec);
+    } else {
+      const fold = el('details', 'change-fold change-pair-fold');
+      fold.appendChild(el('summary', 'change-fold-sum', pairSummary(p.tA, p.tB, v.text)));
+      fold.appendChild(sec);
+      wrap.appendChild(fold);
+    }
+  });
   if (allSaturated(star)) wrap.appendChild(el('p', 'change-note', SATURATED_STAR_TEXT));
   const fixed = el('div', 'change-fixed');
   for (const t of FIXED_LINES) fixed.appendChild(el('p', 'change-note', t));
@@ -474,11 +529,17 @@ export function renderResults(star: ChangeStar, opts: ResultsOptions = {}): HTML
   return wrap;
 }
 
-export function measurableAid(r: PreparedReadouts, pick: (e: MeasurableEntry) => void): HTMLElement {
+export function measurableAid(
+  r: PreparedReadouts,
+  pick: (e: MeasurableEntry) => void,
+  rings: (s: RingStar[] | null) => void = setMeasurableRings,
+): HTMLElement {
   const list = measurableStars(r);
   if (list.length === 0) return el('p', 'change-note', NONE_MEASURABLE_TEXT);
   const det = el('details', 'change-fold');
   det.appendChild(el('summary', 'change-fold-sum', measurableSummary(list.length)));
+  det.addEventListener('toggle', () => rings(det.open ? list.map((e) => ({ ra: e.ra, dec: e.dec })) : null));
+  det.appendChild(el('p', 'change-note', RINGS_HINT));
   const ul = el('ul', 'change-measurable');
   for (const e of list) {
     const li = el('li');
@@ -506,8 +567,18 @@ export function renderChangeBlock(host: HTMLElement, ctx: ChangeContext, ra: num
   host.replaceChildren(el('h4', 'v-subhead', CHANGE_HEADING));
   const body = el('div', 'change-body');
   host.appendChild(body);
+  let ringsOn = false;
+  const setRings = (v: RingStar[] | null): void => {
+    ringsOn = v !== null;
+    setMeasurableRings(v);
+  };
+  const clearRings = (): void => {
+    if (ringsOn) setRings(null);
+  };
   const set = (...nodes: Node[]): void => {
-    if (alive()) body.replaceChildren(...nodes);
+    if (!alive()) return;
+    clearRings();
+    body.replaceChildren(...nodes);
   };
   const hint = (t: string): HTMLElement => el('p', 'v-hint', t);
 
@@ -523,7 +594,10 @@ export function renderChangeBlock(host: HTMLElement, ctx: ChangeContext, ra: num
 
   const mjds = ctx.exposures.map((e) => e.mjd);
   const epochYear = mjds.length ? 2000 + ((mjds.reduce((a, b) => a + b, 0) / mjds.length) - 51544.5) / 365.25 : 2016;
-  const star = nearestGaia(ctx.gaia, ra, dec, ctx.pixelArcsec, epochYear);
+  // live fields without a loaded catalogue fetch one on demand (see showLive)
+  let gaia = ctx.gaia;
+  let gaiaTried = gaia.length > 0;
+  let star = nearestGaia(gaia, ra, dec, ctx.pixelArcsec, epochYear);
   // loaded lazily so this module stays importable without the data layer's browser globals
   let example: { name: string } | null = null;
   if (ctx.slug !== EXAMPLE_SLUG) {
@@ -535,12 +609,28 @@ export function renderChangeBlock(host: HTMLElement, ctx: ChangeContext, ra: num
     );
   }
   const resultOpts = (sRa: number, sDec: number, detector?: number): ResultsOptions => ({
-    brightNeighbour: hasBrightNeighbour(sRa, sDec, ctx.gaia.map((x) => ({ ra: x.ra, dec: x.dec, gmag: x.gmag }))),
+    brightNeighbour: hasBrightNeighbour(sRa, sDec, gaia.map((x) => ({ ra: x.ra, dec: x.dec, gmag: x.gmag }))),
     detector,
     example,
   });
   const showLive = (message?: string): void => {
-    if (ctx.gaia.length > 0 && !star) {
+    if (!gaiaTried) {
+      gaiaTried = true;
+      set(hint('Looking up catalogued stars here.'));
+      liveGaia(ra, dec, { signal: life.signal }).then(
+        (rows) => {
+          if (!alive()) return;
+          gaia = rows;
+          star = nearestGaia(gaia, ra, dec, ctx.pixelArcsec, epochYear);
+          showLive(message);
+        },
+        () => {
+          if (alive()) showLive(message);
+        },
+      );
+      return;
+    }
+    if (gaia.length > 0 && !star) {
       set(hint(NO_STAR_TEXT));
       return;
     }
@@ -548,7 +638,7 @@ export function renderChangeBlock(host: HTMLElement, ctx: ChangeContext, ra: num
     const btn = el('button', 'v-btn change-btn', `Check whether this star changed (${estimateText(est)})`);
     btn.type = 'button';
     btn.addEventListener('click', () => start(est.bytes));
-    const caution = ctx.gaia.length === 0 ? [hint('No star catalogue is loaded for this field, so the check measures exactly the spot you clicked. Click on the centre of a star.')] : [];
+    const caution = gaia.length === 0 ? [hint('No star catalogue is loaded for this field, so the check measures exactly the spot you clicked. Click on the centre of a star.')] : [];
     set(...caution, ...(message ? [hint(message)] : []), btn);
   };
 
@@ -572,8 +662,9 @@ export function renderChangeBlock(host: HTMLElement, ctx: ChangeContext, ra: num
         pmdec: g?.pmdec ?? undefined,
         epoch: 2016,
         gmag: g?.gmag,
+        sourceId: g?.sourceId,
         exposures: ctx.exposures,
-        gaia: ctx.gaia,
+        gaia,
       },
       {
         signal: ctrl.signal,
@@ -615,17 +706,48 @@ export function renderChangeBlock(host: HTMLElement, ctx: ChangeContext, ra: num
     showLive();
   } else {
     set(hint('Looking up saved results.'));
-    loadPreparedReadouts(ctx.slug as string, { signal: life.signal }).then(
-      (r) => {
+    const slug = ctx.slug as string;
+    const load =
+      ctx.detector === undefined
+        ? loadPreparedReadouts(slug, { signal: life.signal }).then((r) => ({ r, fellBack: false }))
+        : loadPreparedReadouts(slug, { signal: life.signal, detector: ctx.detector }).then((r) =>
+            r ? { r, fellBack: false } : loadPreparedReadouts(slug, { signal: life.signal }).then((r2) => ({ r: r2, fellBack: r2 !== null })),
+          );
+    load.then(
+      ({ r, fellBack }) => {
         if (!alive()) return;
-        const star = r ? matchPreparedStar(r, ra, dec, 2 * ctx.pixelArcsec, ctx.target) : null;
-        const showPrepared = (st: ChangeStar, sRa: number, sDec: number): void => {
+        const snap = (): ChangeStar | null =>
+          r ? matchPreparedStar(r, ra, dec, 2 * ctx.pixelArcsec, ctx.target) ?? matchPreparedStar(r, ra, dec, SNAP_PX * ctx.pixelArcsec, ctx.target) : null;
+        const star = snap();
+        const showPrepared = (st: ChangeStar, sRa: number, sDec: number, comparison = false): void => {
           if (!r) return;
           const head = st.pairs.length === 0 ? el('p', undefined, TOO_BRIGHT_TEXT) : renderResults(st, resultOpts(sRa, sDec, r.detector));
           const note = FIELD_NOTES[r.slug];
           const top = note ? [el('p', 'change-note', note), ...(measurableStars(r).length === 0 ? [el('p', 'change-note', NONE_MEASURABLE_TEXT)] : [])] : [];
-          const aid = note && measurableStars(r).length === 0 ? [] : [measurableAid(r, (e) => showPrepared(e.star, e.ra, e.dec))];
-          set(hint(detectorLine(r.detector)), ...top, head, ...aid);
+          const aid = note && measurableStars(r).length === 0 ? [] : [measurableAid(r, (e) => showPrepared(e.star, e.ra, e.dec), setRings)];
+          const lines: Node[] = [hint(detectorLine(r.detector))];
+          if (fellBack && ctx.setDetector) {
+            const sw = el('button', 'v-btn change-btn', `Switch to detector ${r.detector}`);
+            sw.type = 'button';
+            sw.addEventListener('click', () => ctx.setDetector?.(r.detector));
+            lines.push(sw);
+          }
+          lines.push(hint(measuredLine(st)));
+          const targetEntry = r.stars.find((x) => x.isTarget);
+          const cmp = comparisonFor(r);
+          const extra: Node[] = [];
+          if (comparison && targetEntry) {
+            const back = el('button', 'v-btn change-btn', 'Back to the target');
+            back.type = 'button';
+            back.addEventListener('click', () => showPrepared(targetEntry.star, targetEntry.ra, targetEntry.dec));
+            extra.push(back);
+          } else if (st.isTarget && cmp && cmp.star !== st) {
+            const b = el('button', 'v-btn change-btn', COMPARE_TEXT);
+            b.type = 'button';
+            b.addEventListener('click', () => showPrepared(cmp.star, cmp.ra, cmp.dec, true));
+            extra.push(b);
+          }
+          set(...lines, ...top, ...extra, head, ...aid);
         };
         if (star && r) {
           const hit = r.stars.find((x) => x.star === star);
@@ -649,6 +771,7 @@ export function renderChangeBlock(host: HTMLElement, ctx: ChangeContext, ra: num
       life.abort();
       run?.abort();
       run = null;
+      clearRings();
     },
   };
 }

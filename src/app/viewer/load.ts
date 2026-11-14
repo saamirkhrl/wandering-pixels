@@ -37,6 +37,9 @@ export interface LoadCallbacks {
   onUpdate?: (exposures: Exposure[], status: ExposureUpdateStatus) => void;
   // Keeps the archive asking alive when the load signal is replaced (a detector or size switch).
   archiveSignal?: AbortSignal;
+  // The archive question is about to be asked / has just got its first answer.
+  onSearching?: () => void;
+  onFound?: () => void;
 }
 
 export interface DetInfo {
@@ -180,6 +183,7 @@ export async function searchLive(
   if (signal.aborted) throw abortedError();
   stage('search', 'Asking the archive which images cover this spot');
   const archive = cb.archiveSignal ?? signal;
+  cb.onSearching?.();
   const exposures = await findExposures(target.ra, target.dec, {
     signal: archive,
     onProgress: cb.onStage,
@@ -187,6 +191,7 @@ export async function searchLive(
       if (!archive.aborted) cb.onUpdate?.(list, status);
     },
   });
+  cb.onFound?.();
   if (signal.aborted) throw abortedError();
   if (exposures.length === 0) throw new SpherexError('NO_COVERAGE', 'No images cover this position');
   return { target, exposures, available: availableOf(exposures) };

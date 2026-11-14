@@ -6,17 +6,21 @@ vi.mock('../../lib/spherex', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/spherex')>();
   // the committed readouts files of public/cache
   const files = import.meta.glob(['../../../public/cache/*/index.json', '../../../public/cache/*/readouts*.json'], { eager: true, import: 'default' }) as Record<string, unknown>;
-  const loadCachedReadouts = vi.fn(async (slug: string) => {
-    const idx = files[`../../../public/cache/${slug}/index.json`] as { readouts?: { file: string } } | undefined;
+  const loadCachedReadouts = vi.fn(async (slug: string, opts?: { detector?: number }) => {
+    const idx = files[`../../../public/cache/${slug}/index.json`] as
+      | { readouts?: { file: string }; readoutsByDetector?: Record<string, { file: string }> }
+      | undefined;
     if (!idx) throw new actual.SpherexError('NOT_FOUND', 'no index');
-    if (!idx.readouts) throw new actual.SpherexError('NOT_FOUND', 'no readouts');
-    return files[`../../../public/cache/${slug}/${idx.readouts.file}`];
+    const ref = opts?.detector === undefined ? idx.readouts : idx.readoutsByDetector?.[String(opts.detector)];
+    if (!ref) throw new actual.SpherexError('NOT_FOUND', 'no readouts');
+    return files[`../../../public/cache/${slug}/${ref.file}`];
   });
   return { ...actual, nativeStampsFor: vi.fn(async () => stampsResult.value), loadCachedReadouts };
 });
 
 import {
   checkStarLive,
+  comparisonFor,
   fieldFor,
   hasBrightNeighbour,
   measurableStars,
@@ -154,6 +158,25 @@ describe('prepared readouts (committed cache files)', () => {
     for (const s of m) expect(s.star.pairs.some((p) => p.reliable === true)).toBe(true);
     const rd = await loadPreparedReadouts('r-dra');
     expect(measurableStars(rd!).length).toBe(0);
+  });
+  // the V391 Oph cache may not be committed yet; the test runs once its files exist
+  const hasV391 = Object.keys(import.meta.glob('../../../public/cache/v391-oph/index.json')).length > 0;
+  it.skipIf(!hasV391)('V391 Oph: detector option, catalogue note, comparison star', async () => {
+    const d2 = await loadPreparedReadouts('v391-oph');
+    const d1 = await loadPreparedReadouts('v391-oph', { detector: 1 });
+    expect(d2!.detector).toBe(2);
+    expect(d1!.detector).toBe(1);
+    expect(await loadPreparedReadouts('v391-oph', { detector: 3 })).toBeNull();
+    const t = d2!.stars.find((s) => s.isTarget)!;
+    expect(t.star.catalogueNote).toBe('Catalogued as an eclipsing binary (Gaia DR3; SIMBAD).');
+    expect(t.star.variable).toBe(true);
+    // reference: about 15 to 18 percent at z about 15 to 18 on detector 2
+    const big = t.star.pairs.filter((p) => Math.abs(p.matched.z ?? 0) > 10);
+    expect(big.length).toBe(2);
+    for (const p of big) expect(Math.abs((p.matched.frac ?? 0) * 100)).toBeGreaterThan(14);
+    const c = comparisonFor(d2!)!;
+    expect(c.gmag).toBeCloseTo(12.91, 2);
+    for (const p of c.star.pairs) expect(Math.abs(p.matched.z ?? 99)).toBeLessThan(2);
   });
   it('resolves null for a target without a readouts file', async () => {
     expect(await loadPreparedReadouts('no-such-target')).toBeNull();

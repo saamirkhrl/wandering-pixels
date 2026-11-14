@@ -24,6 +24,7 @@ import {
   wiseAvailable,
   wiseCone,
 } from '../data';
+import { archiveMaxWaitMs } from '../data';
 import type {
   CachedPreview,
   CachedSlug,
@@ -74,6 +75,7 @@ import { toRGBA, upsampleSmooth } from '../viewer/smooth';
 import { createStage, formatDecDeg, formatRaDeg } from '../viewer/stage';
 import { hasTarget, readParams, writeParams } from '../viewer/state';
 import { createSpectrumPanel } from '../viewer/spectrum';
+import { drawMeasurableRings, onRingsChange, setMeasurableRings } from '../viewer/change-rings';
 import { createPlanetSection } from '../viewer/planet';
 import { bytesFromProgress, loadingLine } from '../viewer/loading';
 import type { LoadingBytes } from '../viewer/loading';
@@ -81,7 +83,7 @@ import { NO_PAIR_READING, PAIRED_READING } from '../viewer/stack-copy';
 import type { DiffSource } from '../viewer/stack-copy';
 import { COPY, fill, mjdDate } from '../viewer/distance-copy';
 import { ringRadiusPx } from '../viewer/distance';
-import { createSimTag, simAnchorGrid, simFrames, SIM_MOTION } from '../viewer/planet-sim';
+import { createSimTag, drawSimLabel, simAnchorGrid, simBodyAt, simFrames, SIM_MOTION } from '../viewer/planet-sim';
 import { createQualityPanel } from '../viewer/quality';
 import {
   describeSource,
@@ -177,6 +179,7 @@ export const mount: Mount = (root, ctx) => {
   let pickWaiting = false;
   let cursor: [number, number] | null = null;
   let shownGrid: Grid | null = null;
+  let simMarkAt: { grid: Grid; mjds: number[] } | null = null;
   let restoredTrack = false;
   let current: { kind: 'frame'; pixels: Float32Array; w: number } | { kind: 'diff'; d: DifferenceImage } | null = null;
 
@@ -196,6 +199,18 @@ export const mount: Mount = (root, ctx) => {
   let remaining: Exposure[] = [];
   let restTotal = 0;
   let restCtrl: AbortController | null = null;
+  // archive update that arrived while a full-visits download was running; applied when it settles
+  let queuedList: Exposure[] | null = null;
+  // archive stopped answering before every collection replied: the final plain line plus Ask again
+  let archiveFinal = false;
+  let archiveTimer: ReturnType<typeof setTimeout> | null = null;
+  // slow first answer: after 8 s without it the load text says so
+  let slowTimer: ReturnType<typeof setTimeout> | null = null;
+  let slowDue = false;
+  let searching = false;
+  let found = false;
+  let slow = false;
+  let lastProgress: Progress | null = null;
   let skyName: string | null = null;
   let abTouched = false;
   let restBase = 0;
@@ -256,7 +271,6 @@ export const mount: Mount = (root, ctx) => {
     },
     onLoadRest: () => loadTrackRest(),
     onSim: (on) => (on && loaded && pairs().half.length === 0 ? ctx.go('viewer', { q: "Barnard's Star", planet: '2', dist: '500', sim: '1' }) : setSim(on)),
-    onExample: () => ctx.go('viewer', { ra: '150.1', dec: '2.2', mock: '1', planet: '2', dist: '500' }),
   });
 
   const panel = createPanel({
@@ -526,8 +540,8 @@ export const mount: Mount = (root, ctx) => {
       px: smooth ? null : '1',
       drange: drange === 'faint' ? 'f' : drange === 'bright' ? 'h' : null,
       planet: planetStep ? String(planetStep) : null,
-      dist: trackedFrames && trackD !== null ? String(trackD) : null,
-      ref: trackedFrames && trackRef !== null ? trackRef.toFixed(3) : null,
+      dist: trackD !== null ? String(trackD) : null,
+      ref: trackD !== null && trackRef !== null ? trackRef.toFixed(3) : null,
       sim: simOn ? '1' : null,
     });
   }
@@ -662,6 +676,7 @@ export const mount: Mount = (root, ctx) => {
     trackAutoPick = true;
     startTracked(trackD, trackRef);
     render();
+    persist();
   }
 
   function trackExposures(): Exposure[] {
@@ -1291,7 +1306,8 @@ export const mount: Mount = (root, ctx) => {
         shownGrid = showFrame.grid;
         prepareOverlays(m, showFrame, [m.frames[a], m.frames[b]]);
         stage.setImage(img.rgba, d.w, d.h, img.k);
-        stage.setOverlay(m.grid, showFrame.targetXY);
+        simMarkAt = simShown() ? { grid: m.grid, mjds: [m.frames[a].mjd, m.frames[b].mjd] } : null;
+        stage.setOverlay(m.grid, simShown() ? null : showFrame.targetXY);
         current = { kind: 'diff', d };
       } else {
         showFrame = m.frames[b];
@@ -1474,14 +1490,21 @@ export const mount: Mount = (root, ctx) => {
     prepareOverlays(m, f);
     const img = frameImage(m, f);
     stage.setImage(img.rgba, f.w, f.h, img.k);
-    stage.setOverlay(f.grid, f.targetXY);
+    simMarkAt = simShown() ? { grid: f.grid, mjds: [f.mjd] } : null;
+    stage.setOverlay(f.grid, simShown() ? null : f.targetXY);
     current = { kind: 'frame', pixels: f.pixels, w: f.w };
   }
 
   stage.onLayout(() => render());
 
+  const offRings = onRingsChange(() => stage.redraw());
   stage.setExtraDraw((c, toCanvas, scale, dpr) => {
+    if (shownGrid) drawMeasurableRings(c, toCanvas, scale, dpr, shownGrid);
     if (ringState && shownGrid) drawRings(c, toCanvas, scale, dpr, ringState, shownGrid);
+    const sg = baseGrid();
+    if (simMarkAt && simShown() && sg) {
+      for (const t of simMarkAt.mjds) drawSimLabel(c, toCanvas, scale, dpr, simBodyAt(simMarkAt.grid, t, simAnchorGrid(sg), simAnchorMjd()));
+    }
     if (drawMaskArr) drawMask(c, drawMaskArr, drawMaskW, toCanvas, scale);
     if (advMaskArr) {
       drawMaskOutline(c, advMaskArr, drawMaskW, toCanvas, scale, dpr, { colour: '#ffd27a', alpha: 0.5 });
@@ -1605,6 +1628,7 @@ export const mount: Mount = (root, ctx) => {
         exposures: (live ? live.detExposures : loadedExposures()).filter((e) => e.detector === det),
         gaia: preview?.gaia ?? cachedData?.gaia ?? [],
         pixelArcsec: (shownGrid ?? movie.grid).scaleArcsec,
+        detector: det ?? undefined,
         target: positionAt(loaded.target, movie.grid.epochMjd),
       },
     );
@@ -1842,6 +1866,7 @@ export const mount: Mount = (root, ctx) => {
         }
         adoptLive(true);
         showRest();
+        flushQueued();
         if (restAgain) {
           restAgain = false;
           if (remaining.length > 0 && remaining.length <= AUTO_REST_LIMIT) startRest();
@@ -1852,6 +1877,7 @@ export const mount: Mount = (root, ctx) => {
         restCtrl = null;
         panel.setNotice('Some exposures could not be loaded. What arrived is shown.');
         showRest();
+        flushQueued();
       });
   }
 
@@ -1862,19 +1888,55 @@ export const mount: Mount = (root, ctx) => {
     return skyName ?? params.q ?? (params.ra !== null && params.dec !== null ? `${params.ra}, ${params.dec}` : '');
   }
 
+  const SLOW_COPY = 'Asking the SPHEREx archive. It is slow today; this can take up to a minute.';
+
   function showLoadingNote(): void {
-    stage.setNote(loadingLine(loadName(), loadBytes));
+    stage.setNote(slow ? SLOW_COPY : loadingLine(loadName(), loadBytes));
+  }
+
+  function showLoadProgress(): void {
+    if (lastProgress) panel.setProgress(slow ? { ...lastProgress, message: SLOW_COPY } : lastProgress);
+  }
+
+  function clearSlow(): void {
+    if (slowTimer !== null) clearTimeout(slowTimer);
+    slowTimer = null;
+    slowDue = false;
+    if (slow) {
+      slow = false;
+      if (rootEl.dataset.state === 'loading') {
+        showLoadingNote();
+        showLoadProgress();
+      }
+    }
+  }
+
+  function applySlow(): void {
+    if (disposed || !searching || found || slow) return;
+    slow = true;
+    showLoadingNote();
+    showLoadProgress();
+  }
+
+  function clearArchiveTimer(): void {
+    if (archiveTimer !== null) clearTimeout(archiveTimer);
+    archiveTimer = null;
   }
 
   function archiveLine(): string | null {
     const s = archiveStatus;
     if (!s || s.complete) return null;
+    if (archiveFinal) return `${s.answered} of ${s.total} archive collections answered`;
     return `${s.answered} of ${s.total} archive collections answered; still asking the rest`;
+  }
+
+  function askAgain(): void {
+    startLoad();
   }
 
   function showArchiveLine(): void {
     const line = archiveLine();
-    panel.setArchiveLine(line);
+    panel.setArchiveLine(line, archiveFinal ? { label: 'Ask again', run: askAgain } : undefined);
     if (movie && rootEl.dataset.state === 'ready') stage.setNote(line);
   }
 
@@ -1921,9 +1983,25 @@ export const mount: Mount = (root, ctx) => {
     else showRest();
   }
 
+  // Apply an archive update that was held back during a full-visits download. Frames are
+  // re-attached by exposure id inside growArchive, never by the old visit number.
+  function flushQueued(): void {
+    const q = queuedList;
+    queuedList = null;
+    if (q && !disposed) growArchive(q);
+  }
+
   function onArchiveUpdate(list: Exposure[], status: ExposureUpdateStatus): void {
     archiveStatus = status;
+    if (status.complete) {
+      archiveFinal = false;
+      clearArchiveTimer();
+    }
     showArchiveLine();
+    if (restCtrl) {
+      queuedList = list;
+      return;
+    }
     if (!live || !loaded || !search || rootEl.dataset.state !== 'ready') {
       pendingList = list;
       return;
@@ -1934,14 +2012,16 @@ export const mount: Mount = (root, ctx) => {
   function onLoadProgress(p: Progress): void {
     const b = bytesFromProgress(p);
     if (b.bytes !== null) loadBytes = b;
+    lastProgress = p;
     showLoadingNote();
-    panel.setProgress(p);
+    showLoadProgress();
   }
 
   function resetForLoad(): void {
     ctrl?.abort();
     restCtrl?.abort();
     restCtrl = null;
+    queuedList = null;
     detLoad?.ctrl.abort();
     detLoad = null;
     detFailed = null;
@@ -1975,6 +2055,8 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function handleResult(res: LoadResult): void {
+    clearSlow();
+    lastProgress = null;
     panel.setProgress(null);
     console.info(`[load] ${res.cached ? 'prepared set' : 'first look'} ready at ${Math.round(performance.now() - loadT0)} ms`);
     panel.setArchiveLine(res.cached ? null : archiveLine());
@@ -2079,6 +2161,8 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function handleError(e: unknown): void {
+    clearSlow();
+    lastProgress = null;
     console.info(`[load] stopped: ${(e as { code?: string } | null)?.code ?? 'unknown'}`);
     panel.showControls(false);
     const code = (e as { code?: string } | null)?.code;
@@ -2108,6 +2192,18 @@ export const mount: Mount = (root, ctx) => {
     archiveStatus = null;
     pendingList = null;
     restAgain = false;
+    queuedList = null;
+    archiveFinal = false;
+    clearArchiveTimer();
+    clearSlow();
+    searching = false;
+    found = false;
+    lastProgress = null;
+    slowTimer = setTimeout(() => {
+      if (gen !== loadGen) return;
+      slowDue = true;
+      applySlow();
+    }, 8000);
     panel.setArchiveLine(null);
     refineDone = false;
     simRef = simOn ? params.ref : null;
@@ -2145,6 +2241,26 @@ export const mount: Mount = (root, ctx) => {
           if (!disposed && gen === loadGen && !archive.signal.aborted) onArchiveUpdate(list, status);
         },
         archiveSignal: archive.signal,
+        onSearching: () => {
+          if (disposed || gen !== loadGen) return;
+          searching = true;
+          clearArchiveTimer();
+          // a little past the wait budget the library was given, then the answer is final
+          archiveTimer = setTimeout(() => {
+            archiveTimer = null;
+            if (disposed || gen !== loadGen || archive.signal.aborted) return;
+            if (archiveStatus && !archiveStatus.complete) {
+              archiveFinal = true;
+              showArchiveLine();
+            }
+          }, archiveMaxWaitMs + 2000);
+          if (slowDue) applySlow();
+        },
+        onFound: () => {
+          if (disposed || gen !== loadGen) return;
+          found = true;
+          clearSlow();
+        },
       },
       signal,
     )
@@ -2241,7 +2357,12 @@ export const mount: Mount = (root, ctx) => {
 
   return () => {
     disposed = true;
+    offRings();
+    setMeasurableRings(null);
     token++;
+    clearArchiveTimer();
+    if (slowTimer !== null) clearTimeout(slowTimer);
+    slowTimer = null;
     archiveCtrl?.abort();
     ctrl?.abort();
     restCtrl?.abort();

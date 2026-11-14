@@ -10,6 +10,8 @@ import {
   MIN_VISIT_EXPOSURES,
   SpherexError,
   loadCachedReadouts,
+  readoutReliability,
+  gaiaCone,
 } from '../../lib/spherex';
 import type { CachedSlug, Exposure, GaiaStar, MatchedResult, Target } from '../../lib/spherex';
 
@@ -53,6 +55,8 @@ export interface ChangePair {
   fieldChangedFraction?: number;
   /** Field stars of this visit pair with |matched z| >= 3, of those with a matched z. */
   field?: { differ: number; measured: number };
+  /** Largest plain-pair wavelength gap in channels (live results only). */
+  plainGapBw?: number;
 }
 
 export interface ChangeStar {
@@ -72,6 +76,12 @@ export interface ChangeStar {
 /** Catalogue facts by prepared slug, applied to that slug's target star only. Science signed this text. */
 export const CATALOGUE_NOTES: Readonly<Record<string, string>> = {
   'v391-oph': 'Catalogued as an eclipsing binary (Gaia DR3; SIMBAD).',
+};
+
+/** A steady comparison star per prepared slug (Gaia DR3 id), until the data supplies one. */
+export const COMPARISON_STARS: Readonly<Record<string, string>> = {
+  // G 12.91 against the target's 12.66, 179 arcsec away, reliable and consistent in every detector-2 pair
+  'v391-oph': '4472831551114789632',
 };
 
 /** Science's calibration holds only for stars with no star brighter than this within BRIGHT_RADIUS_ARCSEC. */
@@ -102,6 +112,8 @@ export interface LiveInput {
   pmdec?: number | null;
   epoch?: number;
   gmag?: number | null;
+  /** Gaia DR3 id of the measured star, when it is a catalogued star. */
+  sourceId?: string;
   exposures: Exposure[];
   gaia: GaiaStar[];
 }
@@ -164,8 +176,9 @@ interface CachedReadoutsLike {
 }
 
 const loadCachedReadoutsImpl:
-  | ((slug: string, opts?: { signal?: AbortSignal }) => Promise<CachedReadoutsLike>)
-  | null = (slug, opts) => loadCachedReadouts(slug as CachedSlug, opts) as unknown as Promise<CachedReadoutsLike>;
+  | ((slug: string, opts?: { signal?: AbortSignal; detector?: number }) => Promise<CachedReadoutsLike>)
+  | null = (slug, opts) =>
+  loadCachedReadouts(slug as CachedSlug, opts as Parameters<typeof loadCachedReadouts>[1]) as unknown as Promise<CachedReadoutsLike>;
 
 export const preparedAvailable: boolean = loadCachedReadoutsImpl !== null;
 
@@ -228,6 +241,12 @@ export function measurableStars(r: PreparedReadouts): PreparedReadouts['stars'] 
   return r.stars.filter((s) => s.star.pairs.some((p) => p.reliable === true));
 }
 
+/** The steady comparison star of a prepared field, when one is named. */
+export function comparisonFor(r: PreparedReadouts): PreparedReadouts['stars'][number] | null {
+  const id = COMPARISON_STARS[r.slug];
+  return id ? (r.stars.find((s) => s.id === id) ?? null) : null;
+}
+
 /** Field context of a visit pair, matched by visit mid times within 10 days. */
 export function fieldFor(r: PreparedReadouts, tA: number, tB: number): { differ: number; measured: number } | null {
   for (const s of r.stars) {
@@ -241,10 +260,11 @@ export function fieldFor(r: PreparedReadouts, tA: number, tB: number): { differ:
 const preparedCache = new Map<string, Promise<PreparedReadouts | null>>();
 
 /** Prepared readouts of a cached target. Null when unavailable or the target has none. Cached per slug. */
-export function loadPreparedReadouts(slug: string, opts: { signal?: AbortSignal } = {}): Promise<PreparedReadouts | null> {
+export function loadPreparedReadouts(slug: string, opts: { signal?: AbortSignal; detector?: number } = {}): Promise<PreparedReadouts | null> {
+  const key = `${slug}:${opts.detector ?? ''}`;
   const impl = loadCachedReadoutsImpl;
   if (!impl) return Promise.resolve(null);
-  const hit = preparedCache.get(slug);
+  const hit = preparedCache.get(key);
   if (hit) return hit;
   const p = impl(slug, opts).then(
     (r): PreparedReadouts => {
@@ -272,13 +292,13 @@ export function loadPreparedReadouts(slug: string, opts: { signal?: AbortSignal 
       };
     },
     (e: unknown) => {
-      preparedCache.delete(slug);
+      preparedCache.delete(key);
       const code = (e as { code?: string } | null)?.code;
       if (code === 'NOT_FOUND') return null;
       throw e;
     },
   );
-  preparedCache.set(slug, p);
+  preparedCache.set(key, p);
   return p;
 }
 
@@ -367,6 +387,7 @@ function pairFromMatched(r: MatchedResult, tA: number, tB: number): ChangePair {
     ps: { D: fin(r.ps.D), sigma: sd(r.ps.var), z: fin(r.ps.z), frac: fin(r.ps.fractionalChange), n: r.ps.nPairs },
     flags: [...r.flags],
     verdict: r.verdict,
+    ...(r.perWavelength.length > 0 ? { plainGapBw: Math.max(...r.perWavelength.map((c) => Math.abs(c.plainDlamBw))) } : {}),
   };
 }
 
@@ -430,8 +451,27 @@ export async function checkStarLive(
     for (let j = i + 1; j < ordered.length; j++) {
       const a = ordered[i] as number, b = ordered[j] as number;
       const res = compareVisits(records, a, b, { blended });
-      pairs.push(pairFromMatched(res, meanMjd.get(a) as number, meanMjd.get(b) as number));
+      const pair = pairFromMatched(res, meanMjd.get(a) as number, meanMjd.get(b) as number);
+      // the library's reliability rule, the same one the prepared files carry
+      Object.assign(pair, readoutReliability(res.flags, res.perWavelength.length, {
+        star: { ra: input.ra, dec: input.dec, ...(input.sourceId ? { sourceId: input.sourceId } : {}) },
+        gaia: input.gaia.map((s) => ({ sourceId: s.sourceId, ra: s.ra, dec: s.dec, gmag: s.gmag })),
+      }));
+      pairs.push(pair);
     }
   }
   return { id: 'live', gmag: g, isTarget: false, pairs, source: 'live' };
+}
+
+const gaiaCache = new Map<string, Promise<GaiaStar[]>>();
+
+/** Gaia stars within 4 arcmin of a live position (for snapping, blends and the bright-star rule). Cached per position. */
+export function liveGaia(ra: number, dec: number, opts: { signal?: AbortSignal } = {}): Promise<GaiaStar[]> {
+  const key = `${ra.toFixed(3)}:${dec.toFixed(3)}`;
+  const hit = gaiaCache.get(key);
+  if (hit) return hit;
+  const p = gaiaCone(ra, dec, 240, { signal: opts.signal });
+  p.catch(() => gaiaCache.delete(key));
+  gaiaCache.set(key, p);
+  return p;
 }

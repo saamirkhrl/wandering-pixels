@@ -498,6 +498,38 @@ const DEFS: Def[] = [
     noD6: false,
     seed: 53,
   },
+  {
+    slug: 'v391-oph',
+    name: 'V391 Ophiuchi',
+    blurb:
+      "An eclipsing binary star near Barnard's Star: the readout catches it dimmed by eclipse in some SPHEREx exposures, while a steady neighbour of the same brightness shows no change.",
+    aliases: ['v391 oph', 'v391 ophiuchi'],
+    ra: 269.538,
+    dec: 4.6576,
+    pmra: -1.1,
+    pmdec: -5.0,
+    plx: null,
+    gmag: 12.66,
+    gaiaId: '4472831551114789000',
+    w1: 11.2,
+    w2: 11.1,
+    spectrum: [
+      [0.75, 60],
+      [1.0, 70],
+      [1.6, 60],
+      [2.4, 40],
+      [3.8, 20],
+      [4.4, 16],
+      [5.0, 14],
+    ],
+    visitMult: [1.0, 0.55, 1.0, 0.75, 1.0],
+    visitDays: VISIT_DAYS,
+    perVisit: [2, 4],
+    bandShift: 0,
+    startShift: 4,
+    noD6: false,
+    seed: 61,
+  },
 ];
 
 const BUILTIN_NAMES: { names: string[]; display: string; ra: number; dec: number; pmra: number; pmdec: number }[] = [
@@ -1007,6 +1039,21 @@ export async function resolveTarget(text: string, opts: CallOptions = {}): Promi
   return target;
 }
 
+// Test switches, read only when the mock is the live source (?mock=1): &mockslow=1 delays the first
+// archive answer about 9 s, &mockstall=1 never completes (1 of 3 and a 4 s wait budget), &mockrest=1
+// slows the full-visits download and delays the later archive updates so they land mid-download.
+function mockFlag(name: string): boolean {
+  try {
+    return new URLSearchParams(location.search).get(name) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function archiveWaitMs(): number {
+  return mockFlag('mockstall') ? 4000 : 60000;
+}
+
 export async function findExposures(ra: number, dec: number, opts: FindExposuresOptions = {}): Promise<Exposure[]> {
   throwIfAborted(opts.signal);
   const say = (done: number, total: number, message: string, retrying?: boolean) =>
@@ -1031,6 +1078,7 @@ export async function findExposures(ra: number, dec: number, opts: FindExposures
 
   say(0, 0, 'Asking the SPHEREx archive');
   await nap(500);
+  if (mockFlag('mockslow')) await wait(9000, opts.signal);
   say(0, 0, 'The archive is busy, trying again in 2 s', true);
   await nap(1100);
   say(0, 0, 'Reading the exposure list');
@@ -1057,9 +1105,16 @@ export async function findExposures(ra: number, dec: number, opts: FindExposures
       try {
         await wait(10, signal);
         onUpdate(first.map((e) => ({ ...e })), { answered: 1, total: 3, pending: names.slice(1), complete: false });
-        await wait(1500, signal);
+        if (mockFlag('mockstall')) {
+          // like the library: when the wait budget runs out, one last update that is still incomplete
+          await wait(opts.maxWaitMs ?? 60000, signal);
+          onUpdate(first.map((e) => ({ ...e })), { answered: 1, total: 3, pending: names.slice(1), complete: false });
+          return;
+        }
+        const late = mockFlag('mockrest');
+        await wait(late ? 6000 : 1500, signal);
         onUpdate(upTo(2), { answered: 2, total: 3, pending: names.slice(2), complete: false });
-        await wait(1000, signal);
+        await wait(late ? 1500 : 1000, signal);
         onUpdate(upTo(3), { answered: 3, total: 3, pending: [], complete: true });
       } catch {
         // aborted: stop quietly
@@ -1138,6 +1193,7 @@ export async function loadFrames(
       bytes,
     });
   report();
+  const slowRest = total > 2 && mockFlag('mockrest') && registry.get(exposures[0].id)?.scene.kind === 'live';
 
   const worker = async () => {
     for (;;) {
@@ -1146,6 +1202,7 @@ export async function loadFrames(
       if (i >= total) return;
       const e = exposures[i];
       try {
+        if (slowRest) await wait(900, opts.signal);
         if (i === failIndex) {
           await wait(frameDelay(e.id), opts.signal);
           throw new SpherexError('UPSTREAM_ERROR', 'The archive could not deliver this exposure.');

@@ -57,7 +57,7 @@
 
 .change-val {
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .change-z {
@@ -151,7 +151,8 @@
 
 .change-word {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 400;
+  color: var(--ink-soft);
 }
 
 .change-banner {
@@ -190,4 +191,26 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.change-rowlabel {
+  font-size: 10px;
+  fill: var(--ink-soft);
+}
+
+.change-rowlabel-strong {
+  fill: var(--ink);
+}
+
+.change-numrow {
+  padding: 6px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.change-pair-fold {
+  border-top: 1px solid var(--rule);
+}
+
+.change-pair-fold > .change-pair {
+  border-top: 0;
 }

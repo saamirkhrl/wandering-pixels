@@ -102,7 +102,7 @@ export interface Panel {
   setHeader: (name: string, meta: string) => void;
   setPreparedNote: (name: string | null) => void;
   setEveryNote: (text: string) => void;
-  setArchiveLine: (text: string | null) => void;
+  setArchiveLine: (text: string | null, action?: { label: string; run: () => void }) => void;
   setTitleNote: (text: string | null) => void;
   setMatchNote: (text: string | null) => void;
   setProgress: (p: Progress | null, stageWord?: string) => void;
@@ -808,8 +808,11 @@ export function createPanel(hd: PanelHandlers): Panel {
       everyNote.hidden = text === '';
       everyNote.textContent = text;
     },
-    setArchiveLine: (text) => {
+    setArchiveLine: (text, action) => {
       archiveRow.textContent = text ?? '';
+      if (text !== null && action) {
+        archiveRow.append(' ', btn(action.label, 'v-linkbtn', action.run));
+      }
       archiveRow.hidden = text === null;
     },
     setPairMarks: (indices) => timeline.setPairMarks(indices),

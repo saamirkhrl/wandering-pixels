@@ -50,11 +50,13 @@ export const resolveTarget = live.resolveTarget;
 export { matchCachedTarget } from '../../lib/spherex';
 export const positionAt = live.positionAt;
 // Passes onUpdate through to the live source; a source that ignores it just never calls it.
+// The wait budget is passed explicitly so the viewer's own final-state timer can use the same number.
+export const archiveMaxWaitMs: number = forceMock ? mock.archiveWaitMs() : 60000;
 export const findExposures = (ra: number, dec: number, opts: FindExposuresOptions = {}): Promise<Exposure[]> =>
   (live.findExposures as unknown as (ra: number, dec: number, opts: FindExposuresOptions) => Promise<Exposure[]>)(
     ra,
     dec,
-    opts,
+    { maxWaitMs: archiveMaxWaitMs, ...opts },
   );
 export const makeGrid = live.makeGrid;
 export const loadFrame = live.loadFrame;
@@ -98,7 +100,13 @@ export const loadCached: CacheLib['loadCached'] = async (slug: CachedSlug, opts?
     return c;
   }
 };
-export const listCached = cache.listCached;
+// The app words the example's description itself, so it reads the same whichever source answers.
+const EXAMPLE_BLURBS: Record<string, string> = {
+  'v391-oph':
+    "An eclipsing binary star near Barnard's Star: the readout catches it dimmed by eclipse in some SPHEREx exposures, while a steady neighbour of the same brightness shows no change.",
+};
+export const listCached: CacheLib['listCached'] = () =>
+  cache.listCached().map((c) => (EXAMPLE_BLURBS[c.slug] ? { ...c, blurb: EXAMPLE_BLURBS[c.slug] } : c));
 
 // Real split-cache loaders (format 2). ?mock=1 keeps the mock path, built from loadCached. Any
 // failure (files missing, bad data) falls back to the mock for that target and isSimulated() then

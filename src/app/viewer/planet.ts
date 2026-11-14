@@ -2,8 +2,6 @@ import { COPY, fill } from './distance-copy';
 import { createDistanceControl } from './distance';
 import type { DistanceControl } from './distance';
 
-export const SIM_EXAMPLE_ENABLED = false;
-
 export interface PlanetModel {
   step: 0 | 1 | 2;
   ringsOn: boolean;
@@ -26,7 +24,6 @@ export interface PlanetHandlers {
   onStep(step: 0 | 1 | 2): void;
   onRings(on: boolean): void;
   onDistance(distanceAu: number | null): void;
-  onExample(): void;
   onLoadRest(): void;
   onSim?(on: boolean): void;
 }
@@ -110,9 +107,6 @@ export function createPlanetSection(h: PlanetHandlers): PlanetSection {
     e('p', 'v-detail', COPY.deeper),
   );
 
-  const example = e('button', 'v-linkbtn', COPY.simExample);
-  example.type = 'button';
-  example.addEventListener('click', () => h.onExample());
 
   // simulated body: first thing under the step buttons, for both steps
   const simBox = e('div', 'v-planet-sim');
@@ -126,7 +120,6 @@ export function createPlanetSection(h: PlanetHandlers): PlanetSection {
   simBtn.addEventListener('click', () => h.onSim?.(!simOn));
 
   root.append(seg, few, simBox, s1, s2, gap, limits, science);
-  if (SIM_EXAMPLE_ENABLED) root.appendChild(example);
 
   let step: 0 | 1 | 2 = 0;
   const choose = (s: 1 | 2) => h.onStep(step === s ? 0 : s);

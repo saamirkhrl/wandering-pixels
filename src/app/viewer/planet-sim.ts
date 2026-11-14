@@ -15,7 +15,8 @@ export const SIM_MOTION: TrackingMotion = {
   dRaArcsecPerYr: PLANET_DEMO.motionDraCosDecArcsecPerYr,
   dDecArcsecPerYr: PLANET_DEMO.motionDdecArcsecPerYr,
 };
-export const SIM_MAG_AB = PLANET_DEMO.magnitudeAb;
+// Shown brighter than the science seat's test body (PLANET_DEMO.magnitudeAb) so it is easy to see.
+export const SIM_MAG_AB = 11.5;
 // Anchor offset from the patch centre in grid pixels (west and north), so the body does not sit on
 // the target star and its year of eastward motion stays inside the patch.
 export const SIM_OFFSET_PX: [number, number] = [12, -12];
@@ -30,6 +31,42 @@ export function simAnchorGrid(base: Grid): Grid {
 export function simBodyRaDec(anchor: Grid, anchorMjd: number, mjd: number): [number, number] {
   const g = gridAt(anchor, mjd, SIM_DISTANCE_AU, anchorMjd, SIM_MOTION);
   return [g.ra0, g.dec0];
+}
+
+/** Grid position of the simulated body on a date, in any grid. */
+export function simBodyAt(grid: Grid, mjd: number, anchor: Grid, anchorMjd: number): [number, number] {
+  const [ra, dec] = simBodyRaDec(anchor, anchorMjd, mjd);
+  return worldToGrid(grid, ra, dec);
+}
+
+/** The small "simulated" label beside the body, drawn on the image. */
+export function drawSimLabel(
+  c: CanvasRenderingContext2D,
+  toCanvas: (gx: number, gy: number) => [number, number],
+  scale: number,
+  dpr: number,
+  xy: [number, number],
+): void {
+  const [cx, cy] = toCanvas(xy[0], xy[1]);
+  const off = 1.6 * scale;
+  const colour = getComputedStyle(document.documentElement).getPropertyValue('--signal').trim() || '#f2c230';
+  c.save();
+  c.font = `700 ${Math.round(11 * dpr)}px 'Atkinson Hyperlegible Next', system-ui, sans-serif`;
+  c.textAlign = 'left';
+  c.textBaseline = 'bottom';
+  c.lineJoin = 'round';
+  c.lineWidth = 3 * dpr;
+  c.strokeStyle = 'rgba(5, 8, 16, 0.85)';
+  c.strokeText(COPY.simLabel, cx + off, cy - off);
+  c.fillStyle = colour;
+  c.fillText(COPY.simLabel, cx + off, cy - off);
+  c.strokeStyle = colour;
+  c.lineWidth = Math.max(1, dpr);
+  c.beginPath();
+  c.moveTo(cx + off * 0.45, cy - off * 0.45);
+  c.lineTo(cx + off * 0.95, cy - off * 0.95);
+  c.stroke();
+  c.restore();
 }
 
 /** Grid position of the simulated body in a frame. */

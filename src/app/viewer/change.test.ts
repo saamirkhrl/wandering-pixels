@@ -36,7 +36,14 @@ import {
   EXAMPLE_LEAD,
   EXAMPLE_LINK_TEXT,
   exampleHref,
+  COMPARE_TEXT,
+  diffOverError,
   isBrightNeighbour,
+  measuredLine,
+  pairSummary,
+  RINGS_HINT,
+  SHOW_NUMBERS_PLAIN,
+  Z_LEGEND,
   measurableLabel,
   measurableSummary,
   NONE_MEASURABLE_TEXT,
@@ -71,16 +78,16 @@ const BANNED = [/changed/i, /variable/i, /possible change/i, /significant/i, /no
 
 describe('column verdicts', () => {
   it('colour-matched boundaries', () => {
-    expect(columnVerdict(2.99, 'matched')?.word).toBe('Consistent');
-    expect(columnVerdict(3, 'matched')?.word).toBe('Differs');
-    expect(columnVerdict(-2.99, 'matched')?.word).toBe('Consistent');
-    expect(columnVerdict(-3, 'matched')?.word).toBe('Differs');
-    expect(columnVerdict(9, 'matched')?.word).toBe('Differs');
+    expect(columnVerdict(2.99, 'matched')?.word).toBe('consistent');
+    expect(columnVerdict(3, 'matched')?.word).toBe('differs');
+    expect(columnVerdict(-2.99, 'matched')?.word).toBe('consistent');
+    expect(columnVerdict(-3, 'matched')?.word).toBe('differs');
+    expect(columnVerdict(9, 'matched')?.word).toBe('differs');
   });
   it('single-pair boundaries', () => {
-    expect(columnVerdict(3.99, 'single')?.word).toBe('Consistent');
-    expect(columnVerdict(4, 'single')?.word).toBe('Differs');
-    expect(columnVerdict(-4, 'single')?.word).toBe('Differs');
+    expect(columnVerdict(3.99, 'single')?.word).toBe('consistent');
+    expect(columnVerdict(4, 'single')?.word).toBe('differs');
+    expect(columnVerdict(-4, 'single')?.word).toBe('differs');
   });
   it('has no word for a missing z', () => {
     expect(columnVerdict(null, 'matched')).toBeNull();
@@ -93,32 +100,23 @@ describe('column verdicts', () => {
 
 describe('DISAGREE', () => {
   const p = (percent: number, error: number) => ({ D: 100, sigma: (error * 100) / Math.abs(percent), z: 1, frac: percent / 100 });
-  it('is false when estimates overlap within the summed errors', () => {
-    expect(DISAGREE([p(10, 2), p(13, 2), p(11, 1)])).toBe(false);
-    expect(DISAGREE([p(10, 2), p(13.9, 2)])).toBe(false);
+  it('compares matched and paired at 3 sigma in quadrature', () => {
+    // errors 2 and 2 give 3 * sqrt(8) = 8.485
+    expect(DISAGREE({ matched: p(10, 2), ps: p(18.4, 2) })).toBe(false);
+    expect(DISAGREE({ matched: p(10, 2), ps: p(18.6, 2) })).toBe(true);
+    expect(DISAGREE({ matched: p(10, 2), ps: p(1.4, 2) })).toBe(true);
   });
-  it('is true when any two differ by more than the sum of errors', () => {
-    expect(DISAGREE([p(10, 2), p(14.1, 2)])).toBe(true);
-    expect(DISAGREE([p(10, 2), null, p(30, 1)])).toBe(true);
+  it('ignores the plain pair unless plainGapBw is defined and below 1', () => {
+    const far = { matched: p(10, 2), ps: p(10, 2), plain: p(40, 2) };
+    expect(DISAGREE(far)).toBe(false);
+    expect(DISAGREE({ ...far, plainGapBw: 1 })).toBe(false);
+    expect(DISAGREE({ ...far, plainGapBw: 0.5 })).toBe(true);
+    expect(DISAGREE({ ...far, plainGapBw: 0.5, plain: p(12, 2) })).toBe(false);
   });
   it('ignores missing values', () => {
-    expect(DISAGREE([null, undefined, p(5, 1)])).toBe(false);
-    expect(DISAGREE([])).toBe(false);
-  });
-});
-
-describe('verdictLine with the data seat reliable field', () => {
-  it('reliable true wins over the fallback rules', () => {
-    const p = {
-      matched: { D: 1, sigma: 1, z: 1, frac: 0.01 },
-      plain: { D: 5, sigma: 0.1, z: 50, frac: 0.05 },
-      ps: { D: -5, sigma: 0.1, z: -50, frac: -0.05, n: 3 },
-      flags: ['too_few_samples' as const],
-      w: [[1.3, 1, 1, 1]],
-      reliable: true,
-      unreliableReasons: [],
-    };
-    expect(verdictLine(p as never).text).toBe('Consistent between visits');
+    expect(DISAGREE({ matched: null, ps: p(5, 1) })).toBe(false);
+    expect(DISAGREE({ matched: p(5, 1), ps: null })).toBe(false);
+    expect(DISAGREE({ matched: p(5, 1) })).toBe(false);
   });
 });
 
@@ -157,9 +155,9 @@ describe('verdictLine', () => {
     expect(verdictLine(m(null)).text).toBe('Cannot be measured here: no result.');
     expect(verdictLine({ matched: null, flags: [] }).text).toBe('Cannot be measured here: no result.');
   });
-  it('cannot be measured when the estimates disagree', () => {
+  it('never fails a pair on estimator disagreement', () => {
     const v = verdictLine({ matched: st(5, 0.5, 10, 1), plain: st(1, 0.1, 10, 1), ps: st(1, 0.5, 10, 1), flags: [] });
-    expect(v.text).toBe('Cannot be measured here: the three estimates disagree.');
+    expect(v.kind).toBe('differs');
   });
   it('passes unreliableReasons through when reliable is false', () => {
     const v = verdictLine({ matched: st(9), flags: ['saturated'], reliable: false, unreliableReasons: ['reason one', 'reason two'] });
@@ -209,7 +207,7 @@ describe('verdictLine', () => {
 describe('field context', () => {
   it('writes the field line', () => {
     expect(fieldLine({ field: { differ: 3, measured: 40 } })).toBe(
-      'In this field 3 of 40 measured stars differ; about 1 in 100 is expected by chance.',
+      'In this field 3 of 40 measured stars differ; for well-isolated stars about 1 in 100 is expected by chance (see the note below).',
     );
     expect(fieldLine({})).toBeNull();
   });
@@ -265,15 +263,16 @@ describe('bright neighbour, data reasons, catalogue, links', () => {
     const v = verdictLine({ matched: st(9), flags: [], reliable: false, unreliableReasons: ['fewer than 2 wavelengths', 'odd_one'] });
     expect(v.text).toBe('Cannot be measured here: too few wavelengths; odd one.');
   });
-  it('catalogue stars do not fail on estimator disagreement', () => {
-    const disagree = { matched: st(5, 0.5, 10, 1), plain: st(1, 0.1, 10, 1), ps: st(1, 0.5, 10, 1), flags: [] as ReadoutFlag[] };
-    expect(verdictLine(disagree).kind).toBe('unreliable');
-    expect(verdictLine({ ...disagree, catalogue: true }).kind).toBe('differs');
-    expect(DISAGREE_NOTE).toBe('The three estimates disagree.');
+  it('has the disagreement and caveat texts', () => {
+    expect(DISAGREE_NOTE).toBe('The matched and paired estimates disagree here; treat the result with caution.');
     expect(ECLIPSE_CAVEAT).toBe(
       'An eclipse lasts hours and a visit lasts weeks, so the size of the change depends on which exposures happened to fall in eclipse. Detectors can even disagree in sign.',
     );
     for (const t of [ECLIPSE_CAVEAT, DISAGREE_NOTE]) expect(t).not.toMatch(/trend|fading|period/i);
+  });
+  it('shows the variable line only when there is no catalogue note', () => {
+    expect(variableLine({ variable: true, catalogueNote: 'x' }, 'differs')).toBeNull();
+    expect(variableLine({ variable: true }, 'differs')).toBe('Catalogued as variable in Gaia DR3.');
   });
   it('writes the detector line and the example link', () => {
     expect(detectorLine(3)).toBe('Readout prepared for detector 3.');
@@ -301,6 +300,36 @@ describe('variable line and measurable aid', () => {
     expect(measurableSummary(4)).toBe('Show stars that can be measured here (4)');
     expect(NONE_MEASURABLE_TEXT).toBe('No star in this field can be measured reliably.');
     expect(VARIABLE_LINE).not.toMatch(/trend|fading/i);
+  });
+});
+
+describe('clarity, snapping, rings', () => {
+  it('writes the z line and legend', () => {
+    expect(diffOverError({ D: 1, sigma: 1, z: -1.74, frac: 0.1 })).toBe('difference / error: -1.7');
+    expect(diffOverError(null)).toBe('difference / error: no value');
+    expect(Z_LEGEND).toBe(
+      'Difference / error (z) is the change divided by its error bar; 3 or more counts as a difference for the colour-matched estimate, 4 for the other two.',
+    );
+    expect(SHOW_NUMBERS_PLAIN).toBe('Show the numbers');
+  });
+  it('writes the collapsed pair summary in lower case', () => {
+    expect(pairSummary(60800, 61300, 'Consistent between visits')).toMatch(/^\d+ \w+ \d{4} to \d+ \w+ \d{4}: consistent between visits$/);
+  });
+  it('writes the measured line', () => {
+    expect(measuredLine({ id: '99', gmag: 12.91, isTarget: false })).toBe('Measured: Gaia DR3 99, G magnitude 12.9.');
+    expect(measuredLine({ id: 't', gmag: 3, isTarget: true })).toBe('Measured: the target.');
+  });
+  it('snaps within 4 pixels when nothing is within 2', () => {
+    const g = (dec: number) => ({ sourceId: 'x', ra: 10, dec, pmra: null, pmdec: null, parallax: null, gmag: 12 });
+    const three = g(3 * 6.15 / 3600);
+    expect(nearestGaia([three], 10, 0, 6.15)).toBe(three);
+    expect(nearestGaia([g(5 * 6.15 / 3600)], 10, 0, 6.15)).toBeNull();
+    const near = g(1 * 6.15 / 3600);
+    expect(nearestGaia([three, near], 10, 0, 6.15)).toBe(near);
+  });
+  it('has the rings hint and compare text', () => {
+    expect(RINGS_HINT).toBe('They are ringed on the image; click one to open its readout.');
+    expect(COMPARE_TEXT).toBe('Compare with a steady neighbour');
   });
 });
 
@@ -351,12 +380,15 @@ describe('dates', () => {
 
 describe('block text and mode', () => {
   it('has the exact fixed lines', () => {
-    expect(FIXED_LINES).toHaveLength(5);
-    expect(new Set(FIXED_LINES).size).toBe(5);
+    expect(FIXED_LINES).toHaveLength(6);
+    expect(new Set(FIXED_LINES).size).toBe(6);
     expect(FIXED_LINES.join(' ')).not.toMatch(/threshold/i);
-    expect(FIXED_LINES[4]).toBe('Error bars widened by our measured factor.');
-    expect(FIXED_LINES[0]).toBe(
-      'A difference here is a reason to look closer, not a discovery. On steady stars about 1 in 100 comparisons differ by chance in our tests, and more in crowded or saturated fields.',
+    expect(FIXED_LINES[0]).toMatch(/^A difference here is a reason to look closer, not a discovery\./);
+    expect(FIXED_LINES[1]).toBe(
+      'The 1 percent false-alarm rate holds for unblended, unsaturated stars of Gaia G 12 to 16.5, more than 3 arcminutes from any star brighter than G 9. Near saturated stars, or for blends, it can be tens of percent, and the site marks those results as not reliable.',
+    );
+    expect(FIXED_LINES[5]).toBe(
+      "Error bars include an extra 2 percent of the star's brightness, which we measured to be missing from the archive's own errors.",
     );
   });
   it('is connecting when nothing is available', () => {

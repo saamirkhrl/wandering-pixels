@@ -12,7 +12,7 @@ export const TARGET_NOTES: Record<string, string> = {
   'r-dra':
     'R Draconis itself is saturated, but nearby stars appear to brighten and fade together between visits, most strongly close to it, as its glow changes.',
   'v391-oph':
-    "V391 Ophiuchi, an eclipsing binary star near Barnard's Star: the readout catches it dimmed by eclipse in some SPHEREx exposures, while a steady neighbour of the same brightness shows no change.",
+    "An eclipsing binary star near Barnard's Star: the readout catches it dimmed by eclipse in some SPHEREx exposures, while a steady neighbour of the same brightness shows no change.",
 };
 
 // A caveat shown after the note, for targets that need one.

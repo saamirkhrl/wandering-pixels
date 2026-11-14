@@ -121,4 +121,6 @@ export interface ExposureUpdateStatus {
 export interface FindExposuresOptions extends CallOptions {
   /** Called as more archive collections answer; `exposures` is the whole merged list each time. */
   onUpdate?: (exposures: Exposure[], status: ExposureUpdateStatus) => void;
+  /** How long the library keeps asking the collections that have not answered. Library default 60000. */
+  maxWaitMs?: number;
 }

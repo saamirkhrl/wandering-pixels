@@ -29,10 +29,11 @@ export const COPY = {
   simTry: 'Try it with a simulated body',
   simOff: 'Use the real images only',
   simTag: 'Simulated object, added to real SPHEREx images',
+  simLabel: 'simulated',
   simHow:
-    'The simulated body is 500 au away, about magnitude 12.8, and moves about 19 pixels a year. In step 1 it shows as a bright and dark pair. In step 2, at 500 au it stays in the middle while every star jumps; turn the distance and watch it slide off.',
+    'The simulated body is 500 au away. Shown at magnitude 11.5, far brighter than a real one would be, so it is easy to see. It moves about 19 pixels a year. In step 1 it shows as a bright and dark pair. In step 2, at 500 au it stays in the middle while every star jumps; turn the distance and watch it slide off.',
   simResult:
-    'In our test, a simulated body was found as a bright and dark pair 22 pixels apart, and its distance was read back as 505 au against 500 au put in.',
+    'In our test, a bright simulated body (magnitude 12.75) was found as a bright and dark pair 22 pixels apart, and its distance was read back as 505 au against 500 au put in.',
   limit7:
     'In one test field, simulated movers shifted by 2 pixels or more were found half the time at about magnitude 18.3 to 19.1 (small sample).',
   fine: 'Changing the distance by 1 percent moves the centre {px} px for this pair.',
@@ -44,11 +45,8 @@ export const COPY = {
   limit4:
     'Orbital motion is not modelled when following at a distance (about 9 pixels per six months at 500 au), so a real body lands near, not exactly at, the predicted spot.',
   limit6:
-    'Pairs six months apart are usually several channels apart in wavelength; the colour-matched comparison works per star, not on the image.',
+    'Images six months apart can be several channels apart in wavelength unless a matching pair is chosen; the colour-matched comparison works per star, not on the image.',
   fewVisits: 'This detector has only {n} visits here, so this step needs another detector.',
-  simExample: 'See a simulated example',
-  simLabelMock: 'Simulated object in simulated images',
-  simLabelReal: 'Simulated object added to real SPHEREx images',
   loadingTracked: 'Re-centring the images',
   title: 'Follow a body at an assumed distance',
   example: 'Opens at 500 au as an example, not a prediction.',

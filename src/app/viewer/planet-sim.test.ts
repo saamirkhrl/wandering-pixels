@@ -55,8 +55,8 @@ describe('simulated body', () => {
     const out = plant(f, 20, 20, 10);
     expect(f.pixels).toEqual(before);
     expect(out.pixels[20 * 65 + 20] - before[20 * 65 + 20]).toBeCloseTo(10, 5);
-    expect(simPeak(6.15)).toBeGreaterThan(10);
-    expect(simPeak(6.15)).toBeLessThan(20);
+    expect(simPeak(6.15)).toBeGreaterThan(40);
+    expect(simPeak(6.15)).toBeLessThan(50);
     const [c] = simFrames([f], anchor, T0);
     expect(c).not.toBe(f);
     expect(simFrames([f], anchor, T0)[0]).toBe(c);

@@ -14,6 +14,8 @@ export interface OverlaySource {
   epochYear: number;
   mag: number | null;
   magLabel: string;
+  /** Gaia DR3 variable flag; true only when catalogued as variable. */
+  variable?: boolean | null;
 }
 
 export interface ProjectedSource {
@@ -42,6 +44,7 @@ export function sourcesFromGaia(stars: GaiaStar[]): OverlaySource[] {
     epochYear: GAIA_EPOCH,
     mag: Number.isFinite(s.gmag) ? s.gmag : null,
     magLabel: Number.isFinite(s.gmag) ? `G ${s.gmag.toFixed(1)}` : '',
+    variable: (s as { variable?: boolean | null }).variable ?? null,
   }));
 }
 
@@ -150,6 +153,7 @@ export function describeSource(s: OverlaySource): string {
   } else {
     parts.push('Proper motion not measured.');
   }
+  if (s.variable === true) parts.push('Catalogued as variable (Gaia DR3)');
   return parts.join(' ');
 }
 

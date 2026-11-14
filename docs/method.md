@@ -454,6 +454,44 @@ changed while their constant neighbours of the same brightness stay quiet. Examp
 comparisons 18.2, constant partner 0.9 (median |z| 8.8 against 0.5); Gaia DR3 4472838904098844288 (G 15.4, scatter 0.23
 mag): rms z 2.3 against 0.9 for its partner. Figure variable_demo.png.
 
+## A distant body at 500 au (worked example, not a search)
+
+In plain words: a planet far beyond Neptune drifts slowly across the sky, but over six months it
+also swings back and forth because the Earth moves around the Sun (parallax). We planted a fake
+body at 500 au into the real Barnard's Star field images and recovered it in two steps: first
+from two visits a year apart, where the parallax cancels and the body appears as a pair of a
+bright and a dark spot about 21 pixels apart; then from the visit in between, by shifting the
+images to follow a body at an assumed distance and finding the distance that brings it into
+focus.
+
+Setup: circular orbit at 500 au, 115.9 arcsec/yr (18.85 px/yr), injected with the archive ePSF
+into visits 0, 4 (12 months, 361 days) and 2 (6 months, 203 days) of the Barnard field; apparent
+position = normalize(D u - E), geocentric, as in the website's tracking mode. Our Earth-vector
+offsets agree with astropy to 0.036 arcsec (0.006 px) over 43 epochs. The website's linear motion
+model differs from the true circular orbit by 5e-6 arcsec over a year: curvature is negligible.
+
+Results for a bright body (AB 12.75, flat spectrum):
+- Step 1 (12 months, untracked): positive and negative lobes at S/N +298 and -312, separated by
+  21.8 px (true 21.0). The motion measured from step 1 is 22.1 px/yr against 18.85 true, because
+  the 361-day pair is not exactly a year and carries residual parallax.
+- Step 2 (6 months, tracked): recovered distance when the body is assumed to sit at the step 1
+  start position (ignoring its orbital motion): 462.0 +/- 0.9 au, biased by -7.6 percent. When the
+  position is interpolated along the step 1 motion: 504.7 +/- 0.9 au, +0.9 percent. With the true
+  start and motion the method returns 500.01 au. One percent of distance moves the body by 1.27
+  px at the 6-month visit (1.32 px measured on the stacks).
+- Limits: at a known distance the tracked 6-month stack reaches AB 19.5 (5 sigma). A blind search
+  in this crowded field is limited by residuals of real stars: the injected pair is the top
+  candidate only down to AB 14.25, rank 14 at AB 15.5 and rank 169 at AB 16.5. At AB 14.25 the
+  interpolated distance is still 503.7 +/- 1.1 au.
+- The worked example for the website is in docs/prepared/planet-demo.json. Parallax at 500 au
+  moves the body by up to about 70 px between visits, so a fixed 65 x 65 px frame does not contain
+  it in every visit; the frame must follow the assumed distance.
+
+Best single-exposure pair in wavelength (index only, per detector, 6- and 12-month visit pairs,
+Eps Indi, Barnard and R Dra): always under 0.95 channel (worst 0.47, Eps Indi detector 2 whose
+visit 2 has only 7 exposures). Partial visits break pairing by absence, not by gap: Eps Indi's
+QR3 visit has no detector 1 or 4 exposures at all.
+
 ## Negative results
 
 - Per-pixel matched images (M1) failed. Fitting each grid pixel's spectrum across resampled

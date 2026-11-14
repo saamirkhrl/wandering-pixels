@@ -5,6 +5,8 @@
 // trimmed result as public/cache/<slug>/readouts.d<N>.<8 hex>.json (8 hex = FNV-1a 32 of the file
 // bytes, so the file can be served immutable). index.json names it in a top-level `readouts` entry:
 //   { file, bytes, detector, count }       count = number of (star, visit pair) results in the file.
+// A target with several detectors also has `readoutsByDetector: { "1": ref, "2": ref, ... }`
+// (the default detector is in both); loadCachedReadouts(slug, { detector }) picks from it.
 // loadCachedReadouts reads index.json, then that file. It uses the same baseUrl / fetchFn /
 // signal / onProgress options as the cache loaders in cache.ts.
 //
@@ -111,10 +113,17 @@ export interface FieldPairReadout {
   b: number;
   /** Fraction of the field stars' results for this pair with verdict 'changed' (0 when nField is 0). */
   fieldChangedFraction: number;
-  /** fieldChangedFraction <= FIELD_CHANGED_LIMIT. */
+  /**
+   * fieldChangedFraction <= FIELD_CHANGED_LIMIT when judged; always true when not judged (the
+   * field is then not held against the results).
+   */
   fieldReliable: boolean;
   /** Field-star results counted: non-target stars with a verdict other than 'no result'. */
   nField: number;
+  /** True when nField >= FIELD_MIN_STARS, so the field was judged. With fewer results it is not judged. */
+  judged: boolean;
+  /** Only when judged is false: 'too few stars to judge the field'. */
+  reason?: string;
 }
 
 export interface CachedReadouts {
@@ -135,6 +144,9 @@ export interface CachedReadouts {
  * has a systematic offset (all stars shift together), as R Dra shows.
  */
 export const FIELD_CHANGED_LIMIT = 0.10;
+/** The field is judged only when a pair has at least this many field-star results (verdict other than 'no result'). */
+export const FIELD_MIN_STARS = 10;
+const FIELD_UNJUDGED_REASON = 'too few stars to judge the field';
 
 /** A Gaia source brighter than this (G < BRIGHT_NEIGHBOUR_GMAG) within BRIGHT_NEIGHBOUR_ARCSEC makes a star's result unreliable. */
 export const BRIGHT_NEIGHBOUR_GMAG = 9;
@@ -169,6 +181,24 @@ export function hasBrightNeighbour(
   return false;
 }
 
+/** Context for readoutReliability; every field is optional. */
+export interface ReliabilityContext {
+  fieldReliable?: boolean;
+  star?: { ra: number; dec: number; sourceId?: string };
+  gaia?: readonly GaiaNeighbour[];
+  /** Precomputed hasBrightNeighbour of the star (used by the cached files). */
+  brightNeighbour?: boolean;
+}
+
+/** Reason strings readoutReliability can return, in this order. */
+export type UnreliableReason =
+  | 'saturated' | 'blended' | 'partial_visit' | 'bright_neighbour' | 'fewer than 2 wavelengths' | 'field offset';
+
+export interface ReliabilityResult {
+  reliable: boolean;
+  unreliableReasons: string[];
+}
+
 /**
  * Reliability of one matched result. It is NOT reliable (reliable false) when any of:
  *  - flags include 'saturated', 'blended' or 'partial_visit';
@@ -181,14 +211,8 @@ export function hasBrightNeighbour(
  */
 export function readoutReliability(
   flags: readonly MatchedFlag[], perWavelengthCount: number,
-  ctx?: {
-    fieldReliable?: boolean;
-    star?: { ra: number; dec: number; sourceId?: string };
-    gaia?: readonly GaiaNeighbour[];
-    /** Precomputed hasBrightNeighbour of the star (used by the cached files). */
-    brightNeighbour?: boolean;
-  },
-): { reliable: boolean; unreliableReasons: string[] } {
+  ctx?: ReliabilityContext,
+): ReliabilityResult {
   const unreliableReasons: string[] = [];
   for (const f of ['saturated', 'blended', 'partial_visit'] as const) {
     if (flags.includes(f)) unreliableReasons.push(f);
@@ -202,8 +226,11 @@ export function readoutReliability(
 
 /**
  * Per visit pair, the share of field stars (stars that are not the target) whose result is
- * 'changed'. Denominator: field results with a verdict other than 'no result'. With no such
- * result the fraction is 0 and the pair counts as reliable (nothing to judge by).
+ * 'changed'. Denominator: field results with a verdict other than 'no result'. The field is
+ * judged (judged true, fieldReliable = fraction <= FIELD_CHANGED_LIMIT) only when that count
+ * nField is at least FIELD_MIN_STARS. With fewer, judged is false, reason is 'too few stars to
+ * judge the field' and fieldReliable stays true, so no result is marked 'field offset'. With no
+ * such result the fraction is 0.
  */
 export function fieldPairsOf(stars: readonly StarReadout[]): FieldPairReadout[] {
   const acc = new Map<string, { a: number; b: number; n: number; changed: number }>();
@@ -221,7 +248,10 @@ export function fieldPairsOf(stars: readonly StarReadout[]): FieldPairReadout[] 
     .sort((x, y) => x.a - y.a || x.b - y.b)
     .map((e) => {
       const fieldChangedFraction = e.n > 0 ? Number((e.changed / e.n).toFixed(4)) : 0;
-      return { a: e.a, b: e.b, fieldChangedFraction, fieldReliable: fieldChangedFraction <= FIELD_CHANGED_LIMIT, nField: e.n };
+      if (e.n < FIELD_MIN_STARS) {
+        return { a: e.a, b: e.b, fieldChangedFraction, fieldReliable: true, nField: e.n, judged: false, reason: FIELD_UNJUDGED_REASON };
+      }
+      return { a: e.a, b: e.b, fieldChangedFraction, fieldReliable: fieldChangedFraction <= FIELD_CHANGED_LIMIT, nField: e.n, judged: true };
     });
 }
 
@@ -240,6 +270,11 @@ export function applyReliability(stars: readonly StarReadout[], fieldPairs: read
 export interface LoadReadoutsOptions extends CallOptions {
   baseUrl?: string;
   fetchFn?: typeof fetch;
+  /**
+   * Detector of the readouts file. Omitted: the index's `readouts` entry (the default detector).
+   * Given: the entry of index.json `readoutsByDetector[detector]`; NOT_FOUND when it is missing.
+   */
+  detector?: Detector;
 }
 
 function isAbort(e: unknown, signal?: AbortSignal): boolean {
@@ -286,10 +321,10 @@ export async function loadCachedReadouts(slug: CachedSlug, opts: LoadReadoutsOpt
   const onBytes = (n: number): void => { bytes += n; };
 
   emit('Reading cache index', 0);
-  const idx = await getJson<{ readouts?: ReadoutsRef }>(fetchFn, `${base}${slug}/index.json`, `${slug}/index.json`, opts.signal, onBytes);
-  const ref = idx.readouts;
+  const idx = await getJson<{ readouts?: ReadoutsRef; readoutsByDetector?: Record<string, ReadoutsRef> }>(fetchFn, `${base}${slug}/index.json`, `${slug}/index.json`, opts.signal, onBytes);
+  const ref = opts.detector === undefined ? idx.readouts : idx.readoutsByDetector?.[String(opts.detector)];
   if (!ref || typeof ref.file !== 'string') {
-    throw new SpherexError('NOT_FOUND', `cache ${slug} has no readouts`);
+    throw new SpherexError('NOT_FOUND', opts.detector === undefined ? `cache ${slug} has no readouts` : `cache ${slug} has no readouts for detector ${opts.detector}`);
   }
   emit('Reading readouts', bytes + ref.bytes);
   const out = await getJson<CachedReadouts>(fetchFn, `${base}${slug}/${ref.file}`, `${slug}/${ref.file}`, opts.signal, onBytes);
@@ -299,6 +334,12 @@ export async function loadCachedReadouts(slug: CachedSlug, opts: LoadReadoutsOpt
   // files written before the reliability fields existed: compute them from the results
   for (const st of out.stars) if (st.variable === undefined) st.variable = null;
   if (!Array.isArray(out.fieldPairs)) out.fieldPairs = fieldPairsOf(out.stars);
+  for (const f of out.fieldPairs) {
+    if (typeof f.judged !== 'boolean') {
+      f.judged = f.nField >= FIELD_MIN_STARS;
+      if (!f.judged) { f.fieldReliable = true; f.reason = FIELD_UNJUDGED_REASON; }
+    }
+  }
   if (out.stars.some((st) => st.pairs.some((p) => typeof p.reliable !== 'boolean'))) applyReliability(out.stars, out.fieldPairs);
   emit('Readouts ready', bytes);
   return out;

@@ -13,19 +13,34 @@ export const GET = handler(async (url) => {
   if (cat !== 'catwise2020' && cat !== 'allwise') {
     throw new RelayError('BAD_INPUT', 'catalog must be catwise2020 or allwise', 400);
   }
-  const res = await fetchUpstream(wiseUrl(ra, dec, radius, cat), {
-    init: { headers: { Accept: 'text/csv' } },
-    attemptTimeoutMs: 22000,
-    budgetMs: 25000,
-  });
-  if (!res.ok) throw new RelayError('UPSTREAM_ERROR', `IRSA returned HTTP ${res.status}`, 502);
+  // Handled failure: a 200 with ok:false and no-store, so the client can retry without an error log.
+  const failed = (message) => json({ ok: false, retryable: true, message }, 200, 0);
+  let res;
+  try {
+    // IRSA's front end often 502s in under a second and then succeeds, so retry quickly.
+    res = await fetchUpstream(wiseUrl(ra, dec, radius, cat), {
+      init: { headers: { Accept: 'text/csv' } },
+      attemptTimeoutMs: 22000,
+      budgetMs: 25000,
+      maxAttempts: 5,
+      backoffMs: 300,
+    });
+  } catch (e) {
+    return failed(e instanceof RelayError ? e.message : 'IRSA failed');
+  }
+  if (!res.ok) return failed(`IRSA returned HTTP ${res.status}`);
   let text;
   try {
     text = await res.text();
   } catch {
-    throw new RelayError('UPSTREAM_BUSY', 'IRSA was too slow for this radius, try a smaller one', 503);
+    return failed('IRSA was too slow for this radius, try a smaller one');
   }
-  const sources = parseWise(text, cat);
+  let sources;
+  try {
+    sources = parseWise(text, cat);
+  } catch {
+    return failed('IRSA returned an unreadable answer');
+  }
   return json({ count: sources.length, catalog: cat, epoch: WISE_CATALOGS[cat].epoch, sources }, 200, 86400);
 });
 

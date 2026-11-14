@@ -14,7 +14,7 @@ import { buildMovie, difference } from '../src/lib/spherex/movie';
 import type { CachedSlug, Detector, MovieFrame } from '../src/lib/spherex/types';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SLUGS: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra'];
+const SLUGS: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra', 'v391-oph'];
 const SAMPLES = process.env.WP_SAMPLES_DIR ?? resolve(ROOT, '..', 'research', 'samples');
 const OUT_DIR = join(SAMPLES, 'cache-check');
 const UP = 4;

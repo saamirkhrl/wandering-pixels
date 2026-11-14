@@ -1,13 +1,13 @@
 // Name or coordinates -> Target. Contract: roundtable/05-data-interface.md (resolveTarget).
 //
-// Order: coordinates, then the offline table of the five challenge targets, then the CfA
+// Order: coordinates, then the offline table of the six built-in targets, then the CfA
 // VizieR mirror of Sesame (CORS enabled, called straight from the browser), then the relay.
 import { SpherexError } from './types';
 import type { CallOptions, Target } from './types';
 import { fetchJson, relayUrl } from './net';
 import { positionAt } from './wcs';
 
-export type ChallengeSlug = 'barnards-star' | 'eps-indi-b' | 'wise-0855' | 'rw-aur' | 'r-dra';
+export type ChallengeSlug = 'barnards-star' | 'eps-indi-b' | 'wise-0855' | 'rw-aur' | 'r-dra' | 'v391-oph';
 
 export interface ChallengeEntry {
   slug: ChallengeSlug;
@@ -110,6 +110,22 @@ export const CHALLENGE_TARGETS: readonly ChallengeEntry[] = [
     epoch: 2016.0,
     source: 'gaia',
     aliases: ['R Dra', 'R Draconis', 'r-dra'],
+  },
+  {
+    // Gaia DR3 4472819623984651392 = SIMBAD "V* V391 Oph" (EB*; Gaia DR3 variability class ECL).
+    // Gaia DR3 gaia_source and SIMBAD, queried 2026-11-14: parallax 0.595 mas, G = 12.658,
+    // near-zero proper motion. Comparison star (not a built-in target): Gaia DR3
+    // 4472831551114789632 (G = 12.91). About 516 arcsec from Barnard's Star, so the 60 arcsec
+    // match radius cannot confuse the two.
+    slug: 'v391-oph',
+    name: 'V391 Ophiuchi',
+    ra: 269.5380383,
+    dec: 4.6576478,
+    pmra: -1.114,
+    pmdec: -4.998,
+    epoch: 2016.0,
+    source: 'gaia',
+    aliases: ['V391 Oph', 'V391 Ophiuchi', 'v391-oph', 'Gaia DR3 4472819623984651392'],
   },
 ];
 

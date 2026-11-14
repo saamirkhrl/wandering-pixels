@@ -12,7 +12,7 @@ import { SpherexError } from '../src/lib/spherex/types';
 import type { CachedSlug } from '../src/lib/spherex/types';
 
 const CACHE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'cache');
-const ALL: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra'];
+const ALL: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra', 'v391-oph'];
 
 function readIndex(slug: CachedSlug): { readouts?: ReadoutsRef } | null {
   const p = join(CACHE_DIR, slug, 'index.json');
@@ -59,7 +59,9 @@ describe.each(ALL)('readouts %s', (slug) => {
         expect(f.a).toBeLessThan(f.b);
         expect(f.fieldChangedFraction).toBeGreaterThanOrEqual(0);
         expect(f.fieldChangedFraction).toBeLessThanOrEqual(1);
-        expect(f.fieldReliable).toBe(f.fieldChangedFraction <= 0.1);
+        expect(f.judged).toBe(f.nField >= 10);
+        if (f.judged) expect(f.fieldReliable).toBe(f.fieldChangedFraction <= 0.1);
+        else { expect(f.fieldReliable).toBe(true); expect(f.reason).toBe('too few stars to judge the field'); }
         expect(f.nField).toBeGreaterThanOrEqual(0);
         for (const s of r.stars) {
           for (const p of s.pairs.filter((q) => q.a === f.a && q.b === f.b)) {
@@ -107,6 +109,29 @@ describe.each(ALL)('readouts %s', (slug) => {
     it('throws NOT_FOUND when the index has no readouts entry', async () => {
       await expect(loadCachedReadouts(slug, { fetchFn: diskFetch })).rejects.toMatchObject({ code: 'NOT_FOUND' });
       await expect(loadCachedReadouts(slug, { fetchFn: diskFetch })).rejects.toBeInstanceOf(SpherexError);
+    });
+  });
+});
+
+describe('readouts by detector (v391-oph)', () => {
+  const idx = readIndex('v391-oph') as { readouts?: ReadoutsRef; readoutsByDetector?: Record<string, ReadoutsRef> } | null;
+  describe.skipIf(!idx?.readoutsByDetector)('present', () => {
+    it.each([1, 2, 4] as const)('loads detector %i', async (d) => {
+      const ref = idx!.readoutsByDetector![String(d)];
+      const r = await loadCachedReadouts('v391-oph', { fetchFn: diskFetch, detector: d });
+      expect(r.detector).toBe(d);
+      expect(ref.detector).toBe(d);
+      expect(readFileSync(join(CACHE_DIR, 'v391-oph', ref.file)).length).toBe(ref.bytes);
+      expect(ref.bytes).toBeLessThan(150 * 1024);
+      expect(r.stars.some((s) => s.id === '4472831551114789632')).toBe(true);
+    });
+    it('the default entry is detector 2 and loads without a detector argument', async () => {
+      expect(idx!.readouts!.detector).toBe(2);
+      expect(idx!.readouts).toEqual(idx!.readoutsByDetector!['2']);
+      expect((await loadCachedReadouts('v391-oph', { fetchFn: diskFetch })).detector).toBe(2);
+    });
+    it('throws NOT_FOUND for a detector without readouts', async () => {
+      await expect(loadCachedReadouts('v391-oph', { fetchFn: diskFetch, detector: 3 })).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });
 });

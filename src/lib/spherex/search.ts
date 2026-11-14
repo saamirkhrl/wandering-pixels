@@ -16,6 +16,37 @@ interface ExposuresResponse {
   partial?: string[];
 }
 
+interface CollectionsResponse {
+  collections?: Array<{ name?: string; required?: boolean }>;
+}
+
+interface CollectionResponse {
+  ok?: boolean;
+  exposures?: ExposureRow[];
+}
+
+export interface SearchStatus {
+  answered: number;
+  total: number;
+  pending: string[];
+  complete: boolean;
+}
+
+export interface FindExposuresOptions extends CallOptions {
+  // Called after findExposures has resolved, each time more archive collections answer, and once
+  // more at the end (complete true when all answered; complete false with `pending` listed when
+  // maxWaitMs ran out). `exposures` is the full merged list. visitIndex and inStack are re-derived
+  // over the merged list on every call, so visitIndex of an exposure can CHANGE between calls:
+  // callers must re-derive anything keyed by visitIndex (selected visit, pairs, caches).
+  onUpdate?: (exposures: Exposure[], status: SearchStatus) => void;
+  // Total time budget for retrying collections that did not answer. Default 60000.
+  maxWaitMs?: number;
+}
+
+export const SEARCH_MAX_WAIT_MS = 60000;
+export const SEARCH_BACKOFF_MS = [1000, 2000, 4000, 8000, 15000];
+const COLLECTION_TIMEOUT_MS = 15000;
+
 // When the relay reports collections it could not reach, wait a moment and ask once more. Partial
 // answers are served uncached, so the second call reaches the archive again. Extra time is bounded
 // by the delay plus the timeout.
@@ -147,14 +178,36 @@ export function rowsToExposures(rows: ExposureRow[]): Exposure[] {
   return assignVisits(sorted);
 }
 
-export async function findExposures(ra: number, dec: number, opts: CallOptions = {}): Promise<Exposure[]> {
-  if (!Number.isFinite(ra) || !Number.isFinite(dec)) {
-    throw new SpherexError('BAD_INPUT', 'ra and dec must be finite numbers');
+const collectionsMemo = new Map<string, string[]>();
+
+// Test hook: forget the memoised collection list.
+export function resetCollectionsCache(): void {
+  collectionsMemo.clear();
+}
+
+async function listCollections(signal: AbortSignal | undefined): Promise<string[] | null> {
+  const url = relayUrl('/api/exposures', { collections: 1 });
+  const hit = collectionsMemo.get(url);
+  if (hit) return hit;
+  try {
+    const body = await fetchJson<CollectionsResponse>(url, {
+      signal, stage: 'search', label: 'Collection list', retries: 1, timeoutMs: 10000,
+    });
+    const names = (body.collections ?? [])
+      .map((c) => c?.name)
+      .filter((n): n is string => typeof n === 'string' && n.length > 0);
+    if (names.length === 0) return null;
+    collectionsMemo.set(url, names);
+    return names;
+  } catch (e) {
+    if (signal?.aborted || (e instanceof SpherexError && (e.code === 'ABORTED' || e.code === 'BAD_INPUT'))) throw e;
+    return null;
   }
-  if (dec < -90 || dec > 90) throw new SpherexError('BAD_INPUT', 'dec must be within -90..90');
-  ra = ((ra % 360) + 360) % 360;
+}
+
+// Old single-request form, used when the relay cannot list its collections.
+async function findExposuresAllAtOnce(ra: number, dec: number, opts: FindExposuresOptions): Promise<Exposure[]> {
   const { signal, onProgress } = opts;
-  onProgress?.({ stage: 'search', done: 0, total: 0, message: 'Searching the SPHEREx archive' });
   const url = relayUrl('/api/exposures', { ra, dec });
   const body = await fetchJson<ExposuresResponse>(url, {
     signal, onProgress, stage: 'search', label: 'Exposure search',
@@ -185,4 +238,128 @@ export async function findExposures(ra: number, dec: number, opts: CallOptions =
     message: `Found ${out.length} exposures`,
   });
   return out;
+}
+
+// Searches every archive collection in parallel, one request each.
+//
+// Resolves as soon as the first round is over (every collection answered or failed once) and at
+// least one exposure arrived, with whatever arrived. Collections that failed keep being retried in
+// the background (backoff 1, 2, 4, 8, 15 s, total budget maxWaitMs, stopped by opts.signal) and
+// their rows are delivered through opts.onUpdate, which always fires one last time after
+// findExposures resolved (complete true, or complete false with the pending names).
+//
+// Rules when the first round brought no rows: if every collection answered with zero rows, throw
+// NO_COVERAGE. Otherwise keep retrying the pending collections until some row arrives or all have
+// answered, within maxWaitMs; if the time runs out first, throw UPSTREAM_BUSY (nothing arrived and
+// at least one collection never answered). Abort before resolving throws ABORTED; after resolving
+// the background work just stops (no more onUpdate calls).
+export async function findExposures(ra: number, dec: number, opts: FindExposuresOptions = {}): Promise<Exposure[]> {
+  if (!Number.isFinite(ra) || !Number.isFinite(dec)) {
+    throw new SpherexError('BAD_INPUT', 'ra and dec must be finite numbers');
+  }
+  if (dec < -90 || dec > 90) throw new SpherexError('BAD_INPUT', 'dec must be within -90..90');
+  ra = ((ra % 360) + 360) % 360;
+  const { signal, onProgress, onUpdate } = opts;
+  const maxWaitMs = opts.maxWaitMs ?? SEARCH_MAX_WAIT_MS;
+  onProgress?.({ stage: 'search', done: 0, total: 0, message: 'Searching the SPHEREx archive' });
+
+  const names = await listCollections(signal);
+  if (!names) {
+    const out = await findExposuresAllAtOnce(ra, dec, opts);
+    if (onUpdate) {
+      setTimeout(() => {
+        if (!signal?.aborted) onUpdate(out, { answered: 1, total: 1, pending: [], complete: true });
+      }, 0);
+    }
+    return out;
+  }
+
+  const started = Date.now();
+  const total = names.length;
+  const rowsBy = new Map<string, ExposureRow[]>();
+  let rowCount = 0;
+  const pendingNames = (): string[] => names.filter((n) => !rowsBy.has(n));
+  const status = (complete: boolean): SearchStatus => ({
+    answered: rowsBy.size, total, pending: pendingNames(), complete,
+  });
+  const merged = (): Exposure[] => rowsToExposures([...rowsBy.values()].flat());
+  const progress = (message: string): void =>
+    onProgress?.({ stage: 'search', done: rowsBy.size, total, message });
+
+  const round = async (todo: string[]): Promise<void> => {
+    await Promise.all(todo.map(async (name) => {
+      try {
+        const body = await fetchJson<CollectionResponse>(
+          relayUrl('/api/exposures', { ra, dec, collection: name }),
+          { signal, stage: 'search', label: `Exposure search (${name})`, retries: 0, timeoutMs: COLLECTION_TIMEOUT_MS },
+        );
+        if (body.ok === false) return;
+        const rows = body.exposures ?? [];
+        rowsBy.set(name, rows);
+        rowCount += rows.length;
+      } catch (e) {
+        if (signal?.aborted || (e instanceof SpherexError && (e.code === 'ABORTED' || e.code === 'BAD_INPUT'))) throw e;
+        // network error or upstream failure: exhausted for this round
+      }
+    }));
+  };
+
+  let attempt = 0;
+  const waitBackoff = async (): Promise<boolean> => {
+    const remaining = maxWaitMs - (Date.now() - started);
+    if (remaining <= 0) return false;
+    const delay = Math.min(SEARCH_BACKOFF_MS[Math.min(attempt, SEARCH_BACKOFF_MS.length - 1)], remaining);
+    attempt++;
+    await sleep(delay, signal);
+    return true;
+  };
+
+  await round(names);
+  progress(rowsBy.size === total ? 'All archive collections answered' : `${rowsBy.size} of ${total} archive collections answered; still asking the rest`);
+  while (rowCount === 0 && rowsBy.size < total) {
+    if (!(await waitBackoff())) break;
+    await round(pendingNames());
+    progress(`${rowsBy.size} of ${total} archive collections answered; still asking the rest`);
+  }
+  if (rowCount === 0) {
+    if (rowsBy.size === total) {
+      throw new SpherexError('NO_COVERAGE', 'No SPHEREx exposures cover this position');
+    }
+    throw new SpherexError('UPSTREAM_BUSY', 'The SPHEREx archive did not answer; try again in a moment');
+  }
+
+  const first = merged();
+  progress(rowsBy.size === total
+    ? `Found ${first.length} exposures`
+    : `${rowsBy.size} of ${total} archive collections answered; still asking the rest`);
+
+  const background = async (): Promise<void> => {
+    let sent = rowCount;
+    try {
+      while (rowsBy.size < total) {
+        if (!(await waitBackoff())) break;
+        await round(pendingNames());
+        if (signal?.aborted) return;
+        if (rowsBy.size === total) break;
+        if (rowCount !== sent) {
+          sent = rowCount;
+          const m = merged();
+          progress(`${rowsBy.size} of ${total} archive collections answered; still asking the rest`);
+          onUpdate?.(m, status(false));
+        }
+      }
+    } catch {
+      return; // aborted or unexpected: stop quietly, the caller already has a result
+    }
+    if (signal?.aborted) return;
+    const m = merged();
+    const complete = rowsBy.size === total;
+    progress(complete
+      ? `Found ${m.length} exposures`
+      : `Found ${m.length} exposures; ${total - rowsBy.size} archive collections did not answer`);
+    onUpdate?.(m, status(complete));
+  };
+  // Start after the caller's await has had a chance to run, so the result is always seen first.
+  setTimeout(() => void background(), 0);
+  return first;
 }

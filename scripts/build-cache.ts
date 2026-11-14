@@ -34,9 +34,14 @@ import { gaiaUrl, parseGaia, wiseUrl, parseWise } from '../api/_lib/upstreams.js
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'public', 'cache');
 const MAX_FRAMES = 300;
+// Per-target caps (default MAX_FRAMES) and the detectors that keep a larger per-visit minimum.
+const CAP_BY_SLUG: Record<string, number> = { 'v391-oph': 200 };
+const GUARANTEE_BY_SLUG: Record<string, { detectors: number[]; perVisit: number }> = {
+  'v391-oph': { detectors: [1, 2, 4], perVisit: 12 },
+};
 const MIN_COVERAGE = 0.5;
 const BUDGET_BYTES = 30 * 1024 * 1024;
-const SLUGS: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra'];
+const SLUGS: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra', 'v391-oph'];
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -150,6 +155,7 @@ export const cellKey = (e: Exposure): string => `${String(e.visitIndex).padStart
 // remaining candidates of each cell, best margin first, stay in `pool` for top-ups. Deterministic.
 export function select(
   exposures: Exposure[], margin: (e: Exposure) => number, max = MAX_FRAMES,
+  guarantee?: { detectors: number[]; perVisit: number },
 ): { picked: Exposure[]; cells: Cell[]; mode: 'all' | 'even-300' } {
   const bad = exposures.filter((e) => e.inStack === false);
   const main = exposures.filter((e) => e.inStack !== false);
@@ -167,7 +173,12 @@ export function select(
     return { picked: exposures, cells: cells.map((c) => ({ ...c, q: c.es.length })), mode: 'all' };
   }
   let used = 0;
-  for (const c of cells) { c.q = Math.min(c.es.length, MIN_PER_CELL); used += c.q; }
+  for (const c of cells) {
+    const det = Number(c.key.split('|')[1]);
+    const floor = guarantee && guarantee.detectors.includes(det) ? Math.max(MIN_PER_CELL, guarantee.perVisit) : MIN_PER_CELL;
+    c.q = Math.min(c.es.length, floor);
+    used += c.q;
+  }
   if (used > max) throw new Error(`minimum per cell (${used}) exceeds the cap ${max}`);
   let remaining = max - used;
   const bySize = [...cells].sort((a, b) => (a.es.length - a.q) - (b.es.length - b.q) || (a.key < b.key ? -1 : 1));
@@ -295,7 +306,9 @@ async function buildOne(slug: CachedSlug): Promise<Summary> {
     marginMap.set(e.id, edgeMargin(poly, p.ra, p.dec));
   }
   const withRegion = exposures.filter((e) => Number.isFinite(marginMap.get(e.id))).length;
-  const { picked, cells, mode } = select(exposures, (e) => marginMap.get(e.id) ?? NaN);
+  const { picked, cells, mode } = select(
+    exposures, (e) => marginMap.get(e.id) ?? NaN, CAP_BY_SLUG[slug] ?? MAX_FRAMES, GUARANTEE_BY_SLUG[slug],
+  );
   // Grid centre is evaluated at the mean time of ALL exposures found, so it does not depend on selection.
   const grid = makeGrid(target, exposures);
   console.log(`  exposures found ${exposures.length} (${withRegion} with s_region), selected ${picked.length} (${mode}), cells ${cells.length}, grid ${grid.w}x${grid.h}`);

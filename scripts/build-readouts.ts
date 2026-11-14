@@ -51,7 +51,12 @@ import { COLLECTIONS, buildSiaUrl, parseVotable, queryStatus, rowsToExposures as
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = join(ROOT, 'public', 'cache');
-const SLUGS: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra'];
+const SLUGS: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra', 'v391-oph'];
+// Targets that get one readouts file per listed detector (the first is the index default and also
+// goes in `readouts`; all go in `readoutsByDetector`). Other targets: the default detector only.
+const DETECTORS: Partial<Record<CachedSlug, number[]>> = { 'v391-oph': [2, 1, 4] };
+// Gaia DR3 ids that are always measured (when inside the grid), even when not among the brightest MAX_GAIA.
+const ALWAYS_INCLUDE: Partial<Record<CachedSlug, string[]>> = { 'v391-oph': ['4472831551114789632'] };
 
 const HALF = 8;                 // stamp half size: 17 x 17 as in docs/algorithm.md
 const BIG_HALF = 50;            // MAX_HALF of native.ts
@@ -141,7 +146,7 @@ function sepArcsec(ra1: number, dec1: number, ra2: number, dec2: number): number
   return Math.hypot((ra1 - ra2) * c, dec1 - dec2) * 3600;
 }
 
-function pickStars(target: Target, grid: Grid, gaia: GaiaStar[]): Star[] {
+function pickStars(target: Target, grid: Grid, gaia: GaiaStar[], always: readonly string[] = []): Star[] {
   // The Gaia entry that is the target: nearest within TARGET_MATCH_ARCSEC of the target's position at 2016.0.
   const tAt = positionAt(target, 57388.0); // MJD of J2016.0 (2016-01-01 12:00 TT is 57388.0)
   let ti = -1;
@@ -164,7 +169,10 @@ function pickStars(target: Target, grid: Grid, gaia: GaiaStar[]): Star[] {
     cand.push({ id: s.sourceId, isTarget: false, ra: s.ra, dec: s.dec, gmag: s.gmag, target: t, gaiaIndex: i });
   });
   cand.sort((a, b) => a.gmag - b.gmag);
-  return out.concat(cand.slice(0, MAX_GAIA));
+  const keep = cand.filter((c) => always.includes(c.id));
+  for (const id of always) if (!keep.some((c) => c.id === id)) console.warn(`  WARNING always-include star ${id} is not inside the grid or not in the Gaia list`);
+  const rest = cand.filter((c) => !always.includes(c.id)).slice(0, MAX_GAIA - keep.length);
+  return out.concat([...keep, ...rest].sort((a, b) => a.gmag - b.gmag));
 }
 
 // ---- stamps -----------------------------------------------------------------------------------
@@ -288,7 +296,7 @@ function mid(es: Exposure[]): number {
   return (lo + hi) / 2;
 }
 
-async function buildOne(slug: CachedSlug): Promise<Summary> {
+async function buildOne(slug: CachedSlug, detectorArg?: number): Promise<Summary> {
   const t0 = Date.now();
   const bytes0 = bytesTransferred();
   const entry = CHALLENGE_TARGETS.find((x) => x.slug === slug);
@@ -300,11 +308,11 @@ async function buildOne(slug: CachedSlug): Promise<Summary> {
   const indexPath = join(CACHE, slug, 'index.json');
   const indexRaw = readFileSync(indexPath, 'utf8');
   const index = JSON.parse(indexRaw) as { defaultDetector: number; grid: Grid; readouts?: ReadoutsRef };
-  const detector = index.defaultDetector;
+  const detector = detectorArg ?? index.defaultDetector;
   const grid = index.grid;
 
   const { gaia } = await loadCachedStars(slug, { baseUrl: '/cache/', fetchFn: diskFetch() });
-  const stars = pickStars(target, grid, gaia);
+  const stars = pickStars(target, grid, gaia, ALWAYS_INCLUDE[slug]);
   console.log(`  detector ${detector}, gaia list ${gaia.length}, stars ${stars.length} (target + ${stars.length - 1} Gaia, G >= ${SATURATION_G})`);
 
   const found = await findAll(target.ra, target.dec);
@@ -403,32 +411,46 @@ async function buildOne(slug: CachedSlug): Promise<Summary> {
   writeFileSync(tmp, body);
   renameSync(tmp, join(dir, file));
 
-  // index.json: parse, set one key, stringify with the file's own indentation
-  const parsed = JSON.parse(indexRaw) as Record<string, unknown>;
-  const indent = /^\{\s*\n( +)"/.exec(indexRaw)?.[1].length ?? 0;
-  const trailing = indexRaw.endsWith('\n') ? '\n' : '';
-  const reStr = JSON.stringify(parsed, null, indent || undefined) + trailing;
-  if (reStr !== indexRaw && !('readouts' in parsed)) console.warn('  WARNING index.json does not round-trip byte for byte; rewriting in canonical form');
-  const ref: ReadoutsRef = { file, bytes: body.length, detector: detector as ReadoutsRef['detector'], count: results };
-  parsed.readouts = ref;
-  const idxTmp = join(dir, 'index.json.tmp');
-  writeFileSync(idxTmp, JSON.stringify(parsed, null, indent || undefined) + trailing);
-  renameSync(idxTmp, indexPath);
-  for (const name of readdirSync(dir)) {
-    if (/^readouts\..*\.json$/.test(name) && name !== file) unlinkSync(join(dir, name));
-  }
+  commitIndex(slug, detector, file, body.length, results, indexRaw, index.defaultDetector);
   if (body.length > BUDGET_BYTES) console.warn(`  OVER BUDGET: ${body.length} bytes > ${BUDGET_BYTES}`);
 
   const samples = process.env.WP_SAMPLES_DIR ?? resolve(ROOT, '..', 'research', 'samples');
   mkdirSync(join(samples, 'readouts'), { recursive: true });
-  writeFileSync(join(samples, 'readouts', `${slug}.json`), JSON.stringify({ slug, detector, visits: vInfo, stars: full }, (_k, v) => (typeof v === 'number' && !Number.isFinite(v) ? null : v)));
+  writeFileSync(join(samples, 'readouts', samplesName(slug, detector, index.defaultDetector)), JSON.stringify({ slug, detector, visits: vInfo, stars: full }, (_k, v) => (typeof v === 'number' && !Number.isFinite(v) ? null : v)));
 
   const s: Summary = {
     slug, detector, stars: stars.length, visits: visitLabel, pairs: visits.length * (visits.length - 1) / 2, results, verdicts,
     bytes: bytesTransferred() - bytes0, seconds: (Date.now() - t0) / 1000, outBytes: body.length, targetRows, counters, exposures: toRead.length,
   };
   console.log(`  wrote ${file} (${body.length} bytes)`);
+  report(slug, file, body.length, trimmed, fieldPairs);
   return s;
+}
+
+/** Saved full results file: <slug>.json for the default detector, <slug>.d<N>.json for the others. */
+function samplesName(slug: string, detector: number, defaultDetector: number): string {
+  return detector === defaultDetector ? `${slug}.json` : `${slug}.d${detector}.json`;
+}
+
+/**
+ * index.json: parse, set the readouts keys, stringify with the file's own indentation. The default
+ * detector goes in `readouts`; a target with several detectors also gets `readoutsByDetector`.
+ * Older readouts files of the same detector are deleted, other detectors' files are kept.
+ */
+function commitIndex(slug: CachedSlug, detector: number, file: string, bytes: number, count: number, indexRaw: string, defaultDetector: number): void {
+  const dir = join(CACHE, slug);
+  const parsed = JSON.parse(indexRaw) as Record<string, any>;
+  const indent = /^\{\s*\n( +)"/.exec(indexRaw)?.[1].length ?? 0;
+  const trailing = indexRaw.endsWith('\n') ? '\n' : '';
+  const ref: ReadoutsRef = { file, bytes, detector: detector as ReadoutsRef['detector'], count };
+  if (detector === defaultDetector) parsed.readouts = ref;
+  if (DETECTORS[slug]) parsed.readoutsByDetector = { ...(parsed.readoutsByDetector ?? {}), [String(detector)]: ref };
+  const idxTmp = join(dir, 'index.json.tmp');
+  writeFileSync(idxTmp, JSON.stringify(parsed, null, indent || undefined) + trailing);
+  renameSync(idxTmp, join(dir, 'index.json'));
+  for (const name of readdirSync(dir)) {
+    if (new RegExp(`^readouts\\.d${detector}\\..*\\.json$`).test(name) && name !== file) unlinkSync(join(dir, name));
+  }
 }
 
 // ---- rebuild from the saved full results ------------------------------------------------------
@@ -472,11 +494,32 @@ function reviveResult(r: Record<string, any>): MatchedResult {
   } as unknown as MatchedResult;
 }
 
+function report(slug: string, file: string, size: number, stars: StarReadout[], fieldPairs: CachedReadouts['fieldPairs']): void {
+  const rate = (rs: PairReadout[]): string => `${rs.filter((r) => r.verdict === 'changed').length}/${rs.length}`;
+  const tgt = stars[0];
+  console.log(`\n== ${slug} == ${file} ${size} bytes, ${stars.reduce((n, x) => n + x.pairs.length, 0)} results`);
+  for (const p of tgt.pairs) {
+    console.log(`  target ${p.a}->${p.b}: "${p.verdict}" z=${p.z} reliable=${p.reliable ? 'yes' : 'no'} [${p.unreliableReasons.join(', ')}]`);
+  }
+  for (const f of fieldPairs) console.log(`  field ${f.a}->${f.b}: changed fraction ${f.fieldChangedFraction} (nField ${f.nField}) fieldReliable=${f.fieldReliable}`);
+  const all = stars.flatMap((s) => s.pairs);
+  const rel = all.filter((p) => p.reliable);
+  const isVar = new Map(stars.map((st) => [st, st.variable === true]));
+  const relNoVar = stars.filter((st) => !isVar.get(st)).flatMap((st) => st.pairs.filter((p) => p.reliable));
+  console.log(`  results ${all.length}, reliable ${rel.length}; changed among reliable ${rate(rel)} (incl. variables), ${rate(relNoVar)} (excl. catalogued variables); variables ${stars.filter((st) => st.variable === true).length}, unknown ${stars.filter((st) => st.variable === null).length}`);
+  for (const f of fieldPairs) {
+    const r = rel.filter((p) => p.a === f.a && p.b === f.b);
+    console.log(`    pair ${f.a}->${f.b}: reliable ${r.length}, changed ${rate(r)}`);
+  }
+  console.log(`  stars with brightNeighbour: ${stars.filter((s) => s.brightNeighbour).length}/${stars.length}; stars with any reliable result: ${stars.filter((s) => s.pairs.some((p) => p.reliable)).length}`);
+}
+
 interface Rebuilt { slug: string; file: string; bytes: number; count: number; note: string[] }
 
-async function rebuildOne(slug: CachedSlug): Promise<Rebuilt> {
+async function rebuildOne(slug: CachedSlug, detectorArg?: number): Promise<Rebuilt> {
   const samples = process.env.WP_SAMPLES_DIR ?? resolve(ROOT, '..', 'research', 'samples');
-  const full = JSON.parse(readFileSync(join(samples, 'readouts', `${slug}.json`), 'utf8')) as {
+  const defDet = (JSON.parse(readFileSync(join(CACHE, slug, 'index.json'), 'utf8')) as { defaultDetector: number }).defaultDetector;
+  const full = JSON.parse(readFileSync(join(samples, 'readouts', samplesName(slug, detectorArg ?? defDet, defDet)), 'utf8')) as {
     detector: number; visits: CachedReadouts['visits']; stars: { star: { id: string; isTarget: boolean; ra: number; dec: number; gmag: number | null }; blended: boolean; pairs: { a: number; b: number; result: Record<string, any> }[] }[];
   };
   const note: string[] = [];
@@ -511,37 +554,11 @@ async function rebuildOne(slug: CachedSlug): Promise<Rebuilt> {
   const tmp = join(dir, `${file}.tmp`);
   writeFileSync(tmp, body);
   renameSync(tmp, join(dir, file));
-  const parsed = JSON.parse(indexRaw) as Record<string, unknown>;
-  const indent = /^\{\s*\n( +)"/.exec(indexRaw)?.[1].length ?? 0;
-  const trailing = indexRaw.endsWith('\n') ? '\n' : '';
   const count = stars.reduce((n, s) => n + s.pairs.length, 0);
-  parsed.readouts = { file, bytes: body.length, detector, count } satisfies ReadoutsRef;
-  const idxTmp = join(dir, 'index.json.tmp');
-  writeFileSync(idxTmp, JSON.stringify(parsed, null, indent || undefined) + trailing);
-  renameSync(idxTmp, indexPath);
-  for (const name of readdirSync(dir)) {
-    if (/^readouts\..*\.json$/.test(name) && name !== file) unlinkSync(join(dir, name));
-  }
+  commitIndex(slug, detector, file, body.length, count, indexRaw, defDet);
   if (body.length > BUDGET_BYTES) note.push(`OVER BUDGET: ${body.length} bytes > ${BUDGET_BYTES}`);
 
-  // report
-  const rate = (rs: PairReadout[]): string => `${rs.filter((r) => r.verdict === 'changed').length}/${rs.length}`;
-  const tgt = stars[0];
-  console.log(`\n== ${slug} == ${file} ${body.length} bytes, ${count} results`);
-  for (const p of tgt.pairs) {
-    console.log(`  target ${p.a}->${p.b}: "${p.verdict}" z=${p.z} reliable=${p.reliable ? 'yes' : 'no'} [${p.unreliableReasons.join(', ')}]`);
-  }
-  for (const f of fieldPairs) console.log(`  field ${f.a}->${f.b}: changed fraction ${f.fieldChangedFraction} (nField ${f.nField}) fieldReliable=${f.fieldReliable}`);
-  const all = stars.flatMap((s) => s.pairs);
-  const rel = all.filter((p) => p.reliable);
-  const isVar = new Map(stars.map((st) => [st, st.variable === true]));
-  const relNoVar = stars.filter((st) => !isVar.get(st)).flatMap((st) => st.pairs.filter((p) => p.reliable));
-  console.log(`  results ${all.length}, reliable ${rel.length}; changed among reliable ${rate(rel)} (incl. variables), ${rate(relNoVar)} (excl. catalogued variables); variables ${stars.filter((st) => st.variable === true).length}, unknown ${stars.filter((st) => st.variable === null).length}`);
-  for (const f of fieldPairs) {
-    const r = rel.filter((p) => p.a === f.a && p.b === f.b);
-    console.log(`    pair ${f.a}->${f.b}: reliable ${r.length}, changed ${rate(r)}`);
-  }
-  console.log(`  stars with brightNeighbour: ${stars.filter((s) => s.brightNeighbour).length}/${stars.length}; stars with any reliable result: ${stars.filter((s) => s.pairs.some((p) => p.reliable)).length}`);
+  report(slug, file, body.length, stars, fieldPairs);
   for (const n of note) console.log(`  NOTE ${n}`);
   return { slug, file, bytes: body.length, count, note };
 }
@@ -647,7 +664,7 @@ async function main(): Promise<void> {
   if (args.includes('--rebuild')) {
     const list = arg === 'all' ? SLUGS : SLUGS.filter((x) => x === arg);
     if (list.length === 0) { console.error('usage: --rebuild <slug|all>'); process.exit(2); }
-    for (const slug of list) await rebuildOne(slug);
+    for (const slug of list) for (const d of DETECTORS[slug] ?? [undefined]) await rebuildOne(slug, d);
     process.exit(0);
   }
   if (!arg) {
@@ -664,7 +681,7 @@ async function main(): Promise<void> {
   let code = 0;
   for (const slug of todo) {
     try {
-      sums.push(await buildOne(slug));
+      for (const d of DETECTORS[slug] ?? [undefined]) sums.push(await buildOne(slug, d));
     } catch (e) {
       code = 1;
       console.error(`ERROR ${slug}: ${e instanceof Error ? e.stack ?? e.message : String(e)}`);

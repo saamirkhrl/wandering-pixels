@@ -16,6 +16,18 @@ describe('gaiaCone', () => {
     expect(out[0].gmag).toBe(8.2);
     expect(String(f.mock.calls[0][0])).toContain('radius=900');
   });
+  it('passes variable through and leaves it undefined when absent', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      stars: [
+        { source_id: '1', ra: 1, dec: 2, pmra: null, pmdec: null, parallax: null, phot_g_mean_mag: 9, variable: true },
+        { source_id: '2', ra: 1, dec: 2, pmra: null, pmdec: null, parallax: null, phot_g_mean_mag: 9, variable: false },
+        { source_id: '3', ra: 1, dec: 2, pmra: null, pmdec: null, parallax: null, phot_g_mean_mag: 9, variable: null },
+        { source_id: '4', ra: 1, dec: 2, pmra: null, pmdec: null, parallax: null, phot_g_mean_mag: 9 },
+      ],
+    }), { status: 200 })));
+    const out = await gaiaCone(1, 2, 60);
+    expect(out.map((s) => s.variable)).toEqual([true, false, null, undefined]);
+  });
   it('rejects non-positive radius', async () => {
     await expect(gaiaCone(1, 2, 0)).rejects.toMatchObject({ code: 'BAD_INPUT' });
   });

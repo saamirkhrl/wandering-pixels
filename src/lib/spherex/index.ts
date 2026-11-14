@@ -2,6 +2,7 @@
 export * from './types';
 export { resolveTarget } from './resolve';
 export { findExposures } from './search';
+export type { SearchStatus } from './search';
 export { gaiaCone } from './gaia';
 export { wiseCone } from './wise';
 export type { WiseSource } from './wise';
@@ -27,4 +28,5 @@ export { compareVisits, isBlended, MIN_VISIT_EXPOSURES, Z_CHANGED } from './matc
 export type { MatchedExposure, MatchedResult, MatchedFlag, Verdict, CompareOptions, WavelengthComparison, PairedStack } from './matched';
 export { matchCachedTarget } from './resolve';
 export { loadCachedReadouts, READOUTS_FORMAT } from './readouts';
-export type { CachedReadouts, StarReadout, PairReadout, ReadoutVisit, WavelengthReadout, CombinedReadout, PairedStackReadout, ReadoutsRef, LoadReadoutsOptions } from './readouts';
+export { readoutReliability, hasBrightNeighbour, applyReliability, fieldPairsOf, BRIGHT_NEIGHBOUR_GMAG, BRIGHT_NEIGHBOUR_ARCSEC, FIELD_CHANGED_LIMIT } from './readouts';
+export type { CachedReadouts, StarReadout, PairReadout, ReadoutVisit, WavelengthReadout, CombinedReadout, PairedStackReadout, FieldPairReadout, GaiaNeighbour, ReliabilityContext, ReliabilityResult, UnreliableReason, ReadoutsRef, LoadReadoutsOptions } from './readouts';

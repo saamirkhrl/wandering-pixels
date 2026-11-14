@@ -27,6 +27,17 @@ export function json(body, status = 200, cacheSeconds = 0) {
   });
 }
 
+/**
+ * 200 JSON response with an explicit Cache-Control value.
+ * @param {unknown} body @param {string} cacheControl
+ */
+export function jsonCached(body, cacheControl) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { ...BASE_HEADERS, 'Cache-Control': cacheControl },
+  });
+}
+
 /** @param {ErrorCode} code @param {string} message @param {number} status */
 export function errorJson(code, message, status) {
   return json({ error: { code, message } }, status);

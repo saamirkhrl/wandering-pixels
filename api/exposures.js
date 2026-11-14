@@ -1,6 +1,10 @@
-// GET /api/exposures?ra=&dec= : SPHEREx Level 2 exposures covering a sky position (IRSA SIA2 relay).
-import { handler, numberParam, fetchUpstream, json, options, RelayError } from './_lib/http.js';
-import { COLLECTIONS, buildSiaUrl, parseVotable, queryStatus, rowsToExposures, dedupe } from './_lib/sia.js';
+// GET /api/exposures : SPHEREx Level 2 exposures covering a sky position (IRSA SIA2 relay).
+//   ?collections=1                    list of collections
+//   ?ra=&dec=&collection=<name>       one collection (handled failure is a 200 with ok:false)
+//   ?ra=&dec=                         all collections merged (older form)
+import { handler, numberParam, json, jsonCached, options, RelayError } from './_lib/http.js';
+import { COLLECTIONS, dedupe } from './_lib/sia.js';
+import { queryOneCollection } from './_lib/sia-query.js';
 
 const CACHE_SECONDS = 21600;
 
@@ -8,62 +12,55 @@ const TOTAL_BUDGET_MS = 25000;
 // Optional collections (qr2, the deep ones) answer in under a second when healthy, so they get a
 // short budget and never hold up the response.
 const OPTIONAL_BUDGET_MS = 9000;
-// IRSA's front end often answers 502 within 0.3 s and succeeds on the next try, so retry quickly.
-const MAX_ATTEMPTS = 6;
+// A single-collection request retries quickly inside this total budget.
+const SINGLE_BUDGET_MS = 8000;
 // Once one required collection has answered, the other gets this long to follow before the
 // response is sent without it (listed in `partial`). Keeps a flaky collection from costing 25 s.
 const GRACE_MS = 10000;
-const BACKOFF_MS = 300;
 
-/** One fetch plus body read; the body read can fail separately from the headers. */
-async function fetchOnce(collection, ra, dec, deadline, signal) {
-  const res = await fetchUpstream(buildSiaUrl(collection, ra, dec, 5000), {
-    init: { headers: { Accept: 'application/x-votable+xml, text/xml' } },
-    attemptTimeoutMs: 15000,
-    maxAttempts: MAX_ATTEMPTS,
-    backoffMs: BACKOFF_MS,
-    signal,
-    budgetMs: Math.max(deadline - Date.now(), 1000),
-  });
-  if (res.status !== 200) {
-    await res.body?.cancel();
-    throw new RelayError('UPSTREAM_ERROR', `${collection} returned HTTP ${res.status}`, 502);
-  }
-  return res.text();
-}
+const LIST_CACHE = 'public, s-maxage=86400, max-age=86400';
+const SINGLE_CACHE = 'public, s-maxage=86400, max-age=3600';
 
-/** @param {string} collection @param {number} ra @param {number} dec @param {number} budgetMs @param {AbortSignal} signal */
-async function queryCollection(collection, ra, dec, budgetMs, signal) {
-  const deadline = Date.now() + budgetMs;
-  let xml = '';
-  for (let attempt = 0; ; attempt++) {
-    try {
-      xml = await fetchOnce(collection, ra, dec, deadline, signal);
-      break;
-    } catch (e) {
-      // RelayErrors already went through retries; a stalled body read gets one more try.
-      if (e instanceof RelayError) throw e;
-      if (signal.aborted || attempt >= 1 || deadline - Date.now() < 4000) {
-        throw new RelayError('UPSTREAM_ERROR', `${collection} response could not be read`, 502);
-      }
-    }
-  }
-  if (queryStatus(xml) === 'ERROR') {
-    throw new RelayError('UPSTREAM_ERROR', `${collection} reported a query error`, 502);
-  }
-  return rowsToExposures(parseVotable(xml));
-}
-
-const run = handler(async (url) => {
+function readPosition(url) {
   const ra = numberParam(url.searchParams, 'ra', 0, 360);
   if (ra >= 360) throw new RelayError('BAD_INPUT', 'parameter ra must be between 0 and 360', 400);
   const dec = numberParam(url.searchParams, 'dec', -90, 90);
+  return { ra, dec };
+}
+
+async function singleCollection(url, name) {
+  if (!COLLECTIONS.some((c) => c.name === name)) {
+    throw new RelayError('BAD_INPUT', 'unknown collection', 400);
+  }
+  const { ra, dec } = readPosition(url);
+  try {
+    const rows = await queryOneCollection(name, ra, dec, SINGLE_BUDGET_MS);
+    const exposures = dedupe(rows);
+    return jsonCached(
+      { ok: true, collection: name, ra: Number(ra.toFixed(6)), dec: Number(dec.toFixed(6)), count: exposures.length, exposures },
+      SINGLE_CACHE,
+    );
+  } catch (e) {
+    // A handled state, not a server error: the client retries this collection later.
+    const message = e instanceof RelayError ? e.message : 'upstream failed';
+    return json({ ok: false, collection: name, retryable: true, message }, 200, 0);
+  }
+}
+
+const run = handler(async (url) => {
+  if (url.searchParams.get('collections') === '1') {
+    return jsonCached({ collections: COLLECTIONS.map((c) => ({ name: c.name, required: c.required })) }, LIST_CACHE);
+  }
+  const wanted = url.searchParams.get('collection');
+  if (wanted !== null) return singleCollection(url, wanted);
+
+  const { ra, dec } = readPosition(url);
 
   const stop = new AbortController();
   let graceTimer = null;
   const settled = await Promise.allSettled(
     COLLECTIONS.map((c) =>
-      queryCollection(c.name, ra, dec, c.required ? TOTAL_BUDGET_MS : OPTIONAL_BUDGET_MS, stop.signal).then((v) => {
+      queryOneCollection(c.name, ra, dec, c.required ? TOTAL_BUDGET_MS : OPTIONAL_BUDGET_MS, stop.signal).then((v) => {
         if (c.required && !graceTimer) graceTimer = setTimeout(() => stop.abort(), GRACE_MS);
         return v;
       }),

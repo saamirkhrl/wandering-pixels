@@ -789,7 +789,8 @@ const CACHED: { slug: CachedSlug; name: string; blurb: string }[] = [
   { slug: 'eps-indi-b', name: 'Epsilon Indi B', blurb: 'Nearby pair of brown dwarfs (Ba and Bb, unresolved here) that is clearly visible and moves between visits.' },
   { slug: 'wise-0855', name: 'WISE 0855-0714', blurb: 'This very cold brown dwarf is too faint for single SPHEREx images and is not detected here; the faint source at the marker is a background star (Gaia DR3 5756956644387831296).' },
   { slug: 'rw-aur', name: 'RW Aurigae', blurb: 'Young variable star whose brightness changes between visits; it is not a fast mover.' },
-  { slug: 'r-dra', name: 'R Draconis', blurb: 'Bright, saturated variable star in the continuously observed north deep field; 300 of about 2500 exposures are cached.' },
+  { slug: 'r-dra', name: 'R Draconis', blurb: 'R Draconis is a bright variable star in the continuously observed north deep field, and 300 of about 2500 exposures are cached. R Draconis itself is saturated, but nearby stars appear to brighten and fade together between visits, most strongly close to it, as its glow changes.' },
+  { slug: 'v391-oph', name: 'V391 Ophiuchi', blurb: 'An eclipsing binary star near Barnard\'s Star on the sky whose brightness differs between visits because some exposures caught an eclipse; the change is within a visit, not a trend.' },
 ];
 
 export function listCached(): { slug: CachedSlug; name: string; blurb: string }[] {

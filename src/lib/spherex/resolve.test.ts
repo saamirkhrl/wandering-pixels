@@ -129,6 +129,7 @@ describe('built-in table', () => {
     'wise-0855': ['WISE 0855-0714', 'WISE J085510.83-071442.5', 'wise-0855', 'wise 0855', 'wise j0855-0714'],
     'rw-aur': ['RW Aur', 'RW Aurigae', 'rw-aur', 'rw aur'],
     'r-dra': ['R Dra', 'R Draconis', 'r-dra', 'r dra'],
+    'v391-oph': ['V391 Oph', 'V391 Ophiuchi', 'v391-oph', 'Gaia DR3 4472819623984651392', 'gaia dr3 4472819623984651392'],
   };
 
   it('every alias resolves offline', async () => {
@@ -150,9 +151,9 @@ describe('built-in table', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('has five entries with sane values', () => {
+  it('has six entries with sane values', () => {
     expect(CHALLENGE_TARGETS.map((e) => e.slug).sort()).toEqual(
-      ['barnards-star', 'eps-indi-b', 'r-dra', 'rw-aur', 'wise-0855'],
+      ['barnards-star', 'eps-indi-b', 'r-dra', 'rw-aur', 'v391-oph', 'wise-0855'],
     );
     for (const e of CHALLENGE_TARGETS) {
       expect(e.ra).toBeGreaterThanOrEqual(0);
@@ -163,6 +164,16 @@ describe('built-in table', () => {
     const wise = CHALLENGE_TARGETS.find((e) => e.slug === 'wise-0855')!;
     expect(wise.pmra).toBeLessThan(-8000);
     expect(wise.source).toBe('simbad');
+  });
+
+  it('matches V391 Oph by position and keeps Barnard apart', () => {
+    const v = CHALLENGE_TARGETS.find((e) => e.slug === 'v391-oph')!;
+    const mjd = 61000;
+    expect(matchCachedTarget(v.ra, v.dec, mjd)?.cachedSlug).toBe('v391-oph');
+    expect(matchCachedTarget(v.ra + 30 / 3600 / Math.cos(v.dec * Math.PI / 180), v.dec, mjd)?.cachedSlug).toBe('v391-oph');
+    expect(matchCachedTarget(v.ra + 120 / 3600, v.dec, mjd)).toBeNull();
+    const b = CHALLENGE_TARGETS.find((e) => e.slug === 'barnards-star')!;
+    expect(matchCachedTarget(b.ra, b.dec, mjd)?.cachedSlug).toBe('barnards-star');
   });
 
   it('slugForName returns null for other names', () => {

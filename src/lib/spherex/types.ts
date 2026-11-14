@@ -135,9 +135,10 @@ export interface GaiaStar {
   pmra: number | null; pmdec: number | null;
   parallax: number | null;
   gmag: number;
+  variable?: boolean | null;         // Gaia DR3 phot_variable_flag: true only for VARIABLE; null when not reported
 }
 
-export type CachedSlug = 'barnards-star' | 'eps-indi-b' | 'wise-0855' | 'rw-aur' | 'r-dra';
+export type CachedSlug = 'barnards-star' | 'eps-indi-b' | 'wise-0855' | 'rw-aur' | 'r-dra' | 'v391-oph';
 
 export interface CachedTarget {
   slug: CachedSlug;

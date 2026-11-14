@@ -340,9 +340,9 @@ describe('format 2', () => {
 });
 
 describe('listCached', () => {
-  it('lists the five targets', () => {
+  it('lists the six targets', () => {
     const l = listCached();
-    expect(l.map((x) => x.slug)).toEqual(['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra']);
+    expect(l.map((x) => x.slug)).toEqual(['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra', 'v391-oph']);
     for (const x of l) { expect(x.name.length).toBeGreaterThan(0); expect(x.blurb).toMatch(/^[\x20-\x7e]+$/); }
   });
 });

@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MIN_STACK_EXPOSURES, assignVisits, findExposures, mjdToIso, rowsToExposures } from './search';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MIN_STACK_EXPOSURES, assignVisits, findExposures, mjdToIso, resetCollectionsCache, rowsToExposures } from './search';
 import type { ExposureRow } from './search';
 import type { Exposure } from './types';
 
@@ -62,70 +62,224 @@ describe('rowsToExposures', () => {
   });
 });
 
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+const COLS = ['c1', 'c2', 'c3'];
+const colsBody = { collections: COLS.map((name) => ({ name, required: false })) };
+
+// Fake relay. `script[name]` is a list of behaviours consumed per request: rows, 'fail' (ok:false)
+// or 'net' (rejected fetch). The last entry repeats.
+type Beh = ExposureRow[] | 'fail' | 'net';
+function fakeRelay(script: Record<string, Beh[]>, collectionsOk = true) {
+  const calls: string[] = [];
+  const counts: Record<string, number> = {};
+  const f = vi.fn(async (input: RequestInfo | URL) => {
+    const u = new URL(String(input), 'http://x');
+    if (u.searchParams.get('collections')) {
+      calls.push('collections');
+      return collectionsOk ? json(colsBody) : json({ error: { code: 'UPSTREAM_ERROR', message: 'x' } }, 500);
+    }
+    const c = u.searchParams.get('collection');
+    if (!c) {
+      calls.push('all');
+      return json({ ra: 1, dec: 2, count: 1, partial: [], exposures: [row('LEG', 60000)] });
+    }
+    calls.push(c);
+    const list = script[c] ?? [[]];
+    const n = counts[c] ?? 0;
+    counts[c] = n + 1;
+    const b = list[Math.min(n, list.length - 1)];
+    if (b === 'net') throw new TypeError('network down');
+    if (b === 'fail') return json({ ok: false, collection: c, retryable: true, message: 'busy' });
+    return json({ ok: true, collection: c, count: b.length, exposures: b });
+  });
+  vi.stubGlobal('fetch', f);
+  return { f, calls, counts };
+}
+
 describe('findExposures', () => {
-  it('throws NO_COVERAGE on empty and reports search progress', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ ra: 1, dec: 2, count: 0, partial: [], exposures: [] }), { status: 200 })));
+  beforeEach(() => resetCollectionsCache());
+  afterEach(() => vi.useRealTimers());
+
+  it('throws NO_COVERAGE when every collection answers with zero rows', async () => {
+    fakeRelay({ c1: [[]], c2: [[]], c3: [[]] });
     await expect(findExposures(1, 2)).rejects.toMatchObject({ code: 'NO_COVERAGE' });
   });
   it('rejects bad input', async () => {
     await expect(findExposures(NaN, 0)).rejects.toMatchObject({ code: 'BAD_INPUT' });
     await expect(findExposures(10, 95)).rejects.toMatchObject({ code: 'BAD_INPUT' });
   });
-  it('returns exposures with start and end progress', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ exposures: [row('A', 60000)] }), { status: 200 })));
-    const seen: string[] = [];
-    const out = await findExposures(1, 2, { onProgress: (p) => seen.push(p.stage) });
+  it('returns merged exposures, dedups across collections and reports progress', async () => {
+    const { counts } = fakeRelay({
+      c1: [[row('A', 60000), row('B', 60001)]],
+      c2: [[{ ...row('A', 60000), release: 'qr3' }]],
+      c3: [[row('C', 60002)]],
+    });
+    const msgs: string[] = [];
+    const onUpdate = vi.fn();
+    const out = await findExposures(1, 2, { onProgress: (p) => msgs.push(p.message), onUpdate });
+    expect(out.map((e) => e.obsId).sort()).toEqual(['A', 'B', 'C']);
+    expect(counts).toEqual({ c1: 1, c2: 1, c3: 1 });
+    expect(msgs[0]).toBe('Searching the SPHEREx archive');
+    expect(msgs[msgs.length - 1]).toBe('Found 3 exposures');
+  });
+  it('memoises the collection list per session', async () => {
+    const { calls } = fakeRelay({ c1: [[row('A', 60000)]], c2: [[]], c3: [[]] });
+    await findExposures(1, 2);
+    await findExposures(3, 4);
+    expect(calls.filter((c) => c === 'collections')).toHaveLength(1);
+  });
+  it('resolves on a partial first round, then fills in through onUpdate, ending complete', async () => {
+    vi.useFakeTimers();
+    const { counts } = fakeRelay({
+      c1: [[row('A', 60000)]],
+      c2: ['fail', [row('B', 60001)]],
+      c3: ['net', 'net', 'fail', [row('C', 60002)]], // net is retried once inside fetchJson
+    });
+    const events: string[] = [];
+    const updates: Array<{ n: number; pending: string[]; complete: boolean }> = [];
+    const msgs: string[] = [];
+    const p = findExposures(1, 2, {
+      onProgress: (x) => msgs.push(x.message),
+      onUpdate: (ex, st) => {
+        events.push('update');
+        updates.push({ n: ex.length, pending: st.pending, complete: st.complete });
+      },
+    });
+    const resolved = p.then((r) => { events.push('resolved'); return r; });
+    await vi.advanceTimersByTimeAsync(500); // c3's network retry inside fetchJson
+    const out = await resolved;
     expect(out).toHaveLength(1);
-    expect(seen).toEqual(['search', 'search']);
+    expect(msgs).toContain('1 of 3 archive collections answered; still asking the rest');
+    await vi.advanceTimersByTimeAsync(1100); // retry 1: c2 answers, c3 fails
+    await vi.advanceTimersByTimeAsync(2100); // retry 2: c3 answers
+    await vi.advanceTimersByTimeAsync(10);
+    expect(events[0]).toBe('resolved');
+    expect(updates).toEqual([
+      { n: 2, pending: ['c3'], complete: false },
+      { n: 3, pending: [], complete: true },
+    ]);
+    expect(counts).toEqual({ c1: 1, c2: 2, c3: 4 });
+  });
+  it('fires one final complete update when all answered in the first round', async () => {
+    vi.useFakeTimers();
+    fakeRelay({ c1: [[row('A', 60000)]], c2: [[]], c3: [[]] });
+    const events: string[] = [];
+    const out = await findExposures(1, 2, { onUpdate: (_e, st) => events.push(`update:${st.complete}`) });
+    events.push('resolved');
+    await vi.advanceTimersByTimeAsync(10);
+    expect(out).toHaveLength(1);
+    expect(events).toEqual(['resolved', 'update:true']);
+  });
+  it('reports complete false with the pending names when time runs out', async () => {
+    vi.useFakeTimers();
+    fakeRelay({ c1: [[row('A', 60000)]], c2: ['fail'], c3: [[]] });
+    const updates: Array<{ pending: string[]; complete: boolean }> = [];
+    const out = await findExposures(1, 2, {
+      maxWaitMs: 5000, onUpdate: (_e, st) => updates.push({ pending: st.pending, complete: st.complete }),
+    });
+    expect(out).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(updates).toEqual([{ pending: ['c2'], complete: false }]);
+  });
+  it('throws UPSTREAM_BUSY when nothing ever answers within maxWaitMs', async () => {
+    vi.useFakeTimers();
+    const { f } = fakeRelay({ c1: ['fail'], c2: ['net'], c3: ['fail'] });
+    const p = findExposures(1, 2, { maxWaitMs: 10000 });
+    const caught = p.catch((e) => e);
+    await vi.advanceTimersByTimeAsync(11000);
+    expect(await caught).toMatchObject({ code: 'UPSTREAM_BUSY' });
+    const n = f.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(f.mock.calls.length).toBe(n);
+  });
+  it('keeps waiting while some collections answered empty and others are pending, then finds rows', async () => {
+    vi.useFakeTimers();
+    fakeRelay({ c1: [[]], c2: ['fail', [row('B', 60001)]], c3: [[]] });
+    const p = findExposures(1, 2);
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(await p).toHaveLength(1);
+  });
+  it('resolves [] as NO_COVERAGE once all answered empty after retries', async () => {
+    vi.useFakeTimers();
+    fakeRelay({ c1: [[]], c2: ['fail', []], c3: [[]] });
+    const caught = findExposures(1, 2).catch((e) => e);
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(await caught).toMatchObject({ code: 'NO_COVERAGE' });
+  });
+  it('abort stops background retries and later updates', async () => {
+    vi.useFakeTimers();
+    const { f } = fakeRelay({ c1: [[row('A', 60000)]], c2: ['fail'], c3: ['fail'] });
+    const ctl = new AbortController();
+    const onUpdate = vi.fn();
+    const out = await findExposures(1, 2, { signal: ctl.signal, onUpdate });
+    expect(out).toHaveLength(1);
+    const n = f.mock.calls.length;
+    ctl.abort();
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(f.mock.calls.length).toBe(n);
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+  it('abort before resolving rejects with ABORTED', async () => {
+    vi.useFakeTimers();
+    fakeRelay({ c1: ['fail'], c2: ['fail'], c3: ['fail'] });
+    const ctl = new AbortController();
+    const caught = findExposures(1, 2, { signal: ctl.signal }).catch((e) => e);
+    await vi.advanceTimersByTimeAsync(500);
+    ctl.abort();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(await caught).toMatchObject({ code: 'ABORTED' });
+  });
+  it('falls back to the old all-collections form when the collection list fails', async () => {
+    vi.useFakeTimers();
+    const { calls } = fakeRelay({}, false);
+    const done: boolean[] = [];
+    const p = findExposures(1, 2, { onUpdate: (_e, st) => done.push(st.complete) });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await p).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(calls.filter((c) => c === 'all')).toHaveLength(1);
+    expect(calls.filter((c) => /^c\d/.test(c))).toHaveLength(0);
+    expect(done).toEqual([true]);
   });
 });
 
-describe('findExposures partial results', () => {
+describe('findExposures old-form fallback partial results', () => {
   const resp = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+  const stub = (all: Array<Response>) => {
+    const f = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes('collections=1')) return new Response('{}', { status: 500 });
+      return all.shift() as Response;
+    });
+    vi.stubGlobal('fetch', f);
+    return f;
+  };
+  beforeEach(() => resetCollectionsCache());
   afterEach(() => vi.useRealTimers());
 
-  it('reports a partial result and re-requests once; a complete second answer replaces the first', async () => {
+  it('re-requests once; a complete second answer replaces the first', async () => {
     vi.useFakeTimers();
-    const f = vi.fn()
-      .mockResolvedValueOnce(resp({ partial: ['spherex_dr1'], exposures: [row('A', 60000)] }))
-      .mockResolvedValueOnce(resp({ partial: [], exposures: [row('A', 60000), row('B', 60001)] }));
-    vi.stubGlobal('fetch', f);
+    const f = stub([
+      resp({ partial: ['spherex_dr1'], exposures: [row('A', 60000)] }),
+      resp({ partial: [], exposures: [row('A', 60000), row('B', 60001)] }),
+    ]);
     const msgs: string[] = [];
     const p = findExposures(1, 2, { onProgress: (x) => msgs.push(x.message) });
-    await vi.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(5000);
     const out = await p;
-    expect(f).toHaveBeenCalledTimes(2);
-    expect(f.mock.calls[0][0]).toBe(f.mock.calls[1][0]);
+    expect(f.mock.calls.filter((c) => !String(c[0]).includes('collections=1'))).toHaveLength(2);
     expect(out).toHaveLength(2);
     expect(msgs).toContain('The archive is slow; showing a partial result');
   });
-  it('keeps the first answer when the second is still partial or fails, and asks only once', async () => {
+  it('keeps the first answer when the second is still partial, and asks only once more', async () => {
     vi.useFakeTimers();
-    const f = vi.fn()
-      .mockResolvedValueOnce(resp({ partial: ['spherex_qr3'], exposures: [row('A', 60000)] }))
-      .mockResolvedValueOnce(resp({ partial: ['spherex_qr3'], exposures: [row('A', 60000), row('B', 60001)] }));
-    vi.stubGlobal('fetch', f);
+    const f = stub([
+      resp({ partial: ['spherex_qr3'], exposures: [row('A', 60000)] }),
+      resp({ partial: ['spherex_qr3'], exposures: [row('A', 60000), row('B', 60001)] }),
+    ]);
     const p = findExposures(1, 2);
-    await vi.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(5000);
     expect(await p).toHaveLength(1);
-    expect(f).toHaveBeenCalledTimes(2);
-
-    const g = vi.fn()
-      .mockResolvedValueOnce(resp({ partial: ['spherex_qr3'], exposures: [row('A', 60000)] }))
-      .mockResolvedValueOnce(new Response('{}', { status: 400 }));
-    vi.stubGlobal('fetch', g);
-    const q = findExposures(1, 2);
-    await vi.advanceTimersByTimeAsync(3000);
-    expect(await q).toHaveLength(1);
-    expect(g).toHaveBeenCalledTimes(2);
-  });
-  it('does not re-request a complete answer', async () => {
-    const f = vi.fn().mockResolvedValue(resp({ partial: [], exposures: [row('A', 60000)] }));
-    vi.stubGlobal('fetch', f);
-    await findExposures(1, 2);
-    expect(f).toHaveBeenCalledTimes(1);
+    expect(f.mock.calls.filter((c) => !String(c[0]).includes('collections=1'))).toHaveLength(2);
   });
 });
 

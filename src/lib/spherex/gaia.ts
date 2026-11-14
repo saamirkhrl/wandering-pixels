@@ -12,6 +12,7 @@ interface GaiaResponse {
     pmdec: number | null;
     parallax: number | null;
     phot_g_mean_mag: number | null;
+    variable?: boolean | null;
   }>;
 }
 
@@ -39,5 +40,6 @@ export async function gaiaCone(
     pmdec: s.pmdec ?? null,
     parallax: s.parallax ?? null,
     gmag: s.phot_g_mean_mag ?? NaN,
+    variable: s.variable === undefined ? undefined : s.variable,
   }));
 }

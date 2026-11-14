@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readoutReliability, hasBrightNeighbour, fieldPairsOf, BRIGHT_NEIGHBOUR_GMAG, BRIGHT_NEIGHBOUR_ARCSEC } from './readouts';
+import { FIELD_MIN_STARS, readoutReliability, hasBrightNeighbour, fieldPairsOf, BRIGHT_NEIGHBOUR_GMAG, BRIGHT_NEIGHBOUR_ARCSEC } from './readouts';
 import type { StarReadout, PairReadout } from './readouts';
 
 describe('readoutReliability', () => {
@@ -45,8 +45,18 @@ describe('fieldPairsOf', () => {
   const pair = (verdict: PairReadout['verdict']): PairReadout => ({ a: 0, b: 1, verdict } as PairReadout);
   const star = (isTarget: boolean, verdict: PairReadout['verdict']): StarReadout =>
     ({ id: 'x', ra: 0, dec: 0, gmag: 10, isTarget, variable: null, pairs: [pair(verdict)] });
-  it('ignores the target and no-result rows', () => {
+  it('ignores the target and no-result rows, and does not judge a small field', () => {
     const f = fieldPairsOf([star(true, 'changed'), star(false, 'changed'), star(false, 'no significant change'), star(false, 'no result')]);
-    expect(f).toEqual([{ a: 0, b: 1, fieldChangedFraction: 0.5, fieldReliable: false, nField: 2 }]);
+    expect(f).toEqual([{ a: 0, b: 1, fieldChangedFraction: 0.5, fieldReliable: true, nField: 2, judged: false, reason: 'too few stars to judge the field' }]);
+  });
+  it('judges a field with at least FIELD_MIN_STARS results', () => {
+    expect(FIELD_MIN_STARS).toBe(10);
+    const mk = (nChanged: number) => [
+      ...Array.from({ length: nChanged }, () => star(false, 'changed')),
+      ...Array.from({ length: 10 - nChanged }, () => star(false, 'no significant change')),
+    ];
+    expect(fieldPairsOf(mk(1))[0]).toMatchObject({ judged: true, fieldReliable: true, nField: 10, fieldChangedFraction: 0.1 });
+    expect(fieldPairsOf(mk(2))[0]).toMatchObject({ judged: true, fieldReliable: false });
+    expect(fieldPairsOf(mk(2).slice(1))[0]).toMatchObject({ judged: false, fieldReliable: true });
   });
 });

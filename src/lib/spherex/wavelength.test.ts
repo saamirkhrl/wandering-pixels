@@ -5,15 +5,17 @@ import { setFetch, getHdu, readHduData, clearHeaderCaches, bytesTransferred } fr
 import { annotateWavelengths, clearWaveCache, parseWaveTable, readWaveTable, waveAt } from './wavelength';
 import type { Exposure, Target } from './types';
 
-import { SPHEREX_TESTS_DIR } from './testdata';
+import { SPHEREX_TESTS_DIR, hasSamples } from './testdata';
 const DIR = SPHEREX_TESTS_DIR + '/';
-const keys = JSON.parse(readFileSync(DIR + 'keys.json', 'utf8'));
-const oracle = JSON.parse(readFileSync(DIR + 'oracle.json', 'utf8'));
+const have = hasSamples('keys.json', 'oracle.json', '2025W35_2A_0221_2_D2.fits', '2026W34_2A_0233_3_D2.fits');
+const keys = have ? JSON.parse(readFileSync(DIR + 'keys.json', 'utf8')) : {};
+const oracle = have ? JSON.parse(readFileSync(DIR + 'oracle.json', 'utf8')) : {};
 const OBS = ['2025W35_2A_0221_2', '2026W34_2A_0233_3'];
 const fileOf: Record<string, Uint8Array> = {};
 let requests = 0;
 
 beforeAll(() => {
+  if (!have) return;
   for (const o of OBS) fileOf[keys[o].url] = readFileSync(DIR + keys[o].file);
   setFetch((async (input: RequestInfo | URL, init?: RequestInit) => {
     requests++;
@@ -39,7 +41,7 @@ beforeAll(() => {
   }) as typeof fetch);
 });
 
-describe('wavelength vs astropy-derived oracle', () => {
+describe.skipIf(!have)('wavelength vs astropy-derived oracle', () => {
   for (const o of OBS) {
     it(`waveAt matches oracle test points (${o})`, async () => {
       const url = keys[o].url;

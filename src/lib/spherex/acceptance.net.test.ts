@@ -7,11 +7,12 @@ import { loadFrame } from './frame';
 import { makeGrid, positionAt, worldToGrid } from './wcs';
 import type { Exposure, Frame, Target } from './types';
 
-import { SPHEREX_TESTS_DIR } from './testdata';
+import { NET_TESTS, SPHEREX_TESTS_DIR, hasSamples } from './testdata';
 const DIR = SPHEREX_TESTS_DIR + '/';
-const keys = JSON.parse(readFileSync(DIR + 'keys.json', 'utf8'));
-const gaia = JSON.parse(readFileSync(DIR + 'gaia_stars.json', 'utf8'));
-const oracle = JSON.parse(readFileSync(DIR + 'oracle.json', 'utf8'));
+const run = NET_TESTS && hasSamples('keys.json', 'gaia_stars.json', 'oracle.json');
+const keys = run ? JSON.parse(readFileSync(DIR + 'keys.json', 'utf8')) : {};
+const gaia = run ? JSON.parse(readFileSync(DIR + 'gaia_stars.json', 'utf8')) : {};
+const oracle = run ? JSON.parse(readFileSync(DIR + 'oracle.json', 'utf8')) : {};
 const IDS = ['2025W35_2A_0221_2', '2026W34_2A_0233_3'];
 const ORACLE_WAVE = [1.392689, 1.34421];
 
@@ -54,7 +55,7 @@ function centroid(f: Frame, px: number, py: number): [number, number] | null {
   return [cx, cy];
 }
 
-describe('astrometric acceptance (network)', () => {
+describe.skipIf(!run)('astrometric acceptance (network)', () => {
   it('Barnard pair: Gaia stars land where predicted on the common grid', async () => {
     const barnard: Target = { ra: 269.45207696, dec: 4.69336497, pmra: -801.551, pmdec: 10362.394, epoch: 2000, name: "Barnard's Star" };
     const exps: Exposure[] = [];

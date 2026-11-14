@@ -17,14 +17,15 @@ vi.mock('./parallax', () => ({
   })),
 }));
 
-import { SPHEREX_TESTS_DIR } from './testdata';
+import { SPHEREX_TESTS_DIR, hasSamples } from './testdata';
 const DIR = SPHEREX_TESTS_DIR + '/';
 const FILE = DIR + '2025W35_2A_0221_2_D2.fits';
 const URL_OK = 'https://test.invalid/a.fits';
 const URL_NAN = 'https://test.invalid/nan.fits';
 
 const URL_B = 'https://test.invalid/b.fits';
-const oracle = JSON.parse(readFileSync(DIR + 'oracle.json', 'utf8'));
+const have = hasSamples('2025W35_2A_0221_2_D2.fits', '2026W34_2A_0233_3_D2.fits', 'oracle.json');
+const oracle = have ? JSON.parse(readFileSync(DIR + 'oracle.json', 'utf8')) : {};
 const BARNARD: Target = { ra: 269.45207696, dec: 4.69336497, pmra: -801.551, pmdec: 10362.394, epoch: 2000 };
 
 let data: Uint8Array;
@@ -54,6 +55,7 @@ const exposure: Exposure = {
 const grid: Grid = { ra0: 269.44634441, dec0: 4.76722457, w: 21, h: 21, scaleArcsec: 6.15, epochMjd: 60916.658 };
 
 beforeAll(async () => {
+  if (!have) return;
   data = new Uint8Array(readFileSync(FILE));
   nanData = data.slice();
   setFetch(rangeFetch({
@@ -69,7 +71,7 @@ beforeAll(async () => {
 
 afterAll(() => setFetch(globalThis.fetch));
 
-describe('loadFrame', () => {
+describe.skipIf(!have)('loadFrame', () => {
   it('resamples a good window with high coverage and fills the wavelength', async () => {
     const f = await loadFrame(exposure, grid);
     expect(f.w).toBe(21);
@@ -119,7 +121,7 @@ describe('loadFrame', () => {
   });
 });
 
-describe('loadFrame wavelength options', () => {
+describe.skipIf(!have)('loadFrame wavelength options', () => {
   // astropy WCS(header, fobj=hdul, key='W'), sip=None, at the detector pixel of each grid pixel
   // (grid x, grid y, detector x, detector y, wavelength um, bandwidth um).
   const astropy: [number, number, number, number, number, number][] = [
@@ -201,7 +203,7 @@ describe('loadFrame wavelength options', () => {
   }, 60000);
 });
 
-describe('frame.bytes and progress bytes', () => {
+describe.skipIf(!have)('frame.bytes and progress bytes', () => {
   it('counts every byte a frame read, headers included, and 0 header cost on a repeat', async () => {
     clearHeaderCaches();
     clearWaveCache();
@@ -247,7 +249,7 @@ describe('frame.bytes and progress bytes', () => {
   }, 60000);
 });
 
-describe('distance tracking', () => {
+describe.skipIf(!have)('distance tracking', () => {
   const gridAtMock = vi.mocked(gridAt);
 
   it('resamples each exposure onto gridAt(grid, mjd, D, ref) and flags the frame', async () => {

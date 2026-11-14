@@ -1,4 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { assignVisits } from '../src/lib/spherex/search';
 import type { Exposure } from '../src/lib/spherex/types';
@@ -7,7 +9,9 @@ import type { Exposure } from '../src/lib/spherex/types';
 const stack = (e: Exposure) => (e as { inStack?: boolean }).inStack;
 
 describe('assignVisits on saved exposure lists', () => {
-  const dir = '/Users/samir/Desktop/spaceapps/research/samples/exposure-lists';
+  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const samples = process.env.WP_SAMPLES_DIR ?? resolve(repoRoot, '..', 'research', 'samples');
+  const dir = resolve(samples, 'exposure-lists');
   const expected: Record<string, number> = {
     'barnards-star': 3, 'eps-indi-b': 4, 'wise-0855': 3, 'rw-aur': 3, 'r-dra': 8,
   };

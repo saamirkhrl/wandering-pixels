@@ -5,7 +5,7 @@
 // Rows: detector 2 and detector 6. Each tile is a visit-stack frame (asinh stretch, 4x nearest),
 // then the first-last difference (symmetric stretch, grey zero). Rings mark each frame's targetXY.
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 
@@ -16,7 +16,8 @@ import type { CachedSlug, Detector, MovieFrame } from '../src/lib/spherex/types'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SLUGS: CachedSlug[] = ['barnards-star', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra'];
-const OUT_DIR = '/Users/samir/Desktop/spaceapps/research/samples/cache-check';
+const SAMPLES = process.env.WP_SAMPLES_DIR ?? resolve(ROOT, '..', 'research', 'samples');
+const OUT_DIR = join(SAMPLES, 'cache-check');
 const UP = 4;
 const GAP = 4;
 

@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 // @ts-ignore node types are not installed
-import { openSync, readSync, closeSync, readFileSync, existsSync, fstatSync } from 'node:fs';
+import { openSync, readSync, closeSync, readFileSync, fstatSync } from 'node:fs';
 import { readFlagsBlock, maskBits } from './flags';
 import { setFetch, bytesTransferred, getHdu, readRange } from './fits';
 import { riceDecompress } from './rice';
 import { FLAG_BITS } from './types';
 
-import { SPHEREX_TESTS_DIR } from './testdata';
+import { SPHEREX_TESTS_DIR, hasSamples } from './testdata';
 const DIR = SPHEREX_TESTS_DIR;
 const FILE = `${DIR}/level2_2025W35_2A_0221_2D2_spx_l2b-v27-2026-231.fits`;
 const ORACLE = `${DIR}/flags_oracle.json`;
-const have = existsSync(FILE) && existsSync(ORACLE);
+const have = hasSamples(FILE, ORACLE);
 
 interface Oracle {
   block: { x0: number; x1: number; y0: number; y1: number; data: number[] };

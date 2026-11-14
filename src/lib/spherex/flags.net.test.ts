@@ -1,17 +1,17 @@
 import { describe, it, expect } from 'vitest';
 // @ts-ignore node types are not installed
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { readFlagsBlock } from './flags';
 import { bytesTransferred, setFetch } from './fits';
 
-import { SPHEREX_TESTS_DIR } from './testdata';
+import { NET_TESTS, SPHEREX_TESTS_DIR, hasSamples } from './testdata';
 const DIR = SPHEREX_TESTS_DIR;
 const ORACLE = `${DIR}/flags_oracle.json`;
 const URL =
   'https://nasa-irsa-spherex.s3.amazonaws.com/dr1/level2/2025W35_2A/l2b-v27-2026-231/2/' +
   'level2_2025W35_2A_0221_2D2_spx_l2b-v27-2026-231.fits';
 
-describe.skipIf(!existsSync(ORACLE))('readFlagsBlock against real S3', () => {
+describe.skipIf(!NET_TESTS || !hasSamples(ORACLE))('readFlagsBlock against real S3', () => {
   it('reads rows 990..1010 and matches astropy', async () => {
     setFetch(fetch);
     const o = JSON.parse(readFileSync(ORACLE, 'utf8')) as {

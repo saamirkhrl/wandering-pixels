@@ -3,6 +3,7 @@ import {
   bytesTransferred, clearHeaderCaches, getHdu, readHduData, readImageBlock, readWaveTail, setFetch, walkHdus,
 } from './fits';
 import { parseWaveTable, waveAt } from './wavelength';
+import { NET_TESTS } from './testdata';
 
 const URL =
   'https://nasa-irsa-spherex.s3.amazonaws.com/dr1/level2/2025W35_2A/l2b-v27-2026-231/2/' +
@@ -11,13 +12,14 @@ const URL =
 let requests = 0;
 
 beforeAll(() => {
+  if (!NET_TESTS) return;
   setFetch(((input: RequestInfo | URL, init?: RequestInit) => {
     requests++;
     return fetch(input, init);
   }) as typeof fetch);
 });
 
-describe('real SPHEREx Level 2 file', () => {
+describe.skipIf(!NET_TESTS)('real SPHEREx Level 2 file', () => {
   it('walks the 7 HDUs with few requests', async () => {
     const b0 = bytesTransferred();
     const r0 = requests;
@@ -69,7 +71,7 @@ const SAMPLE = [
   'qr3/level2/2026W34_2A/l2b-v27-2026-243/2/level2_2026W34_2A_0233_3D2_spx_l2b-v27-2026-243.fits',
 ].map((k) => S3 + k);
 
-describe('fast header path against the full walk on real files', () => {
+describe.skipIf(!NET_TESTS)('fast header path against the full walk on real files', () => {
   for (const url of SAMPLE) {
     it(`matches walkHdus: ${url.split('/').pop()}`, async () => {
       clearHeaderCaches();

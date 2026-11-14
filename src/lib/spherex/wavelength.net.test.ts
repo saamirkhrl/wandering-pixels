@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { annotateWavelengths } from './wavelength';
 import type { Exposure } from './types';
+import { NET_TESTS } from './testdata';
 
 const BASE = 'https://nasa-irsa-spherex.s3.amazonaws.com/';
 const mk = (obsId: string, key: string, release: 'dr1' | 'qr3'): Exposure => ({
@@ -8,7 +9,7 @@ const mk = (obsId: string, key: string, release: 'dr1' | 'qr3'): Exposure => ({
   wavelengthAtTarget: null, bandwidthAtTarget: null, url: BASE + key, release,
 });
 
-describe('annotateWavelengths (network)', () => {
+describe.skipIf(!NET_TESTS)('annotateWavelengths (network)', () => {
   it('reads Barnard wavelengths from S3 headers', async () => {
     const exps = [
       mk('2025W35_2A_0221_2', 'dr1/level2/2025W35_2A/l2b-v27-2026-231/2/level2_2025W35_2A_0221_2D2_spx_l2b-v27-2026-231.fits', 'dr1'),

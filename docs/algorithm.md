@@ -342,6 +342,16 @@ means the model uses only the same detector as here.
 - Validated on stars of G 12 to 16.5 in two fields, with visit pairs of about 6, 12 and 18 months. Not
   validated for variable stars, faint stars, or a pair of visits less than a month apart.
 
+## Known edge cases / future work
+
+- Negligible-weight flagged pixels: a flagged pixel that overlaps the aperture by a negligible weight
+  (2.4e-6 in the case found) rejects the exposure as masked_aperture. Between the reference and the
+  browser's exposure sets this changed acceptance for 2 of 117 Barnard pair results. The algorithm is
+  deliberately left unchanged so that the reference and the browser port stay identical. Ignoring
+  flags on aperture pixels with weight under about 1e-3 is future work.
+- OVERFLOW (raw bit 1) sets the `saturated` quality flag but is not in the BAD_DATA pixel mask, by
+  design.
+
 ## Conflicts with the data library as it stands
 
 Found while reading roundtable files 05, 07, 08, 09 and `src/lib/spherex` (read only):

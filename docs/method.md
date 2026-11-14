@@ -549,7 +549,11 @@ pairs, three visits) with validation/wp/m2ref.py.
   that the browser lacks. Restricted to the browser's exposures, 116 of 117 agree; the remaining one
   needs the exposure we do not have.
 - Two single-exposure differences are an aperture edge case: a flagged pixel with overlap weight
-  2.4e-6 masks the star in our code but not in the browser's.
+  2.4e-6 masks the star in our code but not in the browser's (and a second, near-boundary case
+  the other way). These two star-exposures changed acceptance, and so the result, for 2 of the 117
+  Barnard pair results. We deliberately leave the algorithm unchanged so that the reference and the
+  browser port stay identical; ignoring flags on aperture pixels with weight under about 1e-3 is
+  future work.
 
 ## Negative results
 

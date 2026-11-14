@@ -47,6 +47,7 @@ export interface Frame {
   bandwidthMap?: Float32Array;      // um per grid pixel, same rule
   bytes: number;                    // bytes transferred for this frame (incl. its header reads); 0 from cache
   trackingDistanceAu?: number;      // set when resampled onto gridAt(grid, mjd, D): grid co-moves with a body at D au
+  trackingMotion?: TrackingMotion;  // set when FrameOptions.motion was used
 }
 
 export type MovieMode = 'visit-stack' | 'single';
@@ -76,6 +77,7 @@ export interface Movie {
   frames: MovieFrame[];
   stretch: { lo: number; hi: number };
   trackingDistanceAu?: number;      // members were tracked at this heliocentric distance (au)
+  trackingMotion?: TrackingMotion;  // members were tracked with this motion
 }
 
 export interface DifferenceImage {
@@ -142,7 +144,12 @@ export interface FrameOptions extends CallOptions {
   target?: Target;                  // if given, wavelengthAtTarget uses positionAt(target, exposure.mjd)
   distanceAu?: number;              // finite > 0: resample each exposure onto gridAt(grid, mjd, distanceAu, referenceMjd)
   referenceMjd?: number;            // see gridAt
+  motion?: TrackingMotion;          // heliocentric linear motion; needs distanceAu and referenceMjd
 }
+
+// Linear motion of the heliocentric direction, arcsec per Julian year. dRa is a true angle
+// (already multiplied by cos dec).
+export interface TrackingMotion { dRaArcsecPerYr: number; dDecArcsecPerYr: number }
 
 export type SpherexErrorCode =
   | 'NOT_FOUND'

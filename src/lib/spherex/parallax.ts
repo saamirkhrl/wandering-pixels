@@ -5,8 +5,10 @@
 // where u is the body's HELIOCENTRIC ICRS unit direction (ra, dec), D its heliocentric distance
 // in au, and E(t) the Earth's heliocentric position in au on ICRS equatorial axes at time t
 // (MJD; UTC is treated as TT, a 69 s difference that is negligible here). The observer is the
-// geocentre. Light-time, aberration and the body's own orbital motion are ignored: this is pure
-// geometry, the shift of a fixed point at distance D as the Earth goes round the Sun.
+// geocentre. Light-time and aberration are ignored: this is pure geometry, the shift of a point
+// at distance D as the Earth goes round the Sun. The body's own orbital motion is ignored unless
+// a TrackingMotion is given to gridAt, which then moves u linearly on the tangent plane (see
+// gridAt); the distance D stays fixed either way.
 //
 // E(t) comes from a compact low-precision solar position (Meeus, Astronomical Algorithms,
 // ch. 25): geometric mean longitude, mean anomaly, equation of centre, orbit eccentricity for
@@ -15,7 +17,8 @@
 // century, then rotated to equatorial axes with the J2000 obliquity 23.4392911 deg. Against
 // the astropy/ERFA ephemeris this is good to about 0.01 deg in direction and 1e-4 au in radius,
 // i.e. under 0.1 arcsec of parallax error at 300 au.
-import type { Grid } from './types';
+import { SpherexError } from './types';
+import type { Grid, TrackingMotion } from './types';
 import { julianYear } from './wcs';
 
 const D2R = Math.PI / 180;
@@ -103,30 +106,138 @@ export function parallaxOffset(ra: number, dec: number, mjd: number, distanceAu:
 }
 
 /**
+ * Solve the heliocentric unit direction h whose apparent direction at mjd from distance d is the
+ * unit vector b, by fixed-point iteration in vector space, h <- normalize(h + (b - apparent(h))),
+ * to better than 1e-10 deg.
+ */
+function solveHeliocentric(b: Vec3, mjd: number, d: number): Vec3 {
+  let h: Vec3 = b;
+  const tol = 1e-10 * D2R;
+  for (let i = 0; i < 100; i++) {
+    const a = apparentVec(h, mjd, d);
+    const next = normalize([h[0] + b[0] - a[0], h[1] + b[1] - a[1], h[2] + b[2] - a[2]]);
+    const step = Math.hypot(next[0] - h[0], next[1] - h[1], next[2] - h[2]);
+    h = next;
+    if (step < tol) break;
+  }
+  return h;
+}
+
+/** East and north unit vectors of the tangent plane at the unit vector u. */
+function eastNorth(u: Vec3): { e: Vec3; n: Vec3 } {
+  const a = Math.atan2(u[1], u[0]);
+  const sd = u[2] > 1 ? 1 : u[2] < -1 ? -1 : u[2];
+  const cd = Math.sqrt(1 - sd * sd);
+  return {
+    e: [-Math.sin(a), Math.cos(a), 0],
+    n: [-sd * Math.cos(a), -sd * Math.sin(a), cd],
+  };
+}
+
+const DAYS_PER_JULIAN_YEAR = 365.25;
+const ARCSEC2RAD = D2R / 3600;
+
+/**
+ * Heliocentric direction at mjd under linear motion from uRef at referenceMjd:
+ * normalize(uRef + (dRa * east + dDec * north) * (mjd - referenceMjd) / 365.25), with the motion
+ * in arcsec per Julian year converted to radians and east/north the unit vectors at uRef.
+ */
+function movedDirection(uRef: Vec3, motion: TrackingMotion, referenceMjd: number, mjd: number): Vec3 {
+  const k = (mjd - referenceMjd) / DAYS_PER_JULIAN_YEAR * ARCSEC2RAD;
+  const { e, n } = eastNorth(uRef);
+  const x = motion.dRaArcsecPerYr * k, y = motion.dDecArcsecPerYr * k;
+  return normalize([
+    uRef[0] + x * e[0] + y * n[0],
+    uRef[1] + x * e[1] + y * n[1],
+    uRef[2] + x * e[2] + y * n[2],
+  ]);
+}
+
+function validMotion(m: TrackingMotion): boolean {
+  return Number.isFinite(m.dRaArcsecPerYr) && Number.isFinite(m.dDecArcsecPerYr);
+}
+
+/**
  * A copy of `base` (same w, h, scaleArcsec) centred on where a body at distanceAu appears at
- * `mjd`, with epochMjd = mjd. The body's heliocentric direction h is (base.ra0, base.dec0) when
+ * `mjd`, with epochMjd = mjd.
+ *
+ * Without motion the body's heliocentric direction h is fixed: (base.ra0, base.dec0) when
  * referenceMjd is absent. When referenceMjd is given, base.ra0/dec0 is taken as the APPARENT
  * position at referenceMjd and h is solved exactly by fixed-point iteration in vector space,
  * h <- normalize(h + (b - apparent(h))), to better than 1e-10 deg, so
  * gridAt(base, referenceMjd, D, referenceMjd) is centred on base.
- * Non-finite or non-positive distanceAu returns a copy with epochMjd = mjd and the same centre.
+ *
+ * With motion (linear heliocentric motion, arcsec per Julian year, dRa a true angle east,
+ * dDec north) referenceMjd is required (finite) or this throws SpherexError('BAD_INPUT'), as it
+ * does for a non-finite motion component. The heliocentric direction is then
+ *   u(t) = normalize(u_ref + (dRa * east + dDec * north) * (t - referenceMjd) / 365.25)
+ * with east/north the unit vectors of the tangent plane at u_ref and arcsec converted to
+ * radians (a straight line on the gnomonic tangent plane at u_ref). u_ref is solved from
+ * base.ra0/dec0 exactly as above, since the motion offset is zero at referenceMjd. The grid
+ * centre is the apparent direction normalize(D * u(mjd) - E(mjd)).
+ *
+ * Non-finite or non-positive distanceAu returns a copy with epochMjd = mjd and the same centre
+ * (motion is ignored then, after the referenceMjd check).
  */
-export function gridAt(base: Grid, mjd: number, distanceAu: number, referenceMjd?: number): Grid {
+export function gridAt(base: Grid, mjd: number, distanceAu: number, referenceMjd?: number, motion?: TrackingMotion): Grid {
+  const hasRef = typeof referenceMjd === 'number' && Number.isFinite(referenceMjd);
+  if (motion !== undefined) {
+    if (!hasRef) throw new SpherexError('BAD_INPUT', 'Tracking motion needs a finite referenceMjd');
+    if (!validMotion(motion)) throw new SpherexError('BAD_INPUT', 'Tracking motion must be finite');
+  }
   if (!validDistance(distanceAu)) return { ...base, epochMjd: mjd };
   const b = unit(base.ra0, base.dec0);
-  let h: Vec3 = b;
-  if (referenceMjd !== undefined && Number.isFinite(referenceMjd)) {
-    const tol = 1e-10 * D2R;
-    for (let i = 0; i < 100; i++) {
-      const a = apparentVec(h, referenceMjd, distanceAu);
-      const next = normalize([h[0] + b[0] - a[0], h[1] + b[1] - a[1], h[2] + b[2] - a[2]]);
-      const step = Math.hypot(next[0] - h[0], next[1] - h[1], next[2] - h[2]);
-      h = next;
-      if (step < tol) break;
-    }
-  }
+  let h: Vec3 = hasRef ? solveHeliocentric(b, referenceMjd as number, distanceAu) : b;
+  if (motion !== undefined) h = movedDirection(h, motion, referenceMjd as number, mjd);
   const c = toRaDec(apparentVec(h, mjd, distanceAu));
   return { ...base, ra0: c.ra, dec0: c.dec, epochMjd: mjd };
+}
+
+/**
+ * Linear heliocentric motion (arcsec per Julian year) from two APPARENT positions a and b.
+ *
+ * Without distanceAu (or with an invalid one): dRa = wrap(b.ra - a.ra) * cos(mean dec) (a true
+ * angle, RA difference wrapped into [-180, 180) deg), dDec = b.dec - a.dec, both divided by the
+ * gap (b.mjd - a.mjd) / 365.25. The parallax left between the two dates is ignored, so this is
+ * exact only for a gap of a whole number of years (to the small Julian vs sidereal year
+ * difference); at other gaps the parallax change leaks into the motion.
+ *
+ * With distanceAu: the parallax is removed exactly first. Each heliocentric direction is the
+ * solution h of apparent(h, mjd) = observed (the gridAt inversion); the motion is the offset of
+ * h_b on the tangent plane at h_a (h_b / (h_b . h_a) - h_a, on the east/north unit vectors of
+ * h_a, in arcsec) over the gap. This is the exact inverse of gridAt's motion rule with
+ * referenceMjd = a.mjd.
+ *
+ * Throws SpherexError('BAD_INPUT') for non-finite inputs or a zero gap.
+ */
+export function motionFromPair(
+  a: { ra: number; dec: number; mjd: number },
+  b: { ra: number; dec: number; mjd: number },
+  distanceAu?: number,
+): TrackingMotion {
+  for (const v of [a.ra, a.dec, a.mjd, b.ra, b.dec, b.mjd]) {
+    if (!Number.isFinite(v)) throw new SpherexError('BAD_INPUT', 'motionFromPair needs finite positions and dates');
+  }
+  const years = (b.mjd - a.mjd) / DAYS_PER_JULIAN_YEAR;
+  if (years === 0) throw new SpherexError('BAD_INPUT', 'motionFromPair needs two different dates');
+  if (!validDistance(distanceAu)) {
+    const cosMean = Math.cos((a.dec + b.dec) / 2 * D2R);
+    return {
+      dRaArcsecPerYr: wrap180(b.ra - a.ra) * cosMean * 3600 / years,
+      dDecArcsecPerYr: (b.dec - a.dec) * 3600 / years,
+    };
+  }
+  const ha = solveHeliocentric(unit(a.ra, a.dec), a.mjd, distanceAu);
+  const hb = solveHeliocentric(unit(b.ra, b.dec), b.mjd, distanceAu);
+  const dot = ha[0] * hb[0] + ha[1] * hb[1] + ha[2] * hb[2];
+  if (!(dot > 0)) throw new SpherexError('BAD_INPUT', 'motionFromPair positions are more than 90 deg apart');
+  const p: Vec3 = [hb[0] / dot - ha[0], hb[1] / dot - ha[1], hb[2] / dot - ha[2]];
+  const { e, n } = eastNorth(ha);
+  const k = 1 / (ARCSEC2RAD * years);
+  return {
+    dRaArcsecPerYr: (p[0] * e[0] + p[1] * e[1] + p[2] * e[2]) * k,
+    dDecArcsecPerYr: (p[0] * n[0] + p[1] * n[1] + p[2] * n[2]) * k,
+  };
 }
 
 /**

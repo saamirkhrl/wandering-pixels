@@ -303,4 +303,45 @@ describe.skipIf(!have)('distance tracking', () => {
     expect(r.frames[0].grid.ra0).not.toBe(r.frames[1].grid.ra0);
     expect(gridAtMock).toHaveBeenCalledWith(grid, e2.mjd, 4, 60800);
   }, 60000);
+
+  it('passes motion to gridAt and sets frame.trackingMotion', async () => {
+    gridAtMock.mockClear();
+    const motion = { dRaArcsecPerYr: 100, dDecArcsecPerYr: 58.8 };
+    const f = await loadFrame(exposure, grid, { distanceAu: 500, referenceMjd: 60900, motion });
+    expect(gridAtMock).toHaveBeenCalledWith(grid, exposure.mjd, 500, 60900, motion);
+    expect(f.trackingDistanceAu).toBe(500);
+    expect(f.trackingMotion).toEqual(motion);
+    expect(f.trackingMotion).not.toBe(motion);
+    const off = await loadFrame(exposure, { ...grid, ra0: 100, dec0: -30 }, { distanceAu: 500, referenceMjd: 60900, motion });
+    expect(off.coverage).toBe(0);
+    expect(off.trackingMotion).toEqual(motion);
+    const plain = await loadFrame(exposure, grid, { distanceAu: 500, referenceMjd: 60900 });
+    expect(plain.trackingMotion).toBeUndefined();
+  }, 60000);
+
+  it('loadFrames passes motion through', async () => {
+    gridAtMock.mockClear();
+    const motion = { dRaArcsecPerYr: -3, dDecArcsecPerYr: 4 };
+    const e2: Exposure = { ...exposure, id: 'y', mjd: exposure.mjd + 1 };
+    const r = await loadFrames([exposure, e2], grid, { distanceAu: 400, referenceMjd: 60800, motion, concurrency: 1 });
+    expect(r.frames.length).toBe(2);
+    expect(r.frames.every((f) => f.trackingMotion?.dDecArcsecPerYr === 4)).toBe(true);
+    expect(gridAtMock).toHaveBeenCalledWith(grid, e2.mjd, 400, 60800, motion);
+  }, 60000);
+
+  it('motion without distanceAu is ignored; with distanceAu but no referenceMjd it is BAD_INPUT', async () => {
+    gridAtMock.mockClear();
+    const motion = { dRaArcsecPerYr: 100, dDecArcsecPerYr: 58.8 };
+    const f = await loadFrame(exposure, grid, { motion, referenceMjd: 60900 });
+    expect(f.grid).toBe(grid);
+    expect(f.trackingMotion).toBeUndefined();
+    expect(gridAtMock).not.toHaveBeenCalled();
+    await expect(loadFrame(exposure, grid, { distanceAu: 500, motion })).rejects.toMatchObject({ code: 'BAD_INPUT' });
+    await expect(loadFrame(exposure, grid, { distanceAu: 500, referenceMjd: NaN, motion }))
+      .rejects.toMatchObject({ code: 'BAD_INPUT' });
+    await expect(loadFrames([exposure], grid, { distanceAu: 500, motion })).rejects.toMatchObject({ code: 'BAD_INPUT' });
+    await expect(loadFrame(exposure, grid, { distanceAu: 500, referenceMjd: 60900, motion: { dRaArcsecPerYr: NaN, dDecArcsecPerYr: 0 } }))
+      .rejects.toMatchObject({ code: 'BAD_INPUT' });
+    expect(gridAtMock).not.toHaveBeenCalled();
+  }, 60000);
 });

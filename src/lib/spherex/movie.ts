@@ -3,6 +3,7 @@ import { SpherexError, BAD_DATA_MASK } from './types';
 import { positionAt, worldToGrid } from './wcs';
 import { robustPercentiles, sigmaClippedStats } from './stats';
 import { saturatedSources } from './saturation';
+import { trackingTolerance } from './parallax';
 
 const MJD_UNIX_EPOCH = 40587;
 
@@ -268,11 +269,16 @@ export function buildMovie(
   const background = opts.background ?? 'median';
   const sel = frames.filter((f) => f.exposure.detector === detector);
   // Selected frames may differ in grid centre (tracked frames) but not in shape or tracking distance.
+  const motionKey = (f: Frame): string =>
+    f.trackingMotion ? `${f.trackingMotion.dRaArcsecPerYr},${f.trackingMotion.dDecArcsecPerYr}` : '';
   for (const f of sel) {
-    if (f.w !== sel[0].w || f.h !== sel[0].h || f.trackingDistanceAu !== sel[0].trackingDistanceAu) {
+    if (
+      f.w !== sel[0].w || f.h !== sel[0].h || f.trackingDistanceAu !== sel[0].trackingDistanceAu ||
+      motionKey(f) !== motionKey(sel[0])
+    ) {
       throw new SpherexError(
         'BAD_INPUT',
-        `buildMovie: frames differ in shape or trackingDistanceAu (${f.exposure.id} vs ${sel[0].exposure.id})`,
+        `buildMovie: frames differ in shape, trackingDistanceAu or trackingMotion (${f.exposure.id} vs ${sel[0].exposure.id})`,
       );
     }
   }
@@ -306,6 +312,7 @@ export function buildMovie(
     frames: out,
     stretch: widen(lo, hi),
     ...(tracked ? { trackingDistanceAu } : {}),
+    ...(sel[0].trackingMotion ? { trackingMotion: { ...sel[0].trackingMotion } } : {}),
   };
 }
 
@@ -366,17 +373,61 @@ export function summarize(
     }));
 }
 
-export function pickBlinkPair(exposures: Exposure[], detector?: Detector): [Exposure, Exposure] | null {
-  const TIE = 1e-9;
-  const c = exposures
+/** Time separation (days) that puts the two frames about one year apart (parallax-dominated). */
+export const YEAR_PAIR_DAYS: [number, number] = [330, 400];
+/** Time separation (days) that puts the two frames about half a year apart. */
+export const HALF_YEAR_PAIR_DAYS: [number, number] = [150, 215];
+
+export interface PairOptions {
+  /** Keep only pairs whose |mjd difference| lies in [lo, hi] days (inclusive). */
+  gapDays?: [number, number];
+  /** Skip exposures with inStack === false. Default true. */
+  requireInStack?: boolean;
+  /** listPairs only: with distanceAu and a position (ra and dec, or target), items carry pxPerPercent. */
+  distanceAu?: number;
+  ra?: number;
+  dec?: number;
+  target?: Target;
+}
+
+export interface ListedPair {
+  a: Exposure;
+  b: Exposure;
+  gapDays: number;
+  wavelengthGapUm: number;
+  /** Wavelength gap over the mean of the two bandwidthAtTarget values; NaN if either is unknown. */
+  wavelengthGapChannels: number;
+  /** trackingTolerance(distanceAu, a.mjd, b.mjd, ra, dec).pxPerPercent; only when asked for via opts. */
+  pxPerPercent?: number;
+}
+
+const PAIR_TIE = 1e-9;
+const LIST_PAIRS_CAP = 50;
+
+function pairCandidates(exposures: Exposure[], detector: Detector | undefined, opts: PairOptions): Exposure[] {
+  const requireInStack = opts.requireInStack ?? true;
+  return exposures
     .filter(
       (e) =>
         e.wavelengthAtTarget !== null &&
         Number.isFinite(e.wavelengthAtTarget) &&
         Number.isFinite(e.mjd) &&
-        (detector === undefined || e.detector === detector),
+        (detector === undefined || e.detector === detector) &&
+        !(requireInStack && e.inStack === false),
     )
     .sort((a, b) => (a.wavelengthAtTarget as number) - (b.wavelengthAtTarget as number));
+}
+
+function gapOk(gap: number, range: [number, number] | undefined): boolean {
+  return range === undefined || (gap >= range[0] && gap <= range[1]);
+}
+
+export function pickBlinkPair(
+  exposures: Exposure[],
+  detector?: Detector,
+  opts: PairOptions = {},
+): [Exposure, Exposure] | null {
+  const c = pairCandidates(exposures, detector, opts);
   let best: [Exposure, Exposure] | null = null;
   let bestD = Infinity;
   let bestGap = -1;
@@ -384,10 +435,11 @@ export function pickBlinkPair(exposures: Exposure[], detector?: Detector): [Expo
     const wi = c[i].wavelengthAtTarget as number;
     for (let j = i + 1; j < c.length; j++) {
       const d = (c[j].wavelengthAtTarget as number) - wi;
-      if (d > bestD + TIE) break; // sorted: no later j can tie or beat the best
+      if (d > bestD + PAIR_TIE) break; // sorted: no later j can tie or beat the best
       if (c[i].visitIndex === c[j].visitIndex) continue;
       const gap = Math.abs(c[j].mjd - c[i].mjd);
-      if (d < bestD - TIE || (Math.abs(d - bestD) <= TIE && gap > bestGap)) {
+      if (!gapOk(gap, opts.gapDays)) continue;
+      if (d < bestD - PAIR_TIE || (Math.abs(d - bestD) <= PAIR_TIE && gap > bestGap)) {
         best = [c[i], c[j]];
         bestD = Math.min(d, bestD);
         bestGap = gap;
@@ -396,4 +448,41 @@ export function pickBlinkPair(exposures: Exposure[], detector?: Detector): [Expo
   }
   if (!best) return null;
   return best[0].mjd <= best[1].mjd ? best : [best[1], best[0]];
+}
+
+/**
+ * Cross-visit pairs that pass the same filters as pickBlinkPair, best first: ascending wavelength
+ * gap (ties: larger time gap), at most 50. a is the earlier exposure.
+ */
+export function listPairs(
+  exposures: Exposure[],
+  detector?: Detector,
+  opts: PairOptions = {},
+): ListedPair[] {
+  const c = pairCandidates(exposures, detector, opts);
+  const out: ListedPair[] = [];
+  for (let i = 0; i < c.length; i++) {
+    const wi = c[i].wavelengthAtTarget as number;
+    for (let j = i + 1; j < c.length; j++) {
+      if (c[i].visitIndex === c[j].visitIndex) continue;
+      const gapDays = Math.abs(c[j].mjd - c[i].mjd);
+      if (!gapOk(gapDays, opts.gapDays)) continue;
+      const [a, b] = c[i].mjd <= c[j].mjd ? [c[i], c[j]] : [c[j], c[i]];
+      const wavelengthGapUm = (c[j].wavelengthAtTarget as number) - wi;
+      out.push({ a, b, gapDays, wavelengthGapUm, wavelengthGapChannels: NaN });
+    }
+  }
+  out.sort((p, q) => p.wavelengthGapUm - q.wavelengthGapUm || q.gapDays - p.gapDays);
+  const top = out.slice(0, LIST_PAIRS_CAP);
+  const pos = opts.target ? { ra: opts.target.ra, dec: opts.target.dec } : opts.ra !== undefined && opts.dec !== undefined ? { ra: opts.ra, dec: opts.dec } : null;
+  for (const p of top) {
+    const ba = p.a.bandwidthAtTarget;
+    const bb = p.b.bandwidthAtTarget;
+    p.wavelengthGapChannels =
+      ba !== null && bb !== null && Number.isFinite(ba) && Number.isFinite(bb) ? p.wavelengthGapUm / ((ba + bb) / 2) : NaN;
+    if (opts.distanceAu !== undefined && pos) {
+      p.pxPerPercent = trackingTolerance(opts.distanceAu, p.a.mjd, p.b.mjd, pos.ra, pos.dec).pxPerPercent;
+    }
+  }
+  return top;
 }

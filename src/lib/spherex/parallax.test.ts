@@ -5,9 +5,10 @@
 // SkyCoord(..., frame=BarycentricMeanEcliptic(equinox='J2000')).icrs. Numbers pasted verbatim.
 import { describe, it, expect } from 'vitest';
 import {
-  parallaxOffset, positionAtDistance, gridAt, trackingTolerance, earthHeliocentric,
+  parallaxOffset, positionAtDistance, gridAt, trackingTolerance, earthHeliocentric, motionFromPair,
 } from './parallax';
-import type { Grid } from './types';
+import { worldToGrid } from './wcs';
+import type { Grid, TrackingMotion } from './types';
 
 const CASES = [
   { label: 'ecl lon 30.0 lat 0.0', ra: 27.910547921516, dec: 11.471973130734, mjd: 60700.0, d: 300.0, raApp: 27.731681499237, decApp: 11.406094662653, dRa: -1.752930486459e-01, dDec: -6.587846808126e-02 },
@@ -179,5 +180,125 @@ describe('trackingTolerance', () => {
   it('zero for the same date and for invalid distances', () => {
     expect(trackingTolerance(500, 60900, 60900, 10, 10).pxPerPercent).toBeCloseTo(0, 12);
     expect(trackingTolerance(Infinity, 60900, 61000, 10, 10).pxPerPercent).toBe(0);
+  });
+});
+
+// Linear heliocentric motion. Synthetic body: heliocentric direction (90, 23.4392911) at the
+// reference date (ecliptic lon 90, lat 0), D = 500 au, motion (100, 58.8) arcsec/yr, i.e.
+// 116.1 arcsec/yr total. Reference MJD 60755 and 60755 + 182.625 sit near the two quadratures,
+// where the parallax change over half a year is largest.
+describe('gridAt with linear motion', () => {
+  const RA = 90, DEC = 23.4392911, D = 500, REF = 60755;
+  const MOTION: TrackingMotion = { dRaArcsecPerYr: 100, dDecArcsecPerYr: 58.8 };
+  const HALF = REF + 182.625, FULL = REF + 365.25;
+
+  // Independent forward model written out here: u(t) on the tangent plane at u_ref, then
+  // normalize(D u(t) - E(t)) with E from earthHeliocentric.
+  function bodyAt(mjd: number, d = D): { ra: number; dec: number } {
+    const a = RA * D2R, dc = DEC * D2R;
+    const u = [Math.cos(dc) * Math.cos(a), Math.cos(dc) * Math.sin(a), Math.sin(dc)];
+    const e = [-Math.sin(a), Math.cos(a), 0];
+    const n = [-Math.sin(dc) * Math.cos(a), -Math.sin(dc) * Math.sin(a), Math.cos(dc)];
+    const k = (mjd - REF) / 365.25 * D2R / AS;
+    const x = MOTION.dRaArcsecPerYr * k, y = MOTION.dDecArcsecPerYr * k;
+    const v = [0, 1, 2].map((i) => u[i] + x * e[i] + y * n[i]);
+    const nv = Math.hypot(v[0], v[1], v[2]);
+    const E = earthHeliocentric(mjd);
+    const w = [0, 1, 2].map((i) => d * v[i] / nv - E[i]);
+    const nw = Math.hypot(w[0], w[1], w[2]);
+    let ra = Math.atan2(w[1], w[0]) / D2R;
+    if (ra < 0) ra += 360;
+    return { ra, dec: Math.asin(w[2] / nw) / D2R };
+  }
+
+  const start = bodyAt(REF);
+  const base: Grid = { ra0: start.ra, dec0: start.dec, w: 65, h: 65, scaleArcsec: 6.15, epochMjd: REF };
+
+  function offPx(g: Grid, mjd: number): number {
+    const b = bodyAt(mjd);
+    const [x, y] = worldToGrid(g, b.ra, b.dec);
+    return Math.hypot(x - (g.w - 1) / 2, y - (g.h - 1) / 2);
+  }
+
+  it('distance + motion keeps the body within 0.2 px of the centre at 0, 0.5 and 1 yr', () => {
+    const offs = [REF, HALF, FULL].map((t) => offPx(gridAt(base, t, D, REF, MOTION), t));
+    console.log(`motion tracking offsets (px) at 0, 0.5, 1 yr: ${offs.map((o) => o.toExponential(2)).join(', ')}`);
+    for (const o of offs) expect(o).toBeLessThan(0.2);
+  });
+
+  it('distance only (no motion) is off by about 9 px at 0.5 yr', () => {
+    const o = offPx(gridAt(base, HALF, D, REF), HALF);
+    console.log(`distance-only offset at 0.5 yr: ${o.toFixed(3)} px`);
+    // 116.1 arcsec/yr * 0.5 yr / 6.15 arcsec/px = 9.44 px
+    expect(o).toBeGreaterThan(8.5);
+    expect(o).toBeLessThan(10.5);
+  });
+
+  it('distance wrong by 5 percent with the correct motion is off by about 6 px at 0.5 yr', () => {
+    const o = offPx(gridAt(base, HALF, D * 1.05, REF, MOTION), HALF);
+    const oFull = offPx(gridAt(base, FULL, D * 1.05, REF, MOTION), FULL);
+    console.log(`5 percent distance error offset: ${o.toFixed(3)} px at 0.5 yr, ${oFull.toFixed(3)} px at 1 yr`);
+    expect(o).toBeGreaterThan(4.5);
+    expect(o).toBeLessThan(8);
+  });
+
+  it('motion with zero rate equals the motionless grid', () => {
+    const g0 = gridAt(base, HALF, D, REF, { dRaArcsecPerYr: 0, dDecArcsecPerYr: 0 });
+    const g1 = gridAt(base, HALF, D, REF);
+    expect(sepArcsec(g0.ra0, g0.dec0, g1.ra0, g1.dec0)).toBeLessThan(1e-9);
+  });
+
+  it('motion without a finite referenceMjd throws BAD_INPUT', () => {
+    expect(() => gridAt(base, HALF, D, undefined, MOTION)).toThrow(expect.objectContaining({ code: 'BAD_INPUT' }));
+    expect(() => gridAt(base, HALF, D, NaN, MOTION)).toThrow(expect.objectContaining({ code: 'BAD_INPUT' }));
+    expect(() => gridAt(base, HALF, D, REF, { dRaArcsecPerYr: NaN, dDecArcsecPerYr: 0 }))
+      .toThrow(expect.objectContaining({ code: 'BAD_INPUT' }));
+  });
+
+  // Oracle: astropy 7 + numpy, scratchpad motion_oracle.py. u(t) = normalize(u_ref + (100 east +
+  // 58.8 north) * dt/365.25 arcsec in radians), u_ref = unit(90, 23.4392911); apparent =
+  // normalize(500 u(t) - E(t)), E = get_body_barycentric('earth') - get_body_barycentric('sun')
+  // at Time(mjd, format='mjd', scale='tt'). Numbers pasted verbatim.
+  it('matches the astropy oracle within 0.5 arcsec', () => {
+    const oracle = [
+      { mjd: 60755.0, ra: 89.87559613048737, dec: 23.439240774439643 },
+      { mjd: 60937.625, ra: 90.14036446442971, dec: 23.447394329290297 },
+      { mjd: 61120.25, ra: 89.90585689427525, dec: 23.455595613924057 },
+    ];
+    const ob: Grid = { ...base, ra0: oracle[0].ra, dec0: oracle[0].dec };
+    let worst = 0;
+    for (const o of oracle) {
+      const g = gridAt(ob, o.mjd, D, REF, MOTION);
+      const sep = sepArcsec(g.ra0, g.dec0, o.ra, o.dec);
+      worst = Math.max(worst, sep);
+      expect(sep).toBeLessThan(0.5);
+    }
+    console.log(`motion oracle max separation ${worst.toFixed(3)} arcsec`);
+  });
+
+  it('motionFromPair without distance round trips a 365.25-day pair within 0.5 arcsec/yr', () => {
+    const a = bodyAt(REF), b = bodyAt(FULL);
+    const m = motionFromPair({ ...a, mjd: REF }, { ...b, mjd: FULL });
+    console.log(`motionFromPair no D: ${m.dRaArcsecPerYr.toFixed(4)}, ${m.dDecArcsecPerYr.toFixed(4)}`);
+    expect(Math.abs(m.dRaArcsecPerYr - 100)).toBeLessThan(0.5);
+    expect(Math.abs(m.dDecArcsecPerYr - 58.8)).toBeLessThan(0.5);
+  });
+
+  it('motionFromPair with distance round trips a 0.5-yr pair within 0.01 arcsec/yr', () => {
+    const a = bodyAt(REF), b = bodyAt(HALF);
+    const m = motionFromPair({ ...a, mjd: REF }, { ...b, mjd: HALF }, D);
+    console.log(`motionFromPair with D: ${m.dRaArcsecPerYr.toFixed(6)}, ${m.dDecArcsecPerYr.toFixed(6)}`);
+    expect(Math.abs(m.dRaArcsecPerYr - 100)).toBeLessThan(0.01);
+    expect(Math.abs(m.dDecArcsecPerYr - 58.8)).toBeLessThan(0.01);
+    // and the half-year pair without D is badly off: the parallax change leaks in
+    const raw = motionFromPair({ ...a, mjd: REF }, { ...b, mjd: HALF });
+    expect(Math.hypot(raw.dRaArcsecPerYr - 100, raw.dDecArcsecPerYr - 58.8)).toBeGreaterThan(100);
+  });
+
+  it('motionFromPair handles the RA wrap and rejects a zero gap', () => {
+    const m = motionFromPair({ ra: 359.99, dec: 0, mjd: 60000 }, { ra: 0.01, dec: 0, mjd: 60365.25 });
+    expect(m.dRaArcsecPerYr).toBeCloseTo(72, 6);
+    expect(() => motionFromPair({ ra: 1, dec: 0, mjd: 60000 }, { ra: 2, dec: 0, mjd: 60000 }))
+      .toThrow(expect.objectContaining({ code: 'BAD_INPUT' }));
   });
 });

@@ -116,9 +116,9 @@ export async function loadBestPair(
   target: Target,
   exposures: Exposure[],
   grid: Grid,
-  opts: FrameOptions & { detector?: Detector; maxWavelengthGapUm?: number } = {},
+  opts: FrameOptions & { detector?: Detector; maxWavelengthGapUm?: number; gapDays?: [number, number] } = {},
 ): Promise<{ frames: Frame[]; matched: boolean; detector: Detector }> {
-  const { detector: wanted, maxWavelengthGapUm, ...frameOpts } = opts;
+  const { detector: wanted, maxWavelengthGapUm, gapDays, ...frameOpts } = opts;
   const detector = wanted ?? pickDetector(exposures);
   let onDet = exposures.filter((e) => e.detector === detector);
   if (onDet.length === 0) throw new SpherexError('NO_COVERAGE', `No exposures on detector ${detector}`);
@@ -136,7 +136,9 @@ export async function loadBestPair(
       if (a.visitIndex === b.visitIndex) continue;
       const gap = Math.abs((a.wavelengthAtTarget as number) - (b.wavelengthAtTarget as number));
       if (maxWavelengthGapUm !== undefined && gap > maxWavelengthGapUm) continue;
-      pairs.push({ a, b, gap, dt: Math.abs(a.mjd - b.mjd) });
+      const dt = Math.abs(a.mjd - b.mjd);
+      if (gapDays !== undefined && !(dt >= gapDays[0] && dt <= gapDays[1])) continue;
+      pairs.push({ a, b, gap, dt });
     }
   }
   pairs.sort((p, q) => p.gap - q.gap || q.dt - p.dt);

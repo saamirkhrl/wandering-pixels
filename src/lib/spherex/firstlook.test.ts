@@ -230,6 +230,18 @@ describe('loadBestPair', () => {
     const r2 = await loadBestPair(target, pairExps, grid, { maxWavelengthGapUm: 0.2 });
     expect(r2.frames.length).toBe(2);
   });
+  it('passes gapDays through to the pair selection', async () => {
+    mockLoad();
+    // time gaps: a1-b1 49, a2-b2 49, a1-b2 50, a1-b3 51, a2-b3 50; only gaps in [49.5, 52] qualify
+    const r = await loadBestPair(target, pairExps, grid, { gapDays: [49.5, 52] });
+    expect(ids(r)).toEqual(['a1', 'b2']);
+    expect(loaded().sort()).toEqual(['a1', 'b2']);
+  });
+  it('falls back to first look when gapDays leaves no pair', async () => {
+    mockLoad();
+    const r = await loadBestPair(target, pairExps, grid, { gapDays: [300, 400] });
+    expect(ids(r)).toEqual(['a1', 'b1']);
+  });
   it('calls annotateWavelengths when wavelengths are missing', async () => {
     const bare = [ex('a1', 2, 0, 1, null), ex('b1', 2, 1, 50, null)];
     annotate.mockResolvedValue([ex('a1', 2, 0, 1, 1.0), ex('b1', 2, 1, 50, 1.0)]);

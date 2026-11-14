@@ -11,8 +11,10 @@ vi.mock('./wcs', () => ({
       : [ra, dec],
 }));
 
+vi.mock('./parallax', () => ({ trackingTolerance: (d: number, a: number, b: number, ra: number, dec: number) => ({ pxPerPercent: d + (b - a) + ra + dec }) }));
+
 import { worldToGrid } from './wcs';
-import { buildMovie, difference, summarize, channelBandwidth, pickBlinkPair, frameBackground } from './movie';
+import { buildMovie, difference, summarize, channelBandwidth, pickBlinkPair, listPairs, frameBackground, YEAR_PAIR_DAYS, HALF_YEAR_PAIR_DAYS } from './movie';
 
 const grid: Grid = { ra0: 10, dec0: 10, w: 65, h: 65, scaleArcsec: 6.15, epochMjd: 60000 };
 
@@ -387,6 +389,67 @@ describe('pickBlinkPair', () => {
   });
 });
 
+describe('pair time-separation options', () => {
+  it('exports the year and half-year windows', () => {
+    expect(YEAR_PAIR_DAYS).toEqual([330, 400]);
+    expect(HALF_YEAR_PAIR_DAYS).toEqual([150, 215]);
+  });
+  const base = exp('a', 2, 0, 1000, 1.0);
+  it('gapDays is inclusive at both boundaries and excludes outside', () => {
+    const at = (dt: number) => pickBlinkPair([base, exp('b', 2, 1, 1000 + dt, 1.0)], 2, { gapDays: [330, 400] });
+    expect(at(330)).not.toBeNull();
+    expect(at(400)).not.toBeNull();
+    expect(at(329.9)).toBeNull();
+    expect(at(400.1)).toBeNull();
+  });
+  it('picks the closest wavelength among qualifying pairs only', () => {
+    const list = [exp('a', 2, 0, 1000, 1.0), exp('b', 2, 1, 1010, 1.001), exp('c', 2, 2, 1335, 1.2)];
+    expect(pickBlinkPair(list)!.map((e) => e.id)).toEqual(['a', 'b']);
+    expect(pickBlinkPair(list, 2, { gapDays: [330, 400] })!.map((e) => e.id)).toEqual(['a', 'c']);
+  });
+  it('requireInStack skips inStack false exposures by default', () => {
+    const stray = { ...exp('s', 2, 1, 1010, 1.0), inStack: false };
+    const list = [exp('a', 2, 0, 1000, 1.0), stray, exp('c', 2, 2, 1020, 1.3)];
+    expect(pickBlinkPair(list)!.map((e) => e.id)).toEqual(['a', 'c']);
+    expect(pickBlinkPair(list, 2, { requireInStack: false })!.map((e) => e.id)).toEqual(['a', 's']);
+    expect(listPairs(list).map((p) => p.b.id)).toEqual(['c']);
+  });
+  it('listPairs sorts by wavelength gap then larger time gap, a is earlier', () => {
+    const list = [
+      exp('a', 2, 0, 1000, 1.0), exp('b', 2, 1, 1100, 1.5), exp('c', 2, 2, 900, 2.0), exp('d', 2, 2, 1500, 1.0),
+    ];
+    const r = listPairs(list, 2);
+    // gaps: a-d 0 (500d), b-d .5 (400d), b-c .5 (200d), a-b .5 (100d), a-c 1.0, c-d same visit
+    expect(r.map((p) => p.a.id + p.b.id)).toEqual(['ad', 'bd', 'cb', 'ab', 'ca']);
+    expect(r[0].gapDays).toBe(500);
+    expect(r[0].wavelengthGapUm).toBeCloseTo(0, 9);
+    for (const p of r) expect(p.a.mjd <= p.b.mjd).toBe(true);
+  });
+  it('listPairs reports channel gap and optional pxPerPercent', () => {
+    const e1 = { ...exp('a', 2, 0, 1000, 1.0), bandwidthAtTarget: 0.02 };
+    const e2 = { ...exp('b', 2, 1, 1100, 1.1), bandwidthAtTarget: 0.04 };
+    const e3 = { ...exp('c', 2, 2, 1200, 1.2), bandwidthAtTarget: null };
+    const r = listPairs([e1, e2, e3], 2);
+    const ab = r.find((p) => p.a.id === 'a' && p.b.id === 'b')!;
+    expect(ab.wavelengthGapChannels).toBeCloseTo(0.1 / 0.03, 9);
+    expect(r.find((p) => p.b.id === 'c' && p.a.id === 'b')!.wavelengthGapChannels).toBeNaN();
+    expect(ab.pxPerPercent).toBeUndefined();
+    expect(listPairs([e1, e2], 2, { distanceAu: 5 })[0].pxPerPercent).toBeUndefined();
+    expect(listPairs([e1, e2], 2, { distanceAu: 5, ra: 10, dec: 20 })[0].pxPerPercent).toBe(5 + 100 + 10 + 20);
+    expect(listPairs([e1, e2], 2, { distanceAu: 5, target: { ra: 1, dec: 2 } })[0].pxPerPercent).toBe(5 + 100 + 1 + 2);
+  });
+  it('listPairs applies gapDays and detector, and caps at 50', () => {
+    const list = [exp('a', 2, 0, 1000, 1.0), exp('b', 2, 1, 1200, 1.1), exp('c', 3, 2, 1200, 1.0)];
+    expect(listPairs(list, 2, { gapDays: HALF_YEAR_PAIR_DAYS }).map((p) => p.a.id + p.b.id)).toEqual(['ab']);
+    expect(listPairs(list, 2, { gapDays: YEAR_PAIR_DAYS })).toEqual([]);
+    const many: Exposure[] = [];
+    for (let i = 0; i < 300; i++) many.push(exp('e' + i, 2, i, 1000 + i, 1 + i * 0.001));
+    const r = listPairs(many, 2);
+    expect(r).toHaveLength(50);
+    for (let i = 1; i < r.length; i++) expect(r[i].wavelengthGapUm).toBeGreaterThanOrEqual(r[i - 1].wavelengthGapUm - 1e-12);
+  });
+});
+
 // ---------------------------------------------------------------------------------------------
 // Tracked (co-moving) frames and clipped combine
 // ---------------------------------------------------------------------------------------------
@@ -550,5 +613,23 @@ describe('tracked movies', () => {
     const [cx1] = centroid(m.frames[1], 44, 32, 4);
     expect(Math.abs(cx0 - 32)).toBeLessThan(0.2);
     expect(Math.abs(cx1 - 32)).toBeGreaterThan(10);
+  });
+});
+
+describe('trackingMotion in buildMovie', () => {
+  const mk = (id: string, mjd: number, vi: number, motion?: { dRaArcsecPerYr: number; dDecArcsecPerYr: number }): Frame => {
+    const n = 65 * 65;
+    return {
+      exposure: { id, obsId: id, detector: 2, time: '', mjd, visitIndex: vi, wavelengthAtTarget: 1.4, bandwidthAtTarget: 0.03, url: '', release: 'dr1' },
+      grid: { ra0: 10, dec0: 10, w: 65, h: 65, scaleArcsec: 6.15, epochMjd: mjd },
+      pixels: new Float32Array(n).fill(1), variance: new Float32Array(n).fill(1), flags: new Uint8Array(n),
+      w: 65, h: 65, coverage: 1, bytes: 0, trackingDistanceAu: 500, ...(motion ? { trackingMotion: motion } : {}),
+    };
+  };
+  it('records a shared motion and rejects mixed motions', () => {
+    const m = { dRaArcsecPerYr: 100, dDecArcsecPerYr: 58.8 };
+    const mv = buildMovie([mk('a', 61000, 0, m), mk('b', 61200, 1, m)], 'single', 2, undefined, { background: 'none' });
+    expect(mv.trackingMotion).toEqual(m);
+    expect(() => buildMovie([mk('a', 61000, 0, m), mk('b', 61200, 1)], 'single', 2)).toThrow(/trackingMotion/);
   });
 });

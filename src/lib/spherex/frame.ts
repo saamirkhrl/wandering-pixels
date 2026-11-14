@@ -5,7 +5,7 @@ import { readFlagsBlock, maskBits } from './flags';
 import { readWaveTable, waveAt } from './wavelength';
 import { parseWcs, skyToPix, gridToWorld, positionAt } from './wcs';
 import { BAD_DATA_MASK, FLAG_BITS, SpherexError } from './types';
-import type { Exposure, Frame, FrameOptions, Grid } from './types';
+import type { Exposure, Frame, FrameOptions, Grid, TrackingMotion } from './types';
 import { gridAt } from './parallax';
 
 function abortIf(signal?: AbortSignal): void {
@@ -46,6 +46,26 @@ async function hduOf(url: string, name: string, ro: ReadOptions): Promise<Hdu> {
   }
 }
 
+/**
+ * Tracking options. distanceAu finite and > 0 turns tracking on. motion is used only with
+ * tracking on: without a usable distanceAu it is ignored (no tracking, no trackingMotion). With
+ * tracking on, motion needs a finite referenceMjd (the date at which the grid centre is the
+ * body's apparent position), else SpherexError('BAD_INPUT'); a non-finite motion component is
+ * BAD_INPUT too.
+ */
+function trackingOptions(opts: FrameOptions): { tracking: boolean; motion?: TrackingMotion } {
+  const tracking = typeof opts.distanceAu === 'number' && Number.isFinite(opts.distanceAu) && opts.distanceAu > 0;
+  if (!tracking || opts.motion === undefined) return { tracking };
+  const m = opts.motion;
+  if (!(typeof opts.referenceMjd === 'number' && Number.isFinite(opts.referenceMjd))) {
+    throw new SpherexError('BAD_INPUT', 'Tracking motion needs a finite referenceMjd');
+  }
+  if (!Number.isFinite(m.dRaArcsecPerYr) || !Number.isFinite(m.dDecArcsecPerYr)) {
+    throw new SpherexError('BAD_INPUT', 'Tracking motion must be finite');
+  }
+  return { tracking, motion: m };
+}
+
 export function loadFrame(exposure: Exposure, grid: Grid, opts: FrameOptions = {}): Promise<Frame> {
   return loadFrameCounted(exposure, grid, opts);
 }
@@ -58,10 +78,12 @@ async function loadFrameCounted(
 ): Promise<Frame> {
   const { signal, onProgress } = opts;
   // Distance tracking: the grid co-moves with a body at distanceAu, per exposure.
-  const tracking = typeof opts.distanceAu === 'number' && Number.isFinite(opts.distanceAu) && opts.distanceAu > 0;
-  const grid: Grid = tracking
-    ? gridAt(baseGrid, exposure.mjd, opts.distanceAu as number, opts.referenceMjd)
-    : baseGrid;
+  const { tracking, motion } = trackingOptions(opts);
+  const grid: Grid = !tracking
+    ? baseGrid
+    : motion
+      ? gridAt(baseGrid, exposure.mjd, opts.distanceAu as number, opts.referenceMjd, motion)
+      : gridAt(baseGrid, exposure.mjd, opts.distanceAu as number, opts.referenceMjd);
   let bytes = 0;
   const ro: ReadOptions = {
     signal,
@@ -102,6 +124,7 @@ async function loadFrameCounted(
     if (!(bx1 >= bx0)) {
       const ef = emptyFrame({ ...exposure }, grid, opts.wavelengthMap === true, bytes);
       if (tracking) ef.trackingDistanceAu = opts.distanceAu;
+      if (motion) ef.trackingMotion = { ...motion };
       return ef;
     }
     const x0 = Math.max(0, Math.floor(bx0) - 2);
@@ -195,6 +218,7 @@ async function loadFrameCounted(
     onProgress?.({ stage: 'reproject', done: 1, total: 1, message: 'Resampled', bytes });
     const frame: Frame = { exposure: exp, grid, pixels, variance, flags, w, h, coverage: good / n, bytes };
     if (tracking) frame.trackingDistanceAu = opts.distanceAu;
+    if (motion) frame.trackingMotion = { ...motion };
     if (wavelengthMap && bandwidthMap) {
       frame.wavelengthMap = wavelengthMap;
       frame.bandwidthMap = bandwidthMap;
@@ -221,6 +245,7 @@ export async function loadFrames(
   const total = exposures.length;
   const count = (n: number): void => { bytes += n; };
   abortIf(signal);
+  trackingOptions(opts); // a bad motion option fails the whole call, not every exposure
   const worker = async (): Promise<void> => {
     for (;;) {
       if (signal?.aborted) return;
@@ -229,7 +254,7 @@ export async function loadFrames(
       try {
         const f = await loadFrameCounted(exposures[i], grid, {
           background: opts.background, signal, wavelengthMap: opts.wavelengthMap, target: opts.target,
-          distanceAu: opts.distanceAu, referenceMjd: opts.referenceMjd,
+          distanceAu: opts.distanceAu, referenceMjd: opts.referenceMjd, motion: opts.motion,
         }, count);
         results[i] = f;
         onFrame?.(f);

@@ -10,6 +10,8 @@ export interface SpectrumPanel {
     visitNo?: (visitIndex: number) => number,
   ): void;
   clear(): void;
+  // a short reason in place of the spectrum, for example while every exposure is still loading
+  wait(text: string): void;
   dispose(): void;
 }
 
@@ -175,6 +177,10 @@ export function createSpectrumPanel(): SpectrumPanel {
 
   const clear = (): void => {
     body.replaceChildren(el('p', 'v-hint', EMPTY_TEXT));
+  };
+
+  const wait = (text: string): void => {
+    body.replaceChildren(el('p', 'v-hint', text));
   };
 
   const show: SpectrumPanel['show'] = (points, where, visitLabel, visitNo = (v) => v + 1) => {
@@ -404,6 +410,7 @@ export function createSpectrumPanel(): SpectrumPanel {
     el: root,
     show,
     clear,
+    wait,
     dispose(): void {
       if (timer !== null) window.clearTimeout(timer);
       if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);

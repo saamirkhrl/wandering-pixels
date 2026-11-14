@@ -1336,18 +1336,30 @@ export function buildMovie(frames: Frame[], mode: MovieMode, detector: Detector,
   return movie;
 }
 
+// Robust scatter (1.4826 x MAD) of the finite difference pixels, and pixels in those units.
+function scatterFields(pixels: Float32Array): { scatter: number; scatterUnits: Float32Array } {
+  const vals: number[] = [];
+  for (const v of pixels) if (Number.isFinite(v)) vals.push(v);
+  const units = new Float32Array(pixels.length).fill(NaN);
+  if (vals.length < 100) return { scatter: NaN, scatterUnits: units };
+  const med = (a: number[]) => { const b = a.slice().sort((x, y) => x - y); return b[b.length >> 1]; };
+  const m = med(vals);
+  const scatter = 1.4826 * med(vals.map((v) => Math.abs(v - m)));
+  if (!(scatter > 0)) return { scatter: NaN, scatterUnits: units };
+  for (let i = 0; i < pixels.length; i++) units[i] = pixels[i] / scatter;
+  return { scatter, scatterUnits: units };
+}
+
 export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
   const n = a.w * a.h;
   const pixels = new Float32Array(n);
   const variance = new Float32Array(n);
-  const snr = new Float32Array(n);
   const mags: number[] = [];
   for (let i = 0; i < n; i++) {
     const p = b.pixels[i] - a.pixels[i];
     const v = a.variance[i] + b.variance[i];
     pixels[i] = p;
     variance[i] = v;
-    snr[i] = v > 0 ? p / Math.sqrt(v) : NaN;
     if (Number.isFinite(p)) mags.push(Math.abs(p));
   }
   const sorted = Float32Array.from(mags).sort();
@@ -1357,7 +1369,7 @@ export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
     grid: a.grid,
     pixels,
     variance,
-    snr,
+    ...scatterFields(pixels),
     w: a.w,
     h: a.h,
     wavelengthA: a.wavelength,
@@ -1789,7 +1801,6 @@ export function pairedDifference(
   const n = w * h;
   const pixels = new Float32Array(n);
   const variance = new Float32Array(n);
-  const snr = new Float32Array(n);
   const num = new Float64Array(n);
   const den = new Float64Array(n);
   for (const c of accepted) {
@@ -1809,12 +1820,10 @@ export function pairedDifference(
     if (den[i] > 0) {
       pixels[i] = num[i] / den[i];
       variance[i] = 1 / den[i];
-      snr[i] = pixels[i] / Math.sqrt(variance[i]);
       mags.push(Math.abs(pixels[i]));
     } else {
       pixels[i] = NaN;
       variance[i] = NaN;
-      snr[i] = NaN;
     }
   }
   const m = Math.max(0.05, percentile(Float32Array.from(mags).sort(), 0.995));
@@ -1825,7 +1834,7 @@ export function pairedDifference(
     grid: framesA[0].grid,
     pixels,
     variance,
-    snr,
+    ...scatterFields(pixels),
     w,
     h,
     wavelengthA: mean(usedFramesA),

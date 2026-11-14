@@ -1,4 +1,4 @@
-import { DIFF_SOURCES, STACK_NOISE, STACK_WARN } from './stack-copy';
+import { DIFF_HINT, DIFF_SOURCES, PAIRED_NOTE, STACK_WARN } from './stack-copy';
 import type { DiffSource } from './stack-copy';
 import type { Detector, MovieMode, Progress, SpherexErrorCode } from '../data';
 import { divergingColor } from './render';
@@ -20,7 +20,7 @@ export interface FrameInfo {
 
 export interface CompareInfo {
   rangeText: string;
-  unit: 'MJy/sr' | 'sigma';
+  unit: 'MJy/sr';
   warning: string | null;
   note: string;
 }
@@ -33,7 +33,6 @@ export interface PanelModel {
   playMode: PlayMode;
   fps: number;
   diff: boolean;
-  snr: boolean;
   mode: MovieMode;
   det: Detector;
   detectorList: { detector: Detector; label: string; enabled: boolean }[];
@@ -48,7 +47,10 @@ export interface PanelModel {
   contrast: 'soft' | 'normal' | 'hard';
   compare: CompareInfo | null;
   // Difference source control: null when there is no choice to make
-  diffSource: { current: DiffSource; available: Record<DiffSource, boolean> } | null;
+  diffSource: { current: DiffSource; available: Record<DiffSource, boolean>; reason: string } | null;
+  // every exposure of this detector has landed; before that, Every exposure and per-star tools wait
+  everyReady: boolean;
+  everyReason: string;
 }
 
 export interface PanelHandlers {
@@ -60,7 +62,6 @@ export interface PanelHandlers {
   setMode: (m: MovieMode) => void;
   setDet: (d: Detector) => void;
   setDiff: (on: boolean) => void;
-  setSnr: (on: boolean) => void;
   setA: (i: number) => void;
   setB: (i: number) => void;
   retry: () => void;
@@ -100,6 +101,7 @@ export interface Panel {
   showSkeleton: () => void;
   setHeader: (name: string, meta: string) => void;
   setPreparedNote: (name: string | null) => void;
+  setEveryNote: (text: string) => void;
   setRecheck: (on: boolean) => void;
   setTitleNote: (text: string | null) => void;
   setMatchNote: (text: string | null) => void;
@@ -226,15 +228,11 @@ export function createPanel(hd: PanelHandlers): Panel {
     srcSeg.append(b);
     return b;
   });
-  const srcNote = h('p', 'v-hint', STACK_NOISE);
-  srcWrap.append(srcSeg, srcNote);
+  const srcNote = h('p', 'v-hint', PAIRED_NOTE);
+  const srcReason = h('p', 'v-hint', '');
+  const srcHint = h('p', 'v-hint', DIFF_HINT);
+  srcWrap.append(srcSeg, srcNote, srcReason, srcHint);
   srcWrap.hidden = true;
-  const unitSeg = h('div', 'v-seg v-unitseg');
-  unitSeg.setAttribute('role', 'group');
-  unitSeg.setAttribute('aria-label', 'Difference units');
-  const bUnitFlux = btn('MJy/sr', 'v-seg-btn', () => hd.setSnr(false));
-  const bUnitSig = btn('Sigma', 'v-seg-btn', () => hd.setSnr(true));
-  unitSeg.append(bUnitFlux, bUnitSig);
   const drangeSeg = h('div', 'v-seg v-unitseg');
   drangeSeg.setAttribute('role', 'group');
   drangeSeg.setAttribute('aria-label', 'Difference brightness range');
@@ -286,7 +284,7 @@ export function createPanel(hd: PanelHandlers): Panel {
   selA.addEventListener('change', () => hd.setA(Number(selA.value)));
   selB.addEventListener('change', () => hd.setB(Number(selB.value)));
   fallback.append(labA, labB);
-  secCmp.append(hCmp, cmpSeg, cmpHint, srcWrap, unitSeg, drangeSeg, legend, warn, fallback);
+  secCmp.append(hCmp, cmpSeg, cmpHint, srcWrap, drangeSeg, legend, warn, fallback);
 
   // display
   const secDisp = h('section', 'v-sec');
@@ -297,6 +295,8 @@ export function createPanel(hd: PanelHandlers): Panel {
   const bVisit = btn('Per visit', 'v-seg-btn', () => hd.setMode('visit-stack'));
   const bSingle = btn('Every exposure', 'v-seg-btn', () => hd.setMode('single'));
   modeSeg.append(bVisit, bSingle);
+  const everyNote = h('p', 'v-hint', '');
+  everyNote.hidden = true;
   const modeHint = h('p', 'v-hint', 'Per visit averages the exposures taken in one pass. Every exposure shows each one separately.');
   const modeHint2 = h('p', 'v-hint', 'Stacked visits suit stars and brown dwarfs. A distant planet would move during a single visit and blur out.');
   const smoothLab = h('p', 'v-lab v-subhead', 'Image');
@@ -332,7 +332,7 @@ export function createPanel(hd: PanelHandlers): Panel {
     return b;
   });
   const sizeNote = h('p', 'v-hint', '');
-  secDisp.append(hDisp, modeSeg, modeHint, modeHint2, smoothLab, smoothSeg, contrastLab, contrastSeg, detLab, detList, sizeLab, sizeSeg, sizeNote);
+  secDisp.append(hDisp, modeSeg, everyNote, modeHint, modeHint2, smoothLab, smoothSeg, contrastLab, contrastSeg, detLab, detList, sizeLab, sizeSeg, sizeNote);
 
   // overlays
   const secOv = h('section', 'v-sec');
@@ -543,7 +543,6 @@ export function createPanel(hd: PanelHandlers): Panel {
     bCmpBlink.setAttribute('aria-pressed', String(!m.diff));
     bCmpDiff.setAttribute('aria-pressed', String(m.diff));
     bCmpDiff.disabled = few;
-    unitSeg.hidden = !m.diff;
     srcWrap.hidden = !(m.diff && m.diffSource !== null);
     if (m.diffSource) {
       const ds = m.diffSource;
@@ -552,10 +551,10 @@ export function createPanel(hd: PanelHandlers): Panel {
         b.setAttribute('aria-pressed', String(k === ds.current));
         b.disabled = !ds.available[k];
       });
-      srcNote.hidden = ds.current !== 'stack';
+      srcNote.hidden = ds.current !== 'paired';
+      srcReason.hidden = ds.reason === '';
+      srcReason.textContent = ds.reason;
     }
-    bUnitFlux.setAttribute('aria-pressed', String(!m.snr));
-    bUnitSig.setAttribute('aria-pressed', String(m.snr));
     legend.hidden = !(m.diff && m.compare);
     if (m.compare) {
       legRange.textContent = m.compare.rangeText;
@@ -568,6 +567,10 @@ export function createPanel(hd: PanelHandlers): Panel {
 
     bVisit.setAttribute('aria-pressed', String(m.mode === 'visit-stack'));
     bSingle.setAttribute('aria-pressed', String(m.mode === 'single'));
+    bSingle.disabled = !m.everyReady;
+    bSingle.title = m.everyReady ? '' : m.everyReason;
+    everyNote.hidden = m.everyReason === '';
+    everyNote.textContent = m.everyReason;
     const dkey = m.detectorList.map((d) => `${d.detector}${d.enabled ? 1 : 0}`).join(',');
     if (dkey !== detKey) {
       detKey = dkey;
@@ -594,7 +597,7 @@ export function createPanel(hd: PanelHandlers): Panel {
     bMask.input.checked = m.overlays.masked;
     bAdv.input.checked = m.overlays.adv;
     drangeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.dr === m.drange)));
-    drangeSeg.hidden = !m.diff || m.snr;
+    drangeSeg.hidden = !m.diff;
     bWise.input.checked = m.overlays.wise && m.wiseAvailable;
     bWise.input.disabled = !m.wiseAvailable;
     bWise.text.textContent = m.wiseAvailable ? 'WISE sources' : 'WISE sources, not available yet';
@@ -799,6 +802,10 @@ export function createPanel(hd: PanelHandlers): Panel {
       if (name !== null) {
         skyRow.append(h('span', '', `Showing the prepared set for ${name}. `), btn('Load this position live instead', 'v-linkbtn', hd.loadLive));
       }
+    },
+    setEveryNote: (text) => {
+      everyNote.hidden = text === '';
+      everyNote.textContent = text;
     },
     setRecheck: (on) => {
       recheckRow.replaceChildren();

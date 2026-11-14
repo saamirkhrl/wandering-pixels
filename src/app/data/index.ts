@@ -94,25 +94,72 @@ export const loadCached: CacheLib['loadCached'] = async (slug: CachedSlug, opts?
 };
 export const listCached = cache.listCached;
 
-// Provisional: previews, per detector loads and paired differences come from the mock helpers,
-// built from whatever loadCached returned (real pixels when the real cache loaded). To switch to
-// the library once it lands, replace these four lines with `real.` versions.
-export const loadCachedPreview = async (
-  slug: CachedSlug,
-  opts?: CallOptions,
-): Promise<CachedPreview> => {
+// Real split-cache loaders (format 2). ?mock=1 keeps the mock path, built from loadCached. Any
+// failure (files missing, bad data) falls back to the mock for that target and isSimulated() then
+// reports it so the viewer can say so.
+function normalizePreview(p: real.CachedPreview): CachedPreview {
+  const per = p.totalBytes.perDetector;
+  const dflt = p.defaultDetector;
+  return {
+    target: p.target,
+    grid: p.grid,
+    defaultDetector: p.defaultDetector,
+    movie: p.movie,
+    pairs: p.pairs,
+    differences: p.differences,
+    visits: p.visits.map((v) => ({
+      visitIndex: v.visitIndex,
+      mjd: v.mjdStart,
+      time: '',
+      nExposures: v.countByDetector[dflt] ?? 0,
+    })),
+    gaia: p.gaia,
+    wise: p.wise,
+    detectors: p.detectors.map((d) => ({ ...d, bytes: per[d.detector] ?? 0 })),
+    totalBytes: Object.values(per).reduce((s, n) => s + n, 0),
+  };
+}
+
+export const loadCachedPreview = async (slug: CachedSlug, opts?: CallOptions): Promise<CachedPreview> => {
+  if (cache !== (mock as unknown)) {
+    try {
+      return normalizePreview(await real.loadCachedPreview(slug, opts));
+    } catch (err) {
+      if ((err as { code?: string } | null)?.code === 'ABORTED') throw err;
+    }
+  }
   const c = await loadCached(slug, opts);
   const preview = await mock.previewFromCached(c, opts);
-  if (fromMock.has(c)) fromMock.add(preview);
+  fromMock.add(preview);
   return preview;
 };
 export const loadCachedDetector = async (
   slug: CachedSlug,
   detector: Detector,
   opts?: CallOptions,
-): Promise<CachedDetectorData> => mock.detectorFromCached(await loadCached(slug, opts), detector, opts);
-export const visitDifference = mock.visitDifference;
-export const pairedDifference = mock.pairedDifference;
+): Promise<CachedDetectorData> => {
+  if (cache !== (mock as unknown)) {
+    try {
+      return await real.loadCachedDetector(slug, detector, opts);
+    } catch (err) {
+      if ((err as { code?: string } | null)?.code === 'ABORTED') throw err;
+    }
+  }
+  return mock.detectorFromCached(await loadCached(slug, opts), detector, opts);
+};
+export const loadCachedStars = async (slug: CachedSlug, opts?: CallOptions) => {
+  if (cache !== (mock as unknown)) {
+    try {
+      return await real.loadCachedStars(slug, opts);
+    } catch (err) {
+      if ((err as { code?: string } | null)?.code === 'ABORTED') throw err;
+    }
+  }
+  const c = await loadCached(slug, opts);
+  return { gaia: c.gaia, wise: c.wise };
+};
+export const visitDifference = live === (mock as unknown) ? mock.visitDifference : real.visitDifference;
+export const pairedDifference = live === (mock as unknown) ? mock.pairedDifference : real.pairedDifference;
 export const asSingle = mock.asSingle;
 export const asNaiveStack = mock.asNaiveStack;
 

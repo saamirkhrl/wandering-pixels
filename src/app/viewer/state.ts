@@ -9,7 +9,6 @@ export interface ViewerParams {
   a: number | null;
   b: number | null;
   diff: boolean;
-  snr: boolean;
   frame: number | null;
   size: number | null;
   trueSharp: boolean;
@@ -56,7 +55,6 @@ export function readParams(): ViewerParams {
     a: int(sp.get('a')),
     b: int(sp.get('b')),
     diff: sp.get('diff') === '1',
-    snr: sp.get('snr') === '1',
     frame: int(sp.get('frame')),
     trueSharp: sp.get('px') === '1',
     planet: sp.get('planet') === '1' ? 1 : sp.get('planet') === '2' ? 2 : 0,

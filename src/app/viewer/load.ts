@@ -4,13 +4,13 @@ import {
   loadFirstLook,
   findExposures,
   listCached,
-  loadCached,
+  loadCachedPreview,
   loadFrames,
   makeGrid,
   resolveTarget,
   summarize,
 } from '../data';
-import type { CachedSlug, CachedTarget, Detector, Exposure, Frame, Grid, Progress, Target } from '../data';
+import type { CachedPreview, CachedSlug, CachedTarget, Detector, Exposure, Frame, Grid, Progress, Target } from '../data';
 
 export interface LoadRequest {
   q: string | null;
@@ -52,6 +52,9 @@ export interface LoadResult {
   live: LiveContext | null;
   search: LiveSearch | null;
   cachedData: CachedTarget | null;
+  // prepared sets: the small first-view bundle, plus which prepared target it is
+  preview: CachedPreview | null;
+  cachedSlug: CachedSlug | null;
   target: Target;
   frames: Frame[];
   det: Detector;
@@ -185,6 +188,8 @@ export async function loadFirst(
     live: { grid, rest: [], size, detExposures: exposures.filter((e) => e.detector === first.detector) },
     search,
     cachedData: null,
+    preview: null,
+    cachedSlug: null,
     target,
     frames,
     det: first.detector,
@@ -236,20 +241,29 @@ export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: Ab
     }
   }
   if (slug) {
-    const c = await loadCached(slug, { signal, onProgress: cb.onStage });
+    const pv = await loadCachedPreview(slug, { signal, onProgress: cb.onStage });
     if (signal.aborted) throw abortedError();
-    const available = availableOf(c.exposures);
-    const det = chooseDetector(available, req.det ?? (slug === 'wise-0855' ? 6 : null));
+    const available: DetInfo[] = pv.detectors
+      .map((d) => ({ detector: d.detector, count: d.count, visits: d.visits.length }))
+      .sort((x, y) => x.detector - y.detector);
+    const det = chooseDetector(available, pv.defaultDetector);
+    // Seed the pair frames the preview carries so pair lists work before any detector file lands.
+    const seeded = new Map<string, Frame>();
+    for (const p of [pv.pairs.year, pv.pairs.halfYear]) {
+      if (p) for (const f of p.frames) seeded.set(f.exposure.id, f);
+    }
     return {
       live: null,
       search: null,
-      cachedData: c,
-      target: c.target,
-      frames: c.frames,
+      cachedData: null,
+      preview: pv,
+      cachedSlug: slug,
+      target: pv.target,
+      frames: Array.from(seeded.values()),
       det,
       available,
       failed: 0,
-      total: c.frames.length,
+      total: seeded.size,
       cached: true,
       matched: true,
       viaPosition,

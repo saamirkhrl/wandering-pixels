@@ -12,9 +12,12 @@ import {
   YEAR_PAIR_DAYS,
   listCached,
   listPairs,
+  loadCachedDetector,
+  loadCachedStars,
   loadFrames,
   parallaxOffset,
   trackingTolerance,
+  visitDifference,
   liveIsMock,
   positionAt,
   spectrumAt,
@@ -22,6 +25,8 @@ import {
   wiseCone,
 } from '../data';
 import type {
+  CachedPreview,
+  CachedSlug,
   CachedTarget,
   DifferenceImage,
   Detector,
@@ -69,7 +74,7 @@ import { createSpectrumPanel } from '../viewer/spectrum';
 import { createPlanetSection } from '../viewer/planet';
 import { bytesFromProgress, loadingLine } from '../viewer/loading';
 import type { LoadingBytes } from '../viewer/loading';
-import { STACK_WARN } from '../viewer/stack-copy';
+import { PAIRED_READING, STACK_WARN } from '../viewer/stack-copy';
 import type { DiffSource } from '../viewer/stack-copy';
 import { COPY, fill } from '../viewer/distance-copy';
 import { ringRadiusPx } from '../viewer/distance';
@@ -106,7 +111,6 @@ interface Loaded {
 
 type Layer = 'gaia' | 'wise' | 'masked' | 'adv';
 
-const SIGMA_RANGE = 5;
 const OVERLAY_LIMIT = 40;
 const KNOWN_CODES = ['NOT_FOUND', 'NO_COVERAGE', 'UPSTREAM_BUSY', 'UPSTREAM_ERROR', 'BAD_INPUT'] as const;
 const DETECTORS: Detector[] = [1, 2, 3, 4, 5, 6];
@@ -142,7 +146,6 @@ export const mount: Mount = (root, ctx) => {
   let aUser: number | null = params.a;
   let bUser: number | null = params.b;
   let diffOn = params.diff;
-  let snr = params.snr;
   let size = params.size ?? DEFAULT_SIZE;
   let pendingFrame: number | null = params.frame;
   let modeUser = new URLSearchParams(location.search).has('mode');
@@ -181,6 +184,15 @@ export const mount: Mount = (root, ctx) => {
   let skyName: string | null = null;
   let abTouched = false;
   let restBase = 0;
+
+  // prepared sets (split cache): the small preview paints first, each detector's exposures follow
+  let preview: CachedPreview | null = null;
+  let cachedSlug: CachedSlug | null = null;
+  const detFrames = new Map<Detector, Frame[]>();
+  let detLoad: { det: Detector; ctrl: AbortController; bytes: number; total: number; switchTo: boolean } | null = null;
+  let detFailed: Detector | null = null;
+  let starsRequested = false;
+  let stackKind: 'paired' | 'stack' = 'paired';
 
   // overlays and spectrum
   const ov: Record<Layer, boolean> = {
@@ -254,6 +266,7 @@ export const mount: Mount = (root, ctx) => {
     },
     setMode: (m) => {
       if (m === mode) return;
+      if (m === 'single' && !everyReady()) return;
       mode = m;
       modeUser = true;
       resetChoices();
@@ -265,6 +278,11 @@ export const mount: Mount = (root, ctx) => {
     },
     setDet: (d) => {
       if (d === det) return;
+      if (preview) {
+        if (d === preview.defaultDetector || detFrames.has(d)) switchDetNow(d);
+        else startDetLoad(d, true);
+        return;
+      }
       if (loaded && !loaded.cached && search) {
         det = d;
         switchLive(d, size);
@@ -299,11 +317,6 @@ export const mount: Mount = (root, ctx) => {
     },
     setDiff: (on) => setDiff(on),
     setDiffSource: (s) => setDiffSource(s),
-    setSnr: (on) => {
-      snr = on;
-      render();
-      persist();
-    },
     setA: (i) => {
       aUser = i;
       abTouched = true;
@@ -418,10 +431,12 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function stackOption(): boolean {
+    if (preview) return !!loaded && trackedFrames === null;
     return !!loaded && trackedFrames === null && visitsWithTwo(loaded.frames) >= 2;
   }
 
   function useMatched(): boolean {
+    if (!everyReady()) return false;
     const p = matchedPairFor();
     if (!p || !loaded) return false;
     const prev = mode;
@@ -444,12 +459,21 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function useStack(): void {
+    const m = movie;
+    const [ia, ib] = ab();
+    const va = m?.frames[ia]?.visitIndex;
+    const vb = m?.frames[ib]?.visitIndex;
     mode = 'visit-stack';
     modeUser = true;
     resetChoices();
     player.stop();
     player.setIndex(0);
     rebuild();
+    if (movie && va !== undefined && vb !== undefined) {
+      const i = movie.frames.findIndex((f) => f.visitIndex === va);
+      const j = movie.frames.findIndex((f) => f.visitIndex === vb);
+      if (i >= 0 && j >= 0 && i !== j) setPair(i, j);
+    }
     showRest();
   }
 
@@ -458,15 +482,17 @@ export const mount: Mount = (root, ctx) => {
       stackPinned = false;
       if (!useMatched()) return;
     } else {
-      stackPinned = true;
-      useStack();
+      stackKind = s;
+      stackPinned = s === 'stack';
+      diffCache = null;
+      if (movie && movie.mode !== 'visit-stack') useStack();
     }
     render();
     persist();
   }
 
   function setDiff(on: boolean): void {
-    if (on && !diffOn && mode === 'visit-stack' && !stackPinned && stackOption()) useMatched();
+    if (on && !diffOn && !preview && mode === 'visit-stack' && !stackPinned && stackOption()) useMatched();
     diffOn = on;
     if (on) player.stop();
     render();
@@ -482,7 +508,6 @@ export const mount: Mount = (root, ctx) => {
       a: aUser !== null ? String(aUser) : null,
       b: bUser !== null ? String(bUser) : null,
       diff: diffOn ? '1' : null,
-      snr: diffOn && snr ? '1' : null,
       frame: player.index > 0 ? String(player.index) : null,
       size: size !== DEFAULT_SIZE ? String(size) : null,
       overlays: layers.length > 0 ? layers.join(',') : null,
@@ -671,7 +696,7 @@ export const mount: Mount = (root, ctx) => {
 
   function startTracked(D: number, ref: number): void {
     if (!loaded || det === null) return;
-    const grid = live ? live.grid : cachedData ? cachedData.grid : null;
+    const grid = live ? live.grid : preview ? preview.grid : cachedData ? cachedData.grid : null;
     if (!grid) return;
     trackCtrl?.abort();
     const rc = new AbortController();
@@ -687,6 +712,7 @@ export const mount: Mount = (root, ctx) => {
     loadFrames(exposures, grid, {
       distanceAu: D,
       referenceMjd: ref,
+      concurrency: 3,
       signal: rc.signal,
       onProgress: (p) => {
         log.push(`${Math.round(performance.now() - t0)}ms ${p.stage} ${p.done}/${p.total} ${p.bytes ?? ''}`);
@@ -773,11 +799,123 @@ export const mount: Mount = (root, ctx) => {
     return trackedFrames ?? (loaded ? loaded.frames : []);
   }
 
+  function pickMovie(): Movie | null {
+    if (!loaded || det === null) return null;
+    if (preview && !trackedFrames) {
+      const f = detFrames.get(det);
+      if (f && !(mode === 'visit-stack' && det === preview.defaultDetector)) return buildMovie(f, mode, det, loaded.target);
+      return det === preview.defaultDetector ? preview.movie : null;
+    }
+    return buildMovie(activeFrames(), mode, det, loaded.target);
+  }
+
+  function mbText(n: number): string {
+    return (n / 1e6).toFixed(1);
+  }
+
+  function previewBytes(d: Detector): number {
+    return preview?.detectors.find((x) => x.detector === d)?.bytes ?? 0;
+  }
+
+  function everyReady(): boolean {
+    return !preview || det === null || detFrames.has(det);
+  }
+
+  function everyReason(): string {
+    if (detLoad) {
+      const t = detLoad.total;
+      const b = Math.min(detLoad.bytes, t > 0 ? t : detLoad.bytes);
+      const what = detLoad.det === det ? 'every exposure' : `detector ${detLoad.det}`;
+      if (t > 0) return `Loading ${what}, ${mbText(b)} of ${mbText(t)} MB`;
+      return b > 0 ? `Loading ${what}, ${mbText(b)} MB so far` : `Loading ${what}`;
+    }
+    if (everyReady()) return '';
+    if (det !== null && detFailed === det) return 'Every exposure could not be loaded for this detector.';
+    return 'Every exposure is loading.';
+  }
+
+  function switchDetNow(d: Detector): void {
+    det = d;
+    resetTracking();
+    resetChoices();
+    player.stop();
+    player.setIndex(0);
+    rebuild();
+    persist();
+  }
+
+  function startDetLoad(d: Detector, switchTo: boolean): void {
+    if (!preview || !cachedSlug || detFrames.has(d)) return;
+    if (detLoad && detLoad.det === d) {
+      detLoad.switchTo = detLoad.switchTo || switchTo;
+      return;
+    }
+    detLoad?.ctrl.abort();
+    const rc = new AbortController();
+    const slug = cachedSlug;
+    const pv = preview;
+    const mine = token;
+    detFailed = null;
+    const entry = { det: d, ctrl: rc, bytes: 0, total: previewBytes(d), switchTo };
+    detLoad = entry;
+    panel.setEveryNote(everyReason());
+    loadCachedDetector(slug, d, {
+      signal: rc.signal,
+      onProgress: (p) => {
+        if (disposed || mine !== token || detLoad !== entry) return;
+        if (typeof p.bytes === 'number') entry.bytes = p.bytes;
+        if (p.total >= 100_000) entry.total = p.total;
+        panel.setEveryNote(everyReason());
+      },
+    })
+      .then((r) => {
+        if (disposed || mine !== token || pv !== preview) return;
+        console.info(`[load] detector ${d} every exposure ready at ${Math.round(performance.now() - loadT0)} ms`);
+        const sw = entry.switchTo;
+        if (detLoad === entry) detLoad = null;
+        detFrames.set(d, r.frames.slice().sort((x, y) => x.exposure.mjd - y.exposure.mjd));
+        onDetLanded(d, sw);
+      })
+      .catch((e: unknown) => {
+        if (disposed || mine !== token) return;
+        if (detLoad === entry) detLoad = null;
+        if ((e as { code?: string } | null)?.code !== 'ABORTED') {
+          detFailed = d;
+          panel.setNotice('Every exposure for this detector could not be loaded. The visit stacks still work.');
+        }
+        render();
+      });
+  }
+
+  function onDetLanded(d: Detector, switchTo: boolean): void {
+    if (!loaded) return;
+    let all: Frame[] = [];
+    detFrames.forEach((f) => {
+      all = all.concat(f);
+    });
+    loaded = { ...loaded, frames: all };
+    pairMemo = null;
+    matchedMemo = null;
+    diffCache = null;
+    pairCache = null;
+    qualityKey = { movie: null, frame: null, n: 0, diff: '' };
+    if (switchTo) {
+      switchDetNow(d);
+    } else if (d === det) {
+      if (mode === 'single') rebuild();
+      else render();
+    } else {
+      render();
+    }
+    ensureOverlayData();
+    restorePlanet();
+  }
+
   function rebuild(): void {
     if (!loaded || det === null) return;
     const prevMjd = movie && player.mode === 'stopped' ? (movie.frames[player.index]?.mjd ?? null) : null;
     try {
-      movie = buildMovie(activeFrames(), mode, det, loaded.target);
+      movie = pickMovie();
     } catch {
       movie = null;
       if (trackedFrames && mode !== 'single') {
@@ -855,13 +993,32 @@ export const mount: Mount = (root, ctx) => {
     });
   }
 
+  type MF = Movie['frames'][number];
+
+  // Like-for-like image for two visit stacks: prebuilt in the preview, else built from every exposure.
+  function pairedFor(m: Movie, fa: MF, fb: MF): DifferenceImage | null {
+    if (m.mode !== 'visit-stack' || trackedFrames) return null;
+    if (preview && m === preview.movie) {
+      const hit = preview.differences.find((x) => x.visitA === fa.visitIndex && x.visitB === fb.visitIndex);
+      if (hit) return hit.image;
+    }
+    const pool = preview ? detFrames.get(m.detector) : loaded?.frames;
+    if (!pool) return null;
+    try {
+      const r = visitDifference(pool, m.detector, fa.visitIndex, fb.visitIndex);
+      return r.nPairs > 0 ? r : null;
+    } catch {
+      return null;
+    }
+  }
+
   function getDiff(m: Movie, a: number, b: number): DiffEntry | null {
     const fa = m.frames[a];
     const fb = m.frames[b];
-    const key = `${trackedFrames ? trackD : 0}|${drange}|${mode}|${m.detector}|${fa?.exposureIds.join(',')}|${fb?.exposureIds.join(',')}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
+    const key = `${stackKind}|${detFrames.size}|${trackedFrames ? trackD : 0}|${drange}|${mode}|${m.detector}|${fa?.exposureIds.join(',')}|${fb?.exposureIds.join(',')}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
     if (diffCache && diffCache.key === key) return diffCache;
     try {
-      const d = difference(m.frames[a], m.frames[b]);
+      const d = (stackKind === 'paired' ? pairedFor(m, fa, fb) : null) ?? difference(m.frames[a], m.frames[b]);
       const dr = diffRange(d.pixels, drange);
       diffCache = { key, d, range: dr.range, soft: dr.soft };
       return diffCache;
@@ -949,9 +1106,9 @@ export const mount: Mount = (root, ctx) => {
   function diffImage(dr: DiffEntry): { rgba: Uint8ClampedArray; k: number } {
     const d = dr.d;
     const k = smoothK(d.w, d.h);
-    const src = snr ? d.snr : d.pixels;
-    const range = snr ? SIGMA_RANGE : dr.range;
-    const soft = snr ? 0 : dr.soft;
+    const src = d.pixels;
+    const range = dr.range;
+    const soft = dr.soft;
     const rgba = cached(src, `${k}|${range}|${soft}`, () => {
       if (k === 1) return renderDiverging(src, d.w, d.h, range, soft);
       const norm = new Float32Array(src.length);
@@ -989,10 +1146,8 @@ export const mount: Mount = (root, ctx) => {
     }
     const d = dr.d;
     return {
-      rangeText: snr
-        ? `Range -${SIGMA_RANGE} to +${SIGMA_RANGE} sigma`
-        : `Range -${sig2(dr.range)} to +${sig2(dr.range)} MJy/sr. Faint values are stretched so small residuals show.`,
-      unit: snr ? 'sigma' : 'MJy/sr',
+      rangeText: `Range -${sig2(dr.range)} to +${sig2(dr.range)} MJy/sr. Faint values are stretched so small residuals show.`,
+      unit: 'MJy/sr',
       warning: d.wavelengthMatched
         ? null
         : `These two visits saw this spot at different wavelengths (${wl(d.wavelengthA)} and ${wl(d.wavelengthB)}). The pair is not like for like: leftovers can come from the star's colour, not from real change.`,
@@ -1002,7 +1157,9 @@ export const mount: Mount = (root, ctx) => {
 
   function readingLine(m: Movie, a: number, b: number): string {
     let text = 'Orange: brighter in B. Blue: brighter in A.';
-    if (m.mode === 'visit-stack') text += ` ${STACK_WARN}`;
+    const meth = current && current.kind === 'diff' ? current.d.method : null;
+    if (meth === 'naive-stack') text += ` ${STACK_WARN}`;
+    else if (meth === 'paired-stack') text += ` ${PAIRED_READING}`;
     const t = loaded?.target;
     const fa = m.frames[a];
     const fb = m.frames[b];
@@ -1028,8 +1185,18 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function diffSourceModel(): PanelModel['diffSource'] {
-    if (!diffOn || !stackOption()) return null;
-    return { current: mode === 'visit-stack' ? 'stack' : 'matched', available: { matched: matchedPairFor() !== null, stack: true } };
+    if (!diffOn || !stackOption() || !movie) return null;
+    const meth = current && current.kind === 'diff' ? current.d.method : null;
+    const cur: DiffSource = movie.mode === 'single' ? 'matched' : meth === 'paired-stack' ? 'paired' : 'stack';
+    const ready = everyReady();
+    let reason = '';
+    if (!ready) reason = 'Matched pair, and the like-for-like image for other visits, need every exposure. Still loading.';
+    else if (stackKind === 'paired' && cur === 'stack') reason = 'No exposures from these two visits pair up by wavelength.';
+    return {
+      current: cur,
+      available: { paired: true, matched: ready && matchedPairFor() !== null, stack: true },
+      reason,
+    };
   }
 
   function detectorList(): PanelModel['detectorList'] {
@@ -1039,9 +1206,14 @@ export const mount: Mount = (root, ctx) => {
       const [lo, hi] = DET_BANDS[d];
       const band = `Detector ${d}, about ${lo.toFixed(1)} to ${hi.toFixed(1)} um`;
       if (!info || info.count === 0) return { detector: d, label: `${band}, no images here`, enabled: false };
+      let extra = '';
+      if (preview && d !== preview.defaultDetector && !detFrames.has(d)) {
+        const bytes = previewBytes(d);
+        extra = detLoad && detLoad.det === d ? ', loading' : bytes > 0 ? `, ${mbText(bytes)} MB to load` : '';
+      }
       return {
         detector: d,
-        label: `${band}, ${info.visits} ${info.visits === 1 ? 'visit' : 'visits'}`,
+        label: `${band}, ${info.visits} ${info.visits === 1 ? 'visit' : 'visits'}${extra}`,
         enabled: true,
       };
     });
@@ -1086,9 +1258,7 @@ export const mount: Mount = (root, ctx) => {
     stage.setKey({
       ramp:
         diffOn && current && current.kind === 'diff'
-          ? snr
-            ? { lo: `-${SIGMA_RANGE}`, hi: `+${SIGMA_RANGE}`, unit: 'sigma' }
-            : { lo: `-${sig2(unitRange)}`, hi: `+${sig2(unitRange)}`, unit: 'MJy/sr' }
+          ? { lo: `-${sig2(unitRange)}`, hi: `+${sig2(unitRange)}`, unit: 'MJy/sr' }
           : null,
       saturated: hasSat,
     });
@@ -1166,7 +1336,6 @@ export const mount: Mount = (root, ctx) => {
       playMode: player.mode,
       fps: player.fps,
       diff: diffOn,
-      snr,
       mode,
       det: m.detector,
       detectorList: detectorList(),
@@ -1190,6 +1359,8 @@ export const mount: Mount = (root, ctx) => {
           .join(' '),
       compare,
       diffSource: diffSourceModel(),
+      everyReady: everyReady(),
+      everyReason: everyReason(),
     };
     panel.update(model);
   }
@@ -1313,14 +1484,21 @@ export const mount: Mount = (root, ctx) => {
       return Number.isNaN(v) ? nanText(y * current.w + x) : `${v.toFixed(2)} MJy/sr`;
     }
     const d = current.d;
-    const v = snr ? d.snr[y * d.w + x] : d.pixels[y * d.w + x];
+    const v = d.pixels[y * d.w + x];
     if (Number.isNaN(v)) return nanText(y * d.w + x);
-    return snr ? `${v >= 0 ? '+' : ''}${v.toFixed(1)} sigma` : `${v >= 0 ? '+' : ''}${v.toFixed(2)} MJy/sr`;
+    return `${v >= 0 ? '+' : ''}${v.toFixed(2)} MJy/sr`;
   });
 
   stage.onPick((fx, fy) => {
     if (!loaded || !movie) return;
     const w = gridToWorld(shownGrid ?? movie.grid, fx, fy);
+    if (!everyReady()) {
+      lastPick = [fx, fy];
+      stage.setPick([fx, fy]);
+      stage.redraw();
+      spectrum.wait('The spectrum needs every exposure. It is still loading.');
+      return;
+    }
     let pts;
     try {
       pts = spectrumAt(loaded.frames, w.ra, w.dec);
@@ -1369,6 +1547,25 @@ export const mount: Mount = (root, ctx) => {
 
   function ensureOverlayData(): void {
     if (!loaded) return;
+    if (preview) {
+      // The preview carries the brightest stars. The full list loads once, when an overlay is on.
+      if (ov.gaia && !ovSources.gaia) ovSources.gaia = sourcesFromGaia(preview.gaia);
+      if (ov.wise && !ovSources.wise) ovSources.wise = sourcesFromWise(preview.wise);
+      if ((ov.gaia || ov.wise) && !starsRequested && cachedSlug) {
+        starsRequested = true;
+        const pv = preview;
+        const mine = token;
+        loadCachedStars(cachedSlug)
+          .then((s) => {
+            if (disposed || mine !== token || pv !== preview) return;
+            ovSources.gaia = sourcesFromGaia(s.gaia);
+            ovSources.wise = sourcesFromWise(s.wise);
+            render();
+          })
+          .catch(() => undefined);
+      }
+      return;
+    }
     if (cachedData) {
       if (ov.gaia && !ovSources.gaia) ovSources.gaia = sourcesFromGaia(cachedData.gaia);
       if (ov.wise && !ovSources.wise) ovSources.wise = sourcesFromWise(cachedData.wise);
@@ -1434,6 +1631,7 @@ export const mount: Mount = (root, ctx) => {
     }
     const name = target.name ?? fallback;
     const isWise =
+      cachedSlug === 'wise-0855' ||
       cachedData?.slug === 'wise-0855' ||
       normalizeName(`${target.name ?? ''} ${params.q ?? ''}`).includes('wise0855');
     panel.setTitleNote(
@@ -1597,6 +1795,13 @@ export const mount: Mount = (root, ctx) => {
     ctrl?.abort();
     restCtrl?.abort();
     restCtrl = null;
+    detLoad?.ctrl.abort();
+    detLoad = null;
+    detFailed = null;
+    detFrames.clear();
+    preview = null;
+    cachedSlug = null;
+    starsRequested = false;
     loaded = null;
     movie = null;
     live = null;
@@ -1627,10 +1832,13 @@ export const mount: Mount = (root, ctx) => {
     console.info(`[load] ${res.cached ? 'prepared set' : 'first look'} ready at ${Math.round(performance.now() - loadT0)} ms`);
     panel.setRecheck(sawPartial && !res.cached);
     askedAt = res.asked ?? null;
-    panel.setPreparedNote(res.viaPosition && res.cachedData ? (res.target.name ?? res.cachedData.slug) : null);
-    panel.setMockLine(res.cached && res.cachedData ? isSimulated(res.cachedData) : liveIsMock);
+    panel.setPreparedNote(res.viaPosition && res.preview ? (res.target.name ?? res.cachedSlug ?? '') : null);
+    panel.setMockLine(res.cached && res.preview ? isSimulated(res.preview) : liveIsMock);
     search = res.search ?? search;
     cachedData = res.cachedData;
+    preview = res.preview;
+    cachedSlug = res.cachedSlug;
+    detFrames.clear();
     live = res.live;
     if (live) {
       size = live.size;
@@ -1656,6 +1864,14 @@ export const mount: Mount = (root, ctx) => {
       available: res.available,
       cached: res.cached,
     });
+    if (preview && movie && !abTouched && aUser === null && bUser === null) {
+      const pr = preview.pairs.year ?? preview.pairs.halfYear;
+      if (pr) {
+        const i = movie.frames.findIndex((f) => f.visitIndex === pr.frames[0].exposure.visitIndex);
+        const j = movie.frames.findIndex((f) => f.visitIndex === pr.frames[1].exposure.visitIndex);
+        if (i >= 0 && j >= 0 && i !== j) setPair(Math.min(i, j), Math.max(i, j));
+      }
+    }
     rootEl.dataset.state = 'ready';
     if (res.failed > 0) {
       panel.setNotice(`${res.failed} of ${res.total} exposures could not be read and were skipped.`);
@@ -1664,6 +1880,11 @@ export const mount: Mount = (root, ctx) => {
     render();
     restorePlanet();
     if (live) startRefine(res);
+    if (preview) {
+      const want = params.det !== null && params.det !== det && res.available.some((x) => x.detector === params.det) ? params.det : null;
+      if (want !== null) startDetLoad(want, true);
+      else startDetLoad(det as Detector, false);
+    }
   }
 
   function startRefine(res: LoadResult): void {

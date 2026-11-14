@@ -74,7 +74,7 @@ import { createSpectrumPanel } from '../viewer/spectrum';
 import { createPlanetSection } from '../viewer/planet';
 import { bytesFromProgress, loadingLine } from '../viewer/loading';
 import type { LoadingBytes } from '../viewer/loading';
-import { PAIRED_READING, STACK_WARN } from '../viewer/stack-copy';
+import { NO_PAIR_READING, PAIRED_READING } from '../viewer/stack-copy';
 import type { DiffSource } from '../viewer/stack-copy';
 import { COPY, fill } from '../viewer/distance-copy';
 import { ringRadiusPx } from '../viewer/distance';
@@ -192,7 +192,6 @@ export const mount: Mount = (root, ctx) => {
   let detLoad: { det: Detector; ctrl: AbortController; bytes: number; total: number; switchTo: boolean } | null = null;
   let detFailed: Detector | null = null;
   let starsRequested = false;
-  let stackKind: 'paired' | 'stack' = 'paired';
 
   // overlays and spectrum
   const ov: Record<Layer, boolean> = {
@@ -411,7 +410,6 @@ export const mount: Mount = (root, ctx) => {
   }
 
   // Difference source: a wavelength-matched single-exposure pair, or whole-visit stacks.
-  let stackPinned = false;
   let matchedMemo: { key: string; pair: Pair | null } | null = null;
 
   function matchedPairFor(): Pair | null {
@@ -479,11 +477,8 @@ export const mount: Mount = (root, ctx) => {
 
   function setDiffSource(s: DiffSource): void {
     if (s === 'matched') {
-      stackPinned = false;
       if (!useMatched()) return;
     } else {
-      stackKind = s;
-      stackPinned = s === 'stack';
       diffCache = null;
       if (movie && movie.mode !== 'visit-stack') useStack();
     }
@@ -492,7 +487,7 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function setDiff(on: boolean): void {
-    if (on && !diffOn && !preview && mode === 'visit-stack' && !stackPinned && stackOption()) useMatched();
+    if (on && !diffOn && !preview && mode === 'visit-stack' && stackOption()) useMatched();
     diffOn = on;
     if (on) player.stop();
     render();
@@ -1015,10 +1010,11 @@ export const mount: Mount = (root, ctx) => {
   function getDiff(m: Movie, a: number, b: number): DiffEntry | null {
     const fa = m.frames[a];
     const fb = m.frames[b];
-    const key = `${stackKind}|${detFrames.size}|${trackedFrames ? trackD : 0}|${drange}|${mode}|${m.detector}|${fa?.exposureIds.join(',')}|${fb?.exposureIds.join(',')}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
+    const key = `${detFrames.size}|${trackedFrames ? trackD : 0}|${drange}|${mode}|${m.detector}|${fa?.exposureIds.join(',')}|${fb?.exposureIds.join(',')}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
     if (diffCache && diffCache.key === key) return diffCache;
     try {
-      const d = (stackKind === 'paired' ? pairedFor(m, fa, fb) : null) ?? difference(m.frames[a], m.frames[b]);
+      const d = m.mode === 'visit-stack' && !trackedFrames ? pairedFor(m, fa, fb) : difference(m.frames[a], m.frames[b]);
+      if (!d) return null;
       const dr = diffRange(d.pixels, drange);
       diffCache = { key, d, range: dr.range, soft: dr.soft };
       return diffCache;
@@ -1158,8 +1154,7 @@ export const mount: Mount = (root, ctx) => {
   function readingLine(m: Movie, a: number, b: number): string {
     let text = 'Orange: brighter in B. Blue: brighter in A.';
     const meth = current && current.kind === 'diff' ? current.d.method : null;
-    if (meth === 'naive-stack') text += ` ${STACK_WARN}`;
-    else if (meth === 'paired-stack') text += ` ${PAIRED_READING}`;
+    if (meth === 'paired-stack') text += ` ${PAIRED_READING}`;
     const t = loaded?.target;
     const fa = m.frames[a];
     const fb = m.frames[b];
@@ -1187,14 +1182,14 @@ export const mount: Mount = (root, ctx) => {
   function diffSourceModel(): PanelModel['diffSource'] {
     if (!diffOn || !stackOption() || !movie) return null;
     const meth = current && current.kind === 'diff' ? current.d.method : null;
-    const cur: DiffSource = movie.mode === 'single' ? 'matched' : meth === 'paired-stack' ? 'paired' : 'stack';
+    const cur: DiffSource = movie.mode === 'single' ? 'matched' : 'paired';
     const ready = everyReady();
     let reason = '';
-    if (!ready) reason = 'Matched pair, and the like-for-like image for other visits, need every exposure. Still loading.';
-    else if (stackKind === 'paired' && cur === 'stack') reason = 'No exposures from these two visits pair up by wavelength.';
+    if (!ready) reason = 'Single pair, and the like-for-like stack for other visits, need every exposure. Still loading.';
+    else if (cur === 'paired' && meth !== 'paired-stack') reason = NO_PAIR_READING;
     return {
       current: cur,
-      available: { paired: true, matched: ready && matchedPairFor() !== null, stack: true },
+      available: { paired: true, matched: ready && matchedPairFor() !== null },
       reason,
     };
   }

@@ -1,4 +1,4 @@
-import { DIFF_HINT, DIFF_SOURCES, PAIRED_NOTE, STACK_WARN } from './stack-copy';
+import { DIFF_HINT, DIFF_SOURCES, PAIRED_NOTE } from './stack-copy';
 import type { DiffSource } from './stack-copy';
 import type { Detector, MovieMode, Progress, SpherexErrorCode } from '../data';
 import { divergingColor } from './render';
@@ -533,10 +533,7 @@ export function createPanel(hd: PanelHandlers): Panel {
       m.b,
     );
     timeline.setPickEnabled(n >= 2);
-    const stackWarn = m.diff && m.diffSource !== null && m.diffSource.current === 'stack';
-    caveat.textContent = stackWarn
-      ? STACK_WARN
-      : m.diff
+    caveat.textContent = m.diff
       ? 'Brightness needs care: each image is taken at a slightly different infrared colour, so a star can flicker without having changed. Bright stars also leave marks in a subtraction even when nothing moved.'
       : 'Brightness needs care: each image is taken at a slightly different infrared colour, so a star can flicker without having changed.';
 

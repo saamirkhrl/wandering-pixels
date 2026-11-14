@@ -23019,7 +23019,8 @@
     ],
     "_citations": [
       "Gaia Collaboration 2023, A&A 674, A1 (Gaia DR3 gaia_source, vari_summary)",
-      "Eyer et al. 2023, A&A 674, A13 (Gaia DR3 variability)"
+      "Eyer et al. 2023, A&A 674, A13 (Gaia DR3 variability)",
+      "Mowlavi et al. 2023, A&A 674, A16 (Gaia DR3 eclipsing-binary candidates, doi:10.1051/0004-6361/202245330)"
     ]
   },
   "phaseb_error_floor_barnard": {

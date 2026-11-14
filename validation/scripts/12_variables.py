@@ -509,7 +509,7 @@ def main():
     fig.savefig(FIGURES / "variable_demo.png", dpi=130)
     plt.close(fig)
     R["_text"] = TEXT
-    R["_citations"] = ["Gaia Collaboration 2023, A&A 674, A1 (Gaia DR3 gaia_source, vari_summary)", "Eyer et al. 2023, A&A 674, A13 (Gaia DR3 variability)"]
+    R["_citations"] = ["Gaia Collaboration 2023, A&A 674, A1 (Gaia DR3 gaia_source, vari_summary)", "Eyer et al. 2023, A&A 674, A13 (Gaia DR3 variability)", "Mowlavi et al. 2023, A&A 674, A16 (Gaia DR3 eclipsing-binary candidates, doi:10.1051/0004-6361/202245330)"]
     update_results("variable_demo", R)
     print(f"\nresults.json section variable_demo written; runtime {time.time() - t0:.0f} s")
 

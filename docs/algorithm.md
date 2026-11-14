@@ -349,6 +349,12 @@ means the model uses only the same detector as here.
   browser's exposure sets this changed acceptance for 2 of 117 Barnard pair results. The algorithm is
   deliberately left unchanged so that the reference and the browser port stay identical. Ignoring
   flags on aperture pixels with weight under about 1e-3 is future work.
+- One flagged pixel marks the whole result `saturated`: the flag is set when any measured exposure of
+  either visit has raw bit 1, 15 or 26 anywhere in the central 5 x 5. For V391 Oph (G 12.7, an
+  eclipsing-binary candidate in Gaia DR3) on detector 4 this fires on a single off-peak OVERFLOW
+  pixel in 1 of about 58 exposures, although the star's peak is 4 MJy/sr, far below the roughly
+  50 MJy/sr where OVERFLOW normally appears. The rule is deliberately conservative and unchanged.
+  Future work: require the bit on the peak pixel, or in more than a set fraction of exposures.
 - OVERFLOW (raw bit 1) sets the `saturated` quality flag but is not in the BAD_DATA pixel mask, by
   design.
 

@@ -554,6 +554,12 @@ pairs, three visits) with validation/wp/m2ref.py.
   Barnard pair results. We deliberately leave the algorithm unchanged so that the reference and the
   browser port stay identical; ignoring flags on aperture pixels with weight under about 1e-3 is
   future work.
+- Known edge case, conservative saturation flag: one flagged pixel in one exposure (seen in 1 of
+  about 58 detector 4 exposures of V391 Oph, an eclipsing-binary candidate in Gaia DR3, Mowlavi et
+  al. 2023, G 12.7, peak 4 MJy/sr, far below the roughly 50 MJy/sr where OVERFLOW normally
+  appears) marks the whole result `saturated`. Both implementations follow this rule, and it is
+  left unchanged. Requiring the bit on the peak pixel, or in more than a set fraction of exposures,
+  is future work.
 
 ## Negative results
 

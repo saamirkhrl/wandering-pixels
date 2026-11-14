@@ -228,7 +228,10 @@ frames usable). The SOURCE flag covers about 97 percent of pixels, so excluding 
 the local background is effectively impossible; the background falls back to a clipped annulus
 median in about 80 percent of cases. The matched model is a straight line over +/- 2.5 bandwidths;
 across that window the PSF width changes by 0.1 to 2 percent, which we neglect. The 2 percent
-error term is empirical.
+error term is empirical. The website computes the per-star readout from native pixel stamps with
+the step 2 photometry of docs/algorithm.md (validated here), but its paired-stack image view is
+built from bilinearly resampled frames and is not validated at pixel level (the grid products in
+this section show why resampled per-pixel comparisons behave worse).
 
 ### Choices fixed before any phase B result was computed (2026-11-14, 09:52 CST; see git history)
 
@@ -294,7 +297,7 @@ chosen after seeing which makes the matched method look best.
 
 Results: to be written (phase C).
 
-### Choices fixed before any phase C result was computed (2026-11-14, 10:40 CST; see git history)
+### Choices fixed before any phase C result was computed (2026-11-14, 10:38 CST; see git history)
 
 1. Fields and visits: Barnard's Star field visits 0 and 2 (6 months); Eps Indi field visits 0
    and 1 (6 months). Native cutout pixels; the archive ePSF (EPSF extension of each Level 2 file,

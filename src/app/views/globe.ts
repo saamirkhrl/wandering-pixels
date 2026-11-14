@@ -161,25 +161,33 @@ export const mount: Mount = (root, ctx) => {
   const loader = new TextureLoader();
   const small = window.innerWidth < 700 || window.innerWidth * (window.devicePixelRatio || 1) < 1100;
   const base = import.meta.env.BASE_URL;
-  const loadInto = (file: string, uniform: 'uDay' | 'uNight') => {
+  // Each uniform keeps the most detailed texture that has arrived: the 30 KB earth-512.jpg
+  // shows first on slow links, then the full map replaces it.
+  const detail = { uDay: -1, uNight: -1 };
+  const loadingLine = el('p', 'globe-loading', 'Loading Earth');
+  loadingLine.setAttribute('role', 'status');
+  const loadInto = (file: string, uniform: 'uDay' | 'uNight', level: number) => {
     loader.load(
       base + 'textures/' + file,
       (tex) => {
-        if (disposed) {
+        if (disposed || level < detail[uniform]) {
           tex.dispose();
           return;
         }
         tex.colorSpace = SRGBColorSpace;
         tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
         textures.push(tex);
+        detail[uniform] = level;
         material.uniforms[uniform]!.value = tex;
+        if (uniform === 'uDay') loadingLine.remove();
       },
       undefined,
       () => undefined,
     );
   };
-  loadInto(small ? 'earth-2k.jpg' : 'earth-4k.jpg', 'uDay');
-  loadInto('earth-night-2k.jpg', 'uNight');
+  loadInto('earth-512.jpg', 'uDay', 0);
+  loadInto(small ? 'earth-2k.jpg' : 'earth-4k.jpg', 'uDay', 1);
+  loadInto('earth-night-2k.jpg', 'uNight', 1);
 
   let sunStamp = 0;
   const updateSun = (now: number) => {
@@ -261,6 +269,7 @@ export const mount: Mount = (root, ctx) => {
   actions.append(chooser, locateBtn);
   const veil = el('div', 'globe-veil');
   view.append(intro, marker, panel, actions, veil);
+  if (detail.uDay < 0) view.appendChild(loadingLine);
 
   // ----- selection -----
   let sel: { lat: number; lon: number; place?: string; tz?: string } | null = null;
@@ -593,6 +602,9 @@ export const mount: Mount = (root, ctx) => {
     const now = performance.now();
     if (flight) {
       stepFlight(now);
+      // The flight's last step switches to the sky view, which unmounts (disposes) this one:
+      // rendering after that would re-upload the textures and recompile into a dead renderer.
+      if (disposed) return;
     } else {
       if (tween) {
         const k = ease3((now - tween.t0) / tween.ms);

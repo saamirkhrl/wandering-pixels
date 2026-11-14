@@ -11,7 +11,7 @@ import {
   worldToAltAz,
   type RiseInfo,
 } from '../sky/astro';
-import { createHipsLayer, HIPS_FRAMES, type HipsLayer } from '../sky/hips';
+import { createHipsLayer, HIPS_FRAMES, HIPS_LOCAL_FRAME, type HipsLayer } from '../sky/hips';
 import { loadBrightStars } from '../sky/stars';
 import { TARGETS, type Target } from '../sky/targets';
 import { button, el, markSvg, reticleSvg, setText } from '../sky/view/dom';
@@ -39,6 +39,7 @@ const WANTED_UM = [0.75, 1.1, 1.6, 2.2, 3.4, 4.6];
 const PLAY_RATE = 1200;
 const NOTE_KEY = 'sky-note-dismissed';
 const NOTE_TEXT = 'First-year SPHEREx map. The date only turns the sky; open a patch to see change.';
+const ARCHIVE_NOTE = 'Other wavelengths need the NASA archive, which is not answering.';
 
 function writeParams(values: Record<string, string>): void {
   try {
@@ -96,6 +97,7 @@ interface Pop {
 }
 
 export const mount: Mount = (root, ctx) => {
+  performance.mark('wp-sky-mount');
   const lat = parseFloat(ctx.params.lat ?? '');
   const lon = parseFloat(ctx.params.lon ?? '');
   const wrap = el('div', 'sky-root');
@@ -120,14 +122,16 @@ export const mount: Mount = (root, ctx) => {
   const reduced = prefersReducedMotion();
   const phoneMq = window.matchMedia('(max-width: 599px)');
 
+  // Next time the Sun is 12 deg below the horizon: 30 min steps, then bisection to under a
+  // minute (about 60 Sun positions in the worst case, a few ms).
   function defaultNight(from: Date): Date {
     if (sunAltitude(place, from) < -12) return from;
-    for (let m = 10; m <= 48 * 60; m += 10) {
+    for (let m = 30; m <= 48 * 60; m += 30) {
       const d = new Date(from.getTime() + m * 60000);
       if (sunAltitude(place, d) < -12) {
-        let lo = m - 10;
+        let lo = m - 30;
         let hi = m;
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
           const mid = (lo + hi) / 2;
           if (sunAltitude(place, new Date(from.getTime() + mid * 60000)) < -12) hi = mid;
           else lo = mid;
@@ -146,6 +150,7 @@ export const mount: Mount = (root, ctx) => {
     isTonight = true;
   }
   date = new Date(Math.floor(date.getTime() / 1000) * 1000);
+  performance.mark('wp-sky-night');
 
   // ---- renderer, scene, camera
   const canvas = el('canvas', 'sky-canvas');
@@ -157,10 +162,10 @@ export const mount: Mount = (root, ctx) => {
   );
   wrap.appendChild(canvas);
 
-  const renderer = new WebGLRenderer({ canvas, antialias: true });
+  // The WebGL context (slow to create on software GL) and the map layer are made right after the
+  // first paint, so the strip and the status line show at once (initGl below).
+  let renderer: WebGLRenderer | null = null;
   const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-  renderer.setPixelRatio(pixelRatio);
-  renderer.setClearColor(0x04060d, 1);
   const scene = new Scene();
   const camera = new PerspectiveCamera(75, 1, 0.1, 100);
   camera.up.set(0, 1, 0);
@@ -175,17 +180,15 @@ export const mount: Mount = (root, ctx) => {
 
   let hips: HipsLayer | null = null;
   const frames = pickFrames();
-  let frameIndex = frames.length ? frames[Math.min(2, frames.length - 1)].index : 0;
+  // Default to the frame shipped with the site (drawn without the archive), else about 1.6 um.
+  let frameIndex = frames.some((f) => f.index === HIPS_LOCAL_FRAME)
+    ? HIPS_LOCAL_FRAME
+    : frames.length
+      ? frames[Math.min(2, frames.length - 1)].index
+      : 0;
   const frameParam = parseInt(ctx.params.frame ?? '', 10);
   const frameKnown = HIPS_FRAMES.find((f) => f.index === frameParam);
   if (frameKnown) frameIndex = frameKnown.index;
-  try {
-    hips = createHipsLayer(renderer, frameIndex);
-    celestial.add(hips.object);
-  } catch {
-    hips = null;
-  }
-
   let starLayer: StarLayer | null = null;
   let starsOn = true;
   let ringMode = false;
@@ -272,7 +275,17 @@ export const mount: Mount = (root, ctx) => {
   const msgs = el('div', 'sky-msgs');
   const statusLine = el('div', 'sky-msg');
   statusLine.setAttribute('role', 'status');
-  msgs.append(statusLine);
+  const statusText = el('span', undefined, 'Loading map');
+  const retryBtn = button('Retry', 'chrome-btn s-retry', () => {
+    hips?.retry();
+    shownFailed = false;
+    retryBtn.remove();
+    setText(statusText, 'Loading map');
+    markDirty();
+  });
+  statusLine.append(statusText);
+  const archiveLine = el('div', 'sky-msg s-wave-note');
+  msgs.append(archiveLine, statusLine);
 
   const strip = el('section', 'sky-strip');
   strip.setAttribute('aria-label', 'Place, time and map controls');
@@ -357,6 +370,11 @@ export const mount: Mount = (root, ctx) => {
   waveSel.addEventListener('change', () => {
     const idx = parseInt(waveSel.value, 10);
     if (!Number.isFinite(idx)) return;
+    if (hips?.archiveDown && idx !== HIPS_LOCAL_FRAME) {
+      waveSel.value = String(frameIndex);
+      setText(archiveLine, ARCHIVE_NOTE);
+      return;
+    }
     frameIndex = idx;
     hips?.setFrame(idx);
     writeParams({ frame: String(idx) });
@@ -439,6 +457,7 @@ export const mount: Mount = (root, ctx) => {
   const live = el('div', 'sky-sr');
   live.setAttribute('aria-live', 'polite');
   wrap.append(bottom, live);
+  performance.mark('wp-sky-strip');
 
   function setStars(on: boolean): void {
     starsOn = on;
@@ -552,7 +571,13 @@ export const mount: Mount = (root, ctx) => {
     timeText.title = full;
     timeText.setAttribute('aria-label', full);
     if (document.activeElement !== timeInput) timeInput.value = clock.toInput(date);
+    if (targetsReady) refreshTargets();
+  }
 
+  // Rise and set searches for the targets (each a few hundred rotation matrices). Skipped on the
+  // first frame so the strip and the sky paint first; run once right after, then with the UI.
+  let targetsReady = false;
+  function refreshTargets(): void {
     for (const r of rows) {
       const ri = riseInfo({ ra: r.target.ra, dec: r.target.dec }, place, date);
       r.info = ri;
@@ -972,7 +997,7 @@ export const mount: Mount = (root, ctx) => {
     width = Math.max(1, Math.floor(rect.width));
     height = Math.max(1, Math.floor(rect.height));
     stripH = strip.offsetHeight || 60;
-    renderer.setSize(width, height, false);
+    renderer?.setSize(width, height, false);
     if (!userMoved) {
       const a = horizonAlt();
       if (intro) intro.to = a;
@@ -991,8 +1016,9 @@ export const mount: Mount = (root, ctx) => {
   let viewDirty = true;
   let raf = 0;
   let last = performance.now();
-  let shownLoading = false;
+  let shownLoading = true;
   let shownFailed = false;
+  let shownArchiveDown = false;
 
   function markDirty(): void {
     lastChange = performance.now();
@@ -1046,10 +1072,21 @@ export const mount: Mount = (root, ctx) => {
     if (ld !== shownLoading || fl !== shownFailed) {
       shownLoading = ld;
       shownFailed = fl;
-      setText(
-        statusLine,
-        fl ? 'Map tiles did not load. The chart and targets still work.' : ld ? 'Loading map' : '',
-      );
+      setText(statusText, fl ? 'Some of the map did not load.' : ld ? 'Loading map' : '');
+      if (fl) statusLine.appendChild(retryBtn);
+      else retryBtn.remove();
+      statusLine.style.display = fl || ld ? '' : 'none';
+    }
+    const down = !!hips?.archiveDown;
+    if (down !== shownArchiveDown) {
+      shownArchiveDown = down;
+      setText(archiveLine, down ? ARCHIVE_NOTE : '');
+      if (down && frameIndex !== HIPS_LOCAL_FRAME) {
+        frameIndex = HIPS_LOCAL_FRAME;
+        hips?.setFrame(frameIndex);
+        waveSel.value = String(frameIndex);
+        writeParams({ frame: String(frameIndex) });
+      }
     }
     if (ld) lastChange = now;
 
@@ -1061,6 +1098,7 @@ export const mount: Mount = (root, ctx) => {
       updateReticleUi();
       viewDirty = false;
     }
+    if (!renderer) return;
     hips?.update(camera, height * pixelRatio);
     renderer.render(scene, camera);
     lastRender = now;
@@ -1080,7 +1118,48 @@ export const mount: Mount = (root, ctx) => {
   }
   resize();
   refreshUi();
-  raf = requestAnimationFrame(tick);
+  uiDirty = false;
+  applyCamera();
+  projectOverlay();
+  viewDirty = false;
+  performance.mark('wp-sky-mount-end');
+
+  let glTimer = 0;
+  function initGl(): void {
+    if (disposed) return;
+    try {
+      renderer = new WebGLRenderer({ canvas, antialias: true });
+    } catch {
+      setText(statusText, 'This browser could not start WebGL, so the sky cannot be drawn.');
+      return;
+    }
+    performance.mark('wp-sky-renderer');
+    renderer.setPixelRatio(pixelRatio);
+    renderer.setClearColor(0x04060d, 1);
+    try {
+      hips = createHipsLayer(renderer, frameIndex);
+      celestial.add(hips.object);
+    } catch {
+      hips = null;
+    }
+    performance.mark('wp-sky-hips');
+    resize();
+    applyCamera();
+    hips?.update(camera, height * pixelRatio);
+    renderer.render(scene, camera);
+    performance.mark('wp-sky-first-render');
+    lastRender = performance.now();
+    raf = requestAnimationFrame(tick);
+  }
+  // First paint shows the strip and "Loading map"; the sky follows in the next task.
+  raf = requestAnimationFrame(() => {
+    glTimer = window.setTimeout(initGl, 0);
+  });
+  const targetsTimer = window.setTimeout(() => {
+    targetsReady = true;
+    refreshTargets();
+    markDirty();
+  }, 50);
 
   let disposed = false;
   loadBrightStars()
@@ -1104,6 +1183,8 @@ export const mount: Mount = (root, ctx) => {
   return () => {
     disposed = true;
     cancelAnimationFrame(raf);
+    window.clearTimeout(targetsTimer);
+    window.clearTimeout(glTimer);
     window.clearTimeout(liveTimer);
     ro.disconnect();
     document.removeEventListener('pointerdown', onDocPointer, true);
@@ -1111,8 +1192,8 @@ export const mount: Mount = (root, ctx) => {
     hips?.dispose();
     starLayer?.dispose();
     backdrop.dispose();
-    renderer.dispose();
-    renderer.forceContextLoss();
+    renderer?.dispose();
+    renderer?.forceContextLoss();
     wrap.remove();
   };
 };

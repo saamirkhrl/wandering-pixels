@@ -35,6 +35,18 @@
   pointer-events: none;
 }
 
+.globe-loading {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  color: var(--paper-dim);
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+
 .globe-marker {
   position: absolute;
   top: 0;

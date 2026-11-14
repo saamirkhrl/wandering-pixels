@@ -77,8 +77,9 @@ import { bytesFromProgress, loadingLine } from '../viewer/loading';
 import type { LoadingBytes } from '../viewer/loading';
 import { NO_PAIR_READING, PAIRED_READING } from '../viewer/stack-copy';
 import type { DiffSource } from '../viewer/stack-copy';
-import { COPY, fill } from '../viewer/distance-copy';
+import { COPY, fill, mjdDate } from '../viewer/distance-copy';
 import { ringRadiusPx } from '../viewer/distance';
+import { createSimTag, simAnchorGrid, simFrames, SIM_MOTION } from '../viewer/planet-sim';
 import { createQualityPanel } from '../viewer/quality';
 import {
   describeSource,
@@ -162,6 +163,9 @@ export const mount: Mount = (root, ctx) => {
   let drange: DiffRange = params.drange;
   let planetStep: 0 | 1 | 2 = params.planet;
   let ringsOn = true;
+  let simOn = new URLSearchParams(location.search).get('sim') === '1';
+  let refineDone = false;
+  let simRef: number | null = simOn ? params.ref : null;
   let trackD: number | null = params.dist;
   let trackRef: number | null = params.ref;
   let trackedFrames: Frame[] | null = null;
@@ -241,6 +245,7 @@ export const mount: Mount = (root, ctx) => {
       startTracked(d, trackRef ?? (movie ? (movie.frames[Math.min(player.index, movie.frames.length - 1)]?.mjd ?? 0) : 0));
     },
     onLoadRest: () => loadTrackRest(),
+    onSim: (on) => (on && loaded && pairs().half.length === 0 ? ctx.go('viewer', { q: "Barnard's Star", planet: '2', dist: '500', sim: '1' }) : setSim(on)),
     onExample: () => ctx.go('viewer', { ra: '150.1', dec: '2.2', mock: '1', planet: '2', dist: '500' }),
   });
 
@@ -352,6 +357,8 @@ export const mount: Mount = (root, ctx) => {
     },
   });
   panel.attach(spectrum.el, quality.el, planet.el);
+  const simTag = createSimTag();
+  stage.el.querySelector('.v-plate')?.appendChild(simTag);
   panel.setBack(params.from === 'sky' ? 'Back to the sky' : params.from === 'globe' ? 'Back to the globe' : null);
 
   rootEl.append(stage.el, panel.el);
@@ -512,6 +519,7 @@ export const mount: Mount = (root, ctx) => {
       planet: planetStep ? String(planetStep) : null,
       dist: trackedFrames && trackD !== null ? String(trackD) : null,
       ref: trackedFrames && trackRef !== null ? trackRef.toFixed(3) : null,
+      sim: simOn ? '1' : null,
     });
   }
 
@@ -641,7 +649,8 @@ export const mount: Mount = (root, ctx) => {
   function loadTrackRest(): void {
     if (trackD === null || trackRef === null) return;
     trackFull = true;
-    trackPickAB = trackedFrames && movie ? [ab()[0], ab()[1]] : null;
+    trackPickAB = null;
+    trackAutoPick = true;
     startTracked(trackD, trackRef);
     render();
   }
@@ -692,8 +701,10 @@ export const mount: Mount = (root, ctx) => {
 
   function startTracked(D: number, ref: number): void {
     if (!loaded || det === null) return;
-    const grid = live ? live.grid : preview ? preview.grid : cachedData ? cachedData.grid : null;
-    if (!grid) return;
+    const base = baseGrid();
+    if (!base) return;
+    const grid = simOn ? simAnchorGrid(base) : base;
+    if (simOn) ref = simAnchorMjd();
     trackCtrl?.abort();
     const rc = new AbortController();
     trackCtrl = rc;
@@ -708,6 +719,7 @@ export const mount: Mount = (root, ctx) => {
     loadFrames(exposures, grid, {
       distanceAu: D,
       referenceMjd: ref,
+      ...(simOn ? { motion: SIM_MOTION } : {}),
       concurrency: 3,
       signal: rc.signal,
       onProgress: (p) => {
@@ -791,13 +803,47 @@ export const mount: Mount = (root, ctx) => {
     }
   }
 
+  function baseGrid(): Grid | null {
+    return live ? live.grid : preview ? preview.grid : cachedData ? cachedData.grid : null;
+  }
+
+  // The simulated body's anchor date, frozen once chosen: the earlier date of the year pair, so
+  // step 1 shows it in both images.
+  function simAnchorMjd(): number {
+    if (simRef !== null) return simRef;
+    const y = pairs().year[0];
+    let t = y ? Math.min(y.a.mjd, y.b.mjd) : Infinity;
+    if (!y && loaded) for (const f of loaded.frames) if (f.exposure.detector === det && f.exposure.mjd < t) t = f.exposure.mjd;
+    if (!Number.isFinite(t)) return 0;
+    simRef = t;
+    return t;
+  }
+
+  function setSim(on: boolean): void {
+    simOn = on;
+    diffCache = null;
+    pairCache = null;
+    if (planetStep === 2 && trackD !== null) startTracked(trackD, simAnchorMjd());
+    else {
+      rebuild();
+      render();
+    }
+    persist();
+  }
+
+  function simShown(): boolean {
+    return simOn && planetStep !== 0 && baseGrid() !== null;
+  }
+
   function activeFrames(): Frame[] {
-    return trackedFrames ?? (loaded ? loaded.frames : []);
+    if (!simShown()) return trackedFrames ?? (loaded ? loaded.frames : []);
+    const fr = trackedFrames ?? (preview && det !== null ? detFrames.get(det) : undefined) ?? (loaded ? loaded.frames : []);
+    return simFrames(fr, simAnchorGrid(baseGrid() as Grid), simAnchorMjd());
   }
 
   function pickMovie(): Movie | null {
     if (!loaded || det === null) return null;
-    if (preview && !trackedFrames) {
+    if (preview && !trackedFrames && !simShown()) {
       const f = detFrames.get(det);
       if (f && !(mode === 'visit-stack' && det === preview.defaultDetector)) return buildMovie(f, mode, det, loaded.target);
       return det === preview.defaultDetector ? preview.movie : null;
@@ -994,11 +1040,11 @@ export const mount: Mount = (root, ctx) => {
   // Like-for-like image for two visit stacks: prebuilt in the preview, else built from every exposure.
   function pairedFor(m: Movie, fa: MF, fb: MF): DifferenceImage | null {
     if (m.mode !== 'visit-stack' || trackedFrames) return null;
-    if (preview && m === preview.movie) {
+    if (preview && m === preview.movie && !simShown()) {
       const hit = preview.differences.find((x) => x.visitA === fa.visitIndex && x.visitB === fb.visitIndex);
       if (hit) return hit.image;
     }
-    const pool = preview ? detFrames.get(m.detector) : loaded?.frames;
+    const pool = simShown() ? activeFrames() : preview ? detFrames.get(m.detector) : loaded?.frames;
     if (!pool) return null;
     try {
       const r = visitDifference(pool, m.detector, fa.visitIndex, fb.visitIndex);
@@ -1310,7 +1356,27 @@ export const mount: Mount = (root, ctx) => {
           : fill(COPY.gapShort, { n, um: um.toFixed(3) });
     }
     const pr = pairs();
+    let jumpAhead: number | null = null;
+    const jt = loaded?.target;
+    const jx = tr && fa && fb ? [fa.mjd, fb.mjd] : trackPairEx.length === 2 ? [trackPairEx[0].mjd, trackPairEx[1].mjd] : null;
+    if (planetStep === 2 && jt && jx && shownGrid) {
+      try {
+        const D = trackD ?? 500;
+        const pa = parallaxOffset(jt.ra, jt.dec, jx[0], D);
+        const pb = parallaxOffset(jt.ra, jt.dec, jx[1], D);
+        jumpAhead = (Math.hypot(pb.dRa - pa.dRa, pb.dDec - pa.dDec) * 3600) / shownGrid.scaleArcsec;
+      } catch {
+        jumpAhead = null;
+      }
+    }
+    const simShownNow = simShown();
+    simTag.hidden = !simShownNow;
     planet.set({
+      simOn: simShownNow,
+      listing: !live ? 'complete' : restCtrl !== null || !refineDone ? 'reading' : remaining.length > 0 ? 'more' : 'complete',
+      partial: !!live && sawPartial,
+      refDate: planetStep === 2 && trackRef !== null ? mjdDate(trackRef) : null,
+      jumpPx: jumpAhead,
       step: planetStep,
       ringsOn,
       gapDays: fa && fb && a !== b ? gapDays(fa.mjd, fb.mjd) : null,
@@ -1889,6 +1955,7 @@ export const mount: Mount = (root, ctx) => {
       const have = new Set(pairFrames.map((f) => f.exposure.id));
       remaining = annotated.filter((e) => !have.has(e.id));
       lv.rest = remaining;
+      refineDone = true;
       if (remaining.length > 0 && remaining.length <= AUTO_REST_LIMIT) startRest();
       else showRest();
     };
@@ -1940,6 +2007,8 @@ export const mount: Mount = (root, ctx) => {
   function startLoad(): void {
     console.info('[load] start');
     sawPartial = false;
+    refineDone = false;
+    simRef = simOn ? params.ref : null;
     resetForLoad();
     search = null;
     cachedData = null;

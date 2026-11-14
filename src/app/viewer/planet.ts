@@ -2,7 +2,7 @@ import { COPY, fill } from './distance-copy';
 import { createDistanceControl } from './distance';
 import type { DistanceControl } from './distance';
 
-export const SIM_EXAMPLE_ENABLED = true;
+export const SIM_EXAMPLE_ENABLED = false;
 
 export interface PlanetModel {
   step: 0 | 1 | 2;
@@ -15,6 +15,11 @@ export interface PlanetModel {
   lowTolerance: boolean;
   // offer to load the rest of the two visits of the tracked pair
   restOffer: { n: number; mb: number } | null;
+  simOn?: boolean;
+  listing?: 'reading' | 'more' | 'complete';
+  partial?: boolean;
+  refDate?: string | null;
+  jumpPx?: number | null;
 }
 
 export interface PlanetHandlers {
@@ -23,6 +28,7 @@ export interface PlanetHandlers {
   onDistance(distanceAu: number | null): void;
   onExample(): void;
   onLoadRest(): void;
+  onSim?(on: boolean): void;
 }
 
 export interface PlanetSection {
@@ -72,13 +78,16 @@ export function createPlanetSection(h: PlanetHandlers): PlanetSection {
 
   // step 2
   const s2 = e('div', 'v-planet-step');
-  s2.append(e('h4', 'v-subhead', COPY.step2Title), e('p', '', COPY.step2Lead));
+  const willJump = e('p', 'v-planet-key');
+  const refLine = e('p', 'v-detail');
+  s2.append(e('h4', 'v-subhead', COPY.step2Title), willJump, refLine);
   const control = createDistanceControl({ onChange: (d) => h.onDistance(d) }, { bare: true });
   control.el.classList.add('v-planet-control');
   s2.appendChild(control.el);
   const lowTol = e('p', 'v-detail', COPY.lowTol);
   lowTol.hidden = true;
   s2.appendChild(lowTol);
+  s2.appendChild(e('p', 'v-hint', COPY.step2Lead));
   const restBtn = e('button', 'v-btn');
   restBtn.type = 'button';
   restBtn.hidden = true;
@@ -91,7 +100,7 @@ export function createPlanetSection(h: PlanetHandlers): PlanetSection {
   const disc = e('details', 'v-disclosure');
   disc.appendChild(e('summary', '', COPY.limitsTitle));
   const l2 = e('p', 'v-hint');
-  disc.append(l2, e('p', 'v-hint', COPY.limit3), e('p', 'v-hint', COPY.limit4), e('p', 'v-hint', COPY.limit6));
+  disc.append(l2, e('p', 'v-hint', COPY.limit3), e('p', 'v-hint', COPY.limit4), e('p', 'v-hint', COPY.limit6), e('p', 'v-hint', COPY.limit7));
   limits.appendChild(disc);
 
   const science = e('div', 'v-planet-science');
@@ -105,7 +114,18 @@ export function createPlanetSection(h: PlanetHandlers): PlanetSection {
   example.type = 'button';
   example.addEventListener('click', () => h.onExample());
 
-  root.append(seg, few, gap, s1, s2, limits, science);
+  // simulated body: first thing under the step buttons, for both steps
+  const simBox = e('div', 'v-planet-sim');
+  const simTagLine = e('p', 'v-sim-line', COPY.simTag);
+  const simHow = e('p', 'v-hint', COPY.simHow);
+  const simResult = e('p', 'v-hint', COPY.simResult);
+  const simBtn = e('button', 'v-btn v-sim-btn');
+  simBtn.type = 'button';
+  simBox.append(simTagLine, simHow, simResult, simBtn);
+  let simOn = false;
+  simBtn.addEventListener('click', () => h.onSim?.(!simOn));
+
+  root.append(seg, few, simBox, s1, s2, gap, limits, science);
   if (SIM_EXAMPLE_ENABLED) root.appendChild(example);
 
   let step: 0 | 1 | 2 = 0;
@@ -123,7 +143,16 @@ export function createPlanetSection(h: PlanetHandlers): PlanetSection {
       b2.disabled = !enough || !m.hasHalf;
       b1.setAttribute('aria-pressed', String(m.step === 1));
       b2.setAttribute('aria-pressed', String(m.step === 2));
-      const notes = !enough ? [fill(COPY.fewVisits, { n: m.visits })] : [m.hasYear ? '' : COPY.noYear, m.hasHalf ? '' : COPY.noHalf].filter(Boolean);
+      const listing = m.listing ?? 'complete';
+      const missing = listing === 'reading' ? COPY.reading : listing === 'more' ? COPY.notLoaded : null;
+      const notes = !enough
+        ? [missing ?? fill(COPY.fewVisits, { n: m.visits })]
+        : !m.hasYear || !m.hasHalf
+          ? missing
+            ? [missing]
+            : [m.hasYear ? '' : COPY.noYear, m.hasHalf ? '' : COPY.noHalf].filter(Boolean)
+          : [];
+      if (m.partial && notes.length > 0) notes.push(COPY.partial);
       few.hidden = notes.length === 0;
       few.textContent = notes.join(' ');
       s1.hidden = m.step !== 1;
@@ -135,6 +164,18 @@ export function createPlanetSection(h: PlanetHandlers): PlanetSection {
       gap.hidden = m.gapText === null;
       l2.textContent = g === null ? '' : fill(COPY.limit2, { n: g });
       lowTol.hidden = !m.lowTolerance;
+      simOn = m.simOn === true;
+      simBox.hidden = m.step === 0 || h.onSim === undefined;
+      simTagLine.hidden = !simOn;
+      simHow.hidden = !simOn;
+      simResult.hidden = !simOn;
+      simBtn.textContent = simOn ? COPY.simOff : COPY.simTry;
+      simBtn.setAttribute('aria-pressed', String(simOn));
+      control.setSim(simOn);
+      willJump.hidden = !m.jumpPx;
+      willJump.textContent = m.jumpPx ? fill(COPY.willJump, { px: Math.round(m.jumpPx) }) : '';
+      refLine.hidden = !m.refDate;
+      refLine.textContent = m.refDate ? fill(simOn ? COPY.refSim : COPY.refReal, { date: m.refDate }) : '';
       restBtn.hidden = m.restOffer === null;
       if (m.restOffer) restBtn.textContent = fill(COPY.loadRest, { n: m.restOffer.n, mb: m.restOffer.mb });
     },

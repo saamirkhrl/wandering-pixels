@@ -14,6 +14,7 @@ export interface DistanceControl {
   setValue(distanceAu: number | null): void;
   setReadout(r: DistanceReadout | null): void;
   setLoading(p: { done: number; total: number; bytes?: number } | null): void;
+  setSim(on: boolean): void;
   dispose(): void;
 }
 
@@ -142,6 +143,7 @@ export function createDistanceControl(
   let available = true;
   let timer: number | null = null;
   let lastReadout: DistanceReadout | null = null;
+  let sim = false;
 
   const clearTimer = (): void => {
     if (timer !== null) {
@@ -162,7 +164,7 @@ export function createDistanceControl(
         el('p', 'dist-p', fill(COPY.jump, { arcsec: r.jumpArcsec.toFixed(1), px: r.jumpPx.toFixed(1) })),
       );
     }
-    readout.appendChild(el('p', 'dist-p', COPY.orbital));
+    readout.appendChild(el('p', 'dist-p', sim ? COPY.orbitalSim : COPY.orbital));
   };
 
   const draw = (): void => {
@@ -278,6 +280,10 @@ export function createDistanceControl(
       loading.hidden = false;
       const mb = p.bytes !== undefined ? `, ${(p.bytes / 1e6).toFixed(0)} MB` : '';
       loading.textContent = `Loading ${p.done} of ${p.total} images${mb}`;
+    },
+    setSim(on): void {
+      sim = on;
+      drawReadout();
     },
     dispose(): void {
       clearTimer();

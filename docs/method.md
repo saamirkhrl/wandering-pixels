@@ -292,7 +292,35 @@ chosen after seeing which makes the matched method look best.
 
 ## Injection and recovery
 
-To be written (phase C).
+Results: to be written (phase C).
+
+### Choices fixed before any phase C result was computed (2026-11-14, 10:40 CST; see git history)
+
+1. Fields and visits: Barnard's Star field visits 0 and 2 (6 months); Eps Indi field visits 0
+   and 1 (6 months). Native cutout pixels; the archive ePSF (EPSF extension of each Level 2 file,
+   zone nearest the source) for the injected point source.
+2. Positions: uniform random in the cutout, at least 15 px from its edges, no Gaia source with
+   G < 18 within 20 arcsec and none with G < 9 within 3 arcmin of the old or new position. Fixed
+   random seed. Motion direction uniform random; position linear in time, with the stated motion
+   per 182.6 days (pixels of 6.15 arcsec).
+3. Grid: AB 14.0 to 19.5 in steps of 0.5; motion 0, 0.25, 0.5, 1, 2, 4 px per 6 months; two
+   spectra: flat in AB, and a cool brown dwarf model (Sonora Bobcat, Marley et al. 2021) normalised
+   to the stated AB magnitude at 4.5 um. 50 trials per cell and field.
+4. Injection: flux density converted to MJy/sr per pixel with the nominal pixel solid angle; the
+   ePSF shifted to the sub-pixel position, integrated over pixels, added to IMAGE; source photon
+   noise added as Gaussian noise with variance k x signal, k fitted per frame from VARIANCE against
+   IMAGE on unflagged pixels, and the same added to VARIANCE.
+5. Photometry and comparisons exactly as docs/algorithm.md (one detector at a time, inflated
+   variance var + (0.02 F)^2), evaluated at the old position (visit A position at visit A's mean
+   epoch) and the new position (visit B). Detector results are pooled by inverse variance for the
+   six-detector statistic; the one-detector statistic uses detector 2.
+6. Detection statistic, for each of P1 (best pair), PS (paired stack) and M2:
+   S = (D_old - D_new) / sqrt(var_old + var_new), with D = visit A minus visit B. Threshold: the
+   99th percentile of S over un-injected trials with the same positions and motion (at least 500
+   per field and motion), i.e. 1 percent false positives; completeness also reported at S >= 5.
+7. False-alarm calibration of the readout: on the phase B steady-star samples, the fraction of
+   (star, detector, visit pair) combined |z| at or above 3, 4 and 5, for P1, PS and M2 with the
+   inflated variance; thresholds recommended for about 1 and 0.1 percent.
 
 ## Known movers
 

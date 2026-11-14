@@ -1,0 +1,17 @@
+[project]
+name = "wp-validation"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.14.5",
+    "astropy>=8.0.2",
+    "astroquery>=0.4.11",
+    "fsspec>=2026.9.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.4",
+    "photutils>=3.1.1",
+    "reproject>=0.21.0",
+    "requests>=2.34.2",
+    "s3fs>=2026.9.0",
+    "scipy>=1.18.1",
+]

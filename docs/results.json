@@ -1,0 +1,6190 @@
+{
+  "_meta": {
+    "updated_utc": "2026-11-14T15:50:03+00:00"
+  },
+  "wavelength_source_check": {
+    "random_D1_median_dwave": {
+      "value": 0.3284612433738787,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py",
+      "note": "WCS-WAVE minus CWAVE, 2000 random pixels, seed 42"
+    },
+    "random_D1_robust_sigma_dwave": {
+      "value": 0.2124371005040352,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D1_max_abs_dwave": {
+      "value": 0.9089339031942423,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D1_max_abs_dwave_over_band": {
+      "value": 0.05252700480158834,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D1_median_abs_dwave_over_band": {
+      "value": 0.014141492016690758,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "cal_header_D1_WLERRMAX": {
+      "value": 50.014,
+      "unit": "nm",
+      "script": "02_wavelength.py",
+      "note": "header of CWAVE: max error of CWAVE lookup vs SpecCal (not WCS-WAVE vs CWAVE)"
+    },
+    "cal_header_D1_WLERRP99": {
+      "value": 0.759,
+      "unit": "nm",
+      "script": "02_wavelength.py"
+    },
+    "random_D2_median_dwave": {
+      "value": 0.31648275218887356,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py",
+      "note": "WCS-WAVE minus CWAVE, 2000 random pixels, seed 42"
+    },
+    "random_D2_robust_sigma_dwave": {
+      "value": 0.19346745527192694,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D2_max_abs_dwave": {
+      "value": 1.0669252880330937,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D2_max_abs_dwave_over_band": {
+      "value": 0.0408298094946929,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D2_median_abs_dwave_over_band": {
+      "value": 0.009653807979249649,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "cal_header_D2_WLERRMAX": {
+      "value": 162.886,
+      "unit": "nm",
+      "script": "02_wavelength.py",
+      "note": "header of CWAVE: max error of CWAVE lookup vs SpecCal (not WCS-WAVE vs CWAVE)"
+    },
+    "cal_header_D2_WLERRP99": {
+      "value": 0.726,
+      "unit": "nm",
+      "script": "02_wavelength.py"
+    },
+    "random_D3_median_dwave": {
+      "value": 0.587282989750193,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py",
+      "note": "WCS-WAVE minus CWAVE, 2000 random pixels, seed 42"
+    },
+    "random_D3_robust_sigma_dwave": {
+      "value": 0.30213678410621503,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D3_max_abs_dwave": {
+      "value": 1.5095529957989129,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D3_max_abs_dwave_over_band": {
+      "value": 0.04297922966815651,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D3_median_abs_dwave_over_band": {
+      "value": 0.012148133989155957,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "cal_header_D3_WLERRMAX": {
+      "value": 655.4219999999999,
+      "unit": "nm",
+      "script": "02_wavelength.py",
+      "note": "header of CWAVE: max error of CWAVE lookup vs SpecCal (not WCS-WAVE vs CWAVE)"
+    },
+    "cal_header_D3_WLERRP99": {
+      "value": 1.161,
+      "unit": "nm",
+      "script": "02_wavelength.py"
+    },
+    "random_D4_median_dwave": {
+      "value": 0.4494751518746565,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py",
+      "note": "WCS-WAVE minus CWAVE, 2000 random pixels, seed 42"
+    },
+    "random_D4_robust_sigma_dwave": {
+      "value": 0.6572657189797706,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D4_max_abs_dwave": {
+      "value": 4.943810635605228,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D4_max_abs_dwave_over_band": {
+      "value": 0.0704809833846213,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D4_median_abs_dwave_over_band": {
+      "value": 0.006955022344597942,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "cal_header_D4_WLERRMAX": {
+      "value": 1385.266,
+      "unit": "nm",
+      "script": "02_wavelength.py",
+      "note": "header of CWAVE: max error of CWAVE lookup vs SpecCal (not WCS-WAVE vs CWAVE)"
+    },
+    "cal_header_D4_WLERRP99": {
+      "value": 2.599,
+      "unit": "nm",
+      "script": "02_wavelength.py"
+    },
+    "random_D5_median_dwave": {
+      "value": 0.1690440026629325,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py",
+      "note": "WCS-WAVE minus CWAVE, 2000 random pixels, seed 42"
+    },
+    "random_D5_robust_sigma_dwave": {
+      "value": 0.16395025553667741,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D5_max_abs_dwave": {
+      "value": 7.219035322209244,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D5_max_abs_dwave_over_band": {
+      "value": 0.18672173554073276,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D5_median_abs_dwave_over_band": {
+      "value": 0.00498385471593645,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "cal_header_D5_WLERRMAX": {
+      "value": 12.048,
+      "unit": "nm",
+      "script": "02_wavelength.py",
+      "note": "header of CWAVE: max error of CWAVE lookup vs SpecCal (not WCS-WAVE vs CWAVE)"
+    },
+    "cal_header_D5_WLERRP99": {
+      "value": 0.844,
+      "unit": "nm",
+      "script": "02_wavelength.py"
+    },
+    "random_D6_median_dwave": {
+      "value": 0.2893336292171256,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py",
+      "note": "WCS-WAVE minus CWAVE, 2000 random pixels, seed 42"
+    },
+    "random_D6_robust_sigma_dwave": {
+      "value": 0.4088925646216114,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D6_max_abs_dwave": {
+      "value": 1.9509568146958145,
+      "unit": "nm",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D6_max_abs_dwave_over_band": {
+      "value": 0.05232583914137019,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "random_D6_median_abs_dwave_over_band": {
+      "value": 0.010060791346821474,
+      "unit": "fraction of local CBAND",
+      "n": 2000,
+      "script": "02_wavelength.py"
+    },
+    "cal_header_D6_WLERRMAX": {
+      "value": 2.823,
+      "unit": "nm",
+      "script": "02_wavelength.py",
+      "note": "header of CWAVE: max error of CWAVE lookup vs SpecCal (not WCS-WAVE vs CWAVE)"
+    },
+    "cal_header_D6_WLERRP99": {
+      "value": 1.2650000000000001,
+      "unit": "nm",
+      "script": "02_wavelength.py"
+    },
+    "cal_dr1_qr3_identical": {
+      "value": true,
+      "unit": "bool",
+      "n": 6,
+      "script": "02_wavelength.py",
+      "note": "version cal-swcs-v5-2026-191 under both dr1/ and qr3/, byte-identical (same ETag) for all 6 detectors"
+    },
+    "wcswave_table_identical_across_exposures": {
+      "value": "24/24",
+      "unit": "tables equal to calibration file table",
+      "n": 24,
+      "script": "02_wavelength.py",
+      "note": "exposures spread over time per detector; compared to table inside the calibration file"
+    },
+    "epsindi_target_median_dwave": {
+      "value": 0.33196943332258755,
+      "unit": "nm",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_target_robust_sigma_dwave": {
+      "value": 0.3056788367742575,
+      "unit": "nm",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_target_max_abs_dwave": {
+      "value": 7.325240475108963,
+      "unit": "nm",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_target_max_abs_dwave_over_band": {
+      "value": 0.19302925419763292,
+      "unit": "fraction of local CBAND",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "barnard_target_median_dwave": {
+      "value": 0.3304479476211597,
+      "unit": "nm",
+      "n": 358,
+      "script": "02_wavelength.py"
+    },
+    "barnard_target_robust_sigma_dwave": {
+      "value": 0.31262271516567286,
+      "unit": "nm",
+      "n": 358,
+      "script": "02_wavelength.py"
+    },
+    "barnard_target_max_abs_dwave": {
+      "value": 2.6328351208531053,
+      "unit": "nm",
+      "n": 358,
+      "script": "02_wavelength.py"
+    },
+    "barnard_target_max_abs_dwave_over_band": {
+      "value": 0.046002743460759034,
+      "unit": "fraction of local CBAND",
+      "n": 358,
+      "script": "02_wavelength.py"
+    }
+  },
+  "wavelength_sampling": {
+    "epsindi_visit0_n_exposures": {
+      "value": 125,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2025-05-09"
+    },
+    "epsindi_visit1_n_exposures": {
+      "value": 139,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2025-10-11"
+    },
+    "epsindi_visit2_n_exposures": {
+      "value": 75,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2026-04-25"
+    },
+    "epsindi_visit3_n_exposures": {
+      "value": 119,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2026-09-27"
+    },
+    "epsindi_target_median_dwave": {
+      "value": 0.33196943332258755,
+      "unit": "nm",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_target_robust_sigma_dwave": {
+      "value": 0.3056788367742575,
+      "unit": "nm",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_target_max_abs_dwave": {
+      "value": 7.325240475108963,
+      "unit": "nm",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_target_max_abs_dwave_over_band": {
+      "value": 0.19302925419763292,
+      "unit": "fraction of local CBAND",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_same_visit_pairs_within_1width": {
+      "value": 0.13271113134532211,
+      "unit": "fraction of same-detector pairs",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| < mean CBAND of the two exposures"
+    },
+    "epsindi_same_visit_pairs_within_0p5width": {
+      "value": 0.027088549965854768,
+      "unit": "fraction of same-detector pairs",
+      "n": 4393,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_6mo_pairs_within_1width": {
+      "value": 0.11204013377926421,
+      "unit": "fraction of same-detector pairs",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| < mean CBAND of the two exposures"
+    },
+    "epsindi_6mo_pairs_within_0p5width": {
+      "value": 0.0659606094388703,
+      "unit": "fraction of same-detector pairs",
+      "n": 5382,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_6mo_expA_with_partner_1width": {
+      "value": 0.7492625368731564,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 339,
+      "script": "02_wavelength.py",
+      "note": "partner = same detector, later visit of this dt class, within 1 width"
+    },
+    "epsindi_6mo_expA_with_partner_0p5width": {
+      "value": 0.7109144542772862,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 339,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_12mo_pairs_within_1width": {
+      "value": 0.11578947368421053,
+      "unit": "fraction of same-detector pairs",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| < mean CBAND of the two exposures"
+    },
+    "epsindi_12mo_pairs_within_0p5width": {
+      "value": 0.052118100128369704,
+      "unit": "fraction of same-detector pairs",
+      "n": 3895,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_12mo_expA_with_partner_1width": {
+      "value": 0.6325757575757576,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 264,
+      "script": "02_wavelength.py",
+      "note": "partner = same detector, later visit of this dt class, within 1 width"
+    },
+    "epsindi_12mo_expA_with_partner_0p5width": {
+      "value": 0.4772727272727273,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 264,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_18mo_pairs_within_1width": {
+      "value": 0.10806503028371055,
+      "unit": "fraction of same-detector pairs",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| < mean CBAND of the two exposures"
+    },
+    "epsindi_18mo_pairs_within_0p5width": {
+      "value": 0.06726171501434491,
+      "unit": "fraction of same-detector pairs",
+      "n": 3137,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_18mo_expA_with_partner_1width": {
+      "value": 0.936,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 125,
+      "script": "02_wavelength.py",
+      "note": "partner = same detector, later visit of this dt class, within 1 width"
+    },
+    "epsindi_18mo_expA_with_partner_0p5width": {
+      "value": 0.936,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 125,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_visit0_n_distinct_wavelengths": {
+      "value": 67,
+      "unit": "wavelengths",
+      "n": 125,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2025-05-09"
+    },
+    "epsindi_visit0_coverage_0p75_5p0": {
+      "value": 0.592935150160509,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 125,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "epsindi_visit0_max_gap": {
+      "value": 1.1655831336975098,
+      "unit": "um",
+      "n": 67,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_visit0_max_gap_bandwidths": {
+      "value": 14.575878493599024,
+      "unit": "local bandwidths",
+      "n": 67,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_visit1_n_distinct_wavelengths": {
+      "value": 100,
+      "unit": "wavelengths",
+      "n": 139,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2025-10-11"
+    },
+    "epsindi_visit1_coverage_0p75_5p0": {
+      "value": 0.992119683062329,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 139,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "epsindi_visit1_max_gap": {
+      "value": 0.10068750381469727,
+      "unit": "um",
+      "n": 100,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_visit1_max_gap_bandwidths": {
+      "value": 1.9408380629674744,
+      "unit": "local bandwidths",
+      "n": 100,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_visit2_n_distinct_wavelengths": {
+      "value": 66,
+      "unit": "wavelengths",
+      "n": 75,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2026-04-25"
+    },
+    "epsindi_visit2_coverage_0p75_5p0": {
+      "value": 0.7053194061359939,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 75,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "epsindi_visit2_max_gap": {
+      "value": 0.24361371994018555,
+      "unit": "um",
+      "n": 66,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_visit2_max_gap_bandwidths": {
+      "value": 6.561765878699574,
+      "unit": "local bandwidths",
+      "n": 66,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_visit3_n_distinct_wavelengths": {
+      "value": 73,
+      "unit": "wavelengths",
+      "n": 119,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2026-09-27"
+    },
+    "epsindi_visit3_coverage_0p75_5p0": {
+      "value": 0.6017357459401383,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 119,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "epsindi_visit3_max_gap": {
+      "value": 1.3936843872070312,
+      "unit": "um",
+      "n": 73,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_visit3_max_gap_bandwidths": {
+      "value": 38.38688234631847,
+      "unit": "local bandwidths",
+      "n": 73,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_all_visits_n_distinct_wavelengths": {
+      "value": 129,
+      "unit": "wavelengths",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_all_visits_coverage_0p75_5p0": {
+      "value": 1.0,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 458,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit0_n_exposures": {
+      "value": 108,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2025-08-26"
+    },
+    "barnard_visit1_n_exposures": {
+      "value": 10,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2025-09-30"
+    },
+    "barnard_visit2_n_exposures": {
+      "value": 113,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2026-03-17"
+    },
+    "barnard_visit3_n_exposures": {
+      "value": 8,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2026-05-04"
+    },
+    "barnard_visit4_n_exposures": {
+      "value": 117,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2026-08-22"
+    },
+    "barnard_visit5_n_exposures": {
+      "value": 2,
+      "unit": "exposures",
+      "script": "02_wavelength.py",
+      "note": "visit date 2026-09-22"
+    },
+    "barnard_target_median_dwave": {
+      "value": 0.3304479476211597,
+      "unit": "nm",
+      "n": 358,
+      "script": "02_wavelength.py"
+    },
+    "barnard_target_robust_sigma_dwave": {
+      "value": 0.31262271516567286,
+      "unit": "nm",
+      "n": 358,
+      "script": "02_wavelength.py"
+    },
+    "barnard_target_max_abs_dwave": {
+      "value": 2.6328351208531053,
+      "unit": "nm",
+      "n": 358,
+      "script": "02_wavelength.py"
+    },
+    "barnard_target_max_abs_dwave_over_band": {
+      "value": 0.046002743460759034,
+      "unit": "fraction of local CBAND",
+      "n": 358,
+      "script": "02_wavelength.py"
+    },
+    "barnard_same_visit_pairs_within_1width": {
+      "value": 0.1136959370904325,
+      "unit": "fraction of same-detector pairs",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| < mean CBAND of the two exposures"
+    },
+    "barnard_same_visit_pairs_within_0p5width": {
+      "value": 0.005897771952817824,
+      "unit": "fraction of same-detector pairs",
+      "n": 3052,
+      "script": "02_wavelength.py"
+    },
+    "barnard_6mo_pairs_within_1width": {
+      "value": 0.11650922177237967,
+      "unit": "fraction of same-detector pairs",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| < mean CBAND of the two exposures"
+    },
+    "barnard_6mo_pairs_within_0p5width": {
+      "value": 0.05735492577597841,
+      "unit": "fraction of same-detector pairs",
+      "n": 4446,
+      "script": "02_wavelength.py"
+    },
+    "barnard_6mo_expA_with_partner_1width": {
+      "value": 0.649171270718232,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 362,
+      "script": "02_wavelength.py",
+      "note": "partner = same detector, later visit of this dt class, within 1 width"
+    },
+    "barnard_6mo_expA_with_partner_0p5width": {
+      "value": 0.6243093922651933,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 362,
+      "script": "02_wavelength.py"
+    },
+    "barnard_12mo_pairs_within_1width": {
+      "value": 0.10804993542832544,
+      "unit": "fraction of same-detector pairs",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| < mean CBAND of the two exposures"
+    },
+    "barnard_12mo_pairs_within_0p5width": {
+      "value": 0.07834696513129574,
+      "unit": "fraction of same-detector pairs",
+      "n": 2323,
+      "script": "02_wavelength.py"
+    },
+    "barnard_12mo_expA_with_partner_1width": {
+      "value": 0.5169491525423728,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 236,
+      "script": "02_wavelength.py",
+      "note": "partner = same detector, later visit of this dt class, within 1 width"
+    },
+    "barnard_12mo_expA_with_partner_0p5width": {
+      "value": 0.5084745762711864,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 236,
+      "script": "02_wavelength.py"
+    },
+    "barnard_18mo_pairs_within_1width": {
+      "value": NaN,
+      "unit": "fraction of same-detector pairs",
+      "n": 0,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| < mean CBAND of the two exposures"
+    },
+    "barnard_18mo_pairs_within_0p5width": {
+      "value": NaN,
+      "unit": "fraction of same-detector pairs",
+      "n": 0,
+      "script": "02_wavelength.py"
+    },
+    "barnard_18mo_expA_with_partner_1width": {
+      "value": NaN,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 0,
+      "script": "02_wavelength.py",
+      "note": "partner = same detector, later visit of this dt class, within 1 width"
+    },
+    "barnard_18mo_expA_with_partner_0p5width": {
+      "value": NaN,
+      "unit": "fraction of earlier-visit exposures",
+      "n": 0,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit0_n_distinct_wavelengths": {
+      "value": 104,
+      "unit": "wavelengths",
+      "n": 108,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2025-08-26"
+    },
+    "barnard_visit0_coverage_0p75_5p0": {
+      "value": 0.9926267608123667,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 108,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "barnard_visit0_max_gap": {
+      "value": 0.09918975830078125,
+      "unit": "um",
+      "n": 104,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit0_max_gap_bandwidths": {
+      "value": 1.8251535233021203,
+      "unit": "local bandwidths",
+      "n": 104,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit1_n_distinct_wavelengths": {
+      "value": 10,
+      "unit": "wavelengths",
+      "n": 10,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2025-09-30"
+    },
+    "barnard_visit1_coverage_0p75_5p0": {
+      "value": 0.11590622716090258,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 10,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "barnard_visit1_max_gap": {
+      "value": 1.384482979774475,
+      "unit": "um",
+      "n": 10,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit1_max_gap_bandwidths": {
+      "value": 34.06901420719773,
+      "unit": "local bandwidths",
+      "n": 10,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit2_n_distinct_wavelengths": {
+      "value": 102,
+      "unit": "wavelengths",
+      "n": 113,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2026-03-17"
+    },
+    "barnard_visit2_coverage_0p75_5p0": {
+      "value": 0.9993073300403708,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 113,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "barnard_visit2_max_gap": {
+      "value": 0.10003066062927246,
+      "unit": "um",
+      "n": 102,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit2_max_gap_bandwidths": {
+      "value": 1.1500860585098518,
+      "unit": "local bandwidths",
+      "n": 102,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit3_n_distinct_wavelengths": {
+      "value": 8,
+      "unit": "wavelengths",
+      "n": 8,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2026-05-04"
+    },
+    "barnard_visit3_coverage_0p75_5p0": {
+      "value": 0.0814487767570159,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 8,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "barnard_visit3_max_gap": {
+      "value": 2.5327820777893066,
+      "unit": "um",
+      "n": 8,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit3_max_gap_bandwidths": {
+      "value": 54.69657225536064,
+      "unit": "local bandwidths",
+      "n": 8,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit4_n_distinct_wavelengths": {
+      "value": 105,
+      "unit": "wavelengths",
+      "n": 117,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2026-08-22"
+    },
+    "barnard_visit4_coverage_0p75_5p0": {
+      "value": 0.9992063755498213,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 117,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "barnard_visit4_max_gap": {
+      "value": 0.09886360168457031,
+      "unit": "um",
+      "n": 105,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit4_max_gap_bandwidths": {
+      "value": 0.9974939022542118,
+      "unit": "local bandwidths",
+      "n": 105,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit5_n_distinct_wavelengths": {
+      "value": 2,
+      "unit": "wavelengths",
+      "n": 2,
+      "script": "02_wavelength.py",
+      "note": "samples merged within 0.5 bandwidth; date 2026-09-22"
+    },
+    "barnard_visit5_coverage_0p75_5p0": {
+      "value": 0.017491778906653908,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 2,
+      "script": "02_wavelength.py",
+      "note": "within +-0.5 bandwidth of a sample"
+    },
+    "barnard_visit5_max_gap": {
+      "value": 2.7796579599380493,
+      "unit": "um",
+      "n": 2,
+      "script": "02_wavelength.py"
+    },
+    "barnard_visit5_max_gap_bandwidths": {
+      "value": 74.78223576167542,
+      "unit": "local bandwidths",
+      "n": 2,
+      "script": "02_wavelength.py"
+    },
+    "barnard_all_visits_n_distinct_wavelengths": {
+      "value": 125,
+      "unit": "wavelengths",
+      "n": 358,
+      "script": "02_wavelength.py"
+    },
+    "barnard_all_visits_coverage_0p75_5p0": {
+      "value": 1.0,
+      "unit": "fraction of 0.75-5.0 um",
+      "n": 358,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_same_visit_dlambda_q10_um": {
+      "value": 0.03756983280181885,
+      "unit": "um",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_same_visit_dlambda_q10_widths": {
+      "value": 0.9566376417510224,
+      "unit": "channel widths",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_same_visit_dlambda_q25_um": {
+      "value": 0.09109997749328613,
+      "unit": "um",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_same_visit_dlambda_q25_widths": {
+      "value": 2.4177576065347015,
+      "unit": "channel widths",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_same_visit_dlambda_q50_um": {
+      "value": 0.20571684837341309,
+      "unit": "um",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_same_visit_dlambda_q50_widths": {
+      "value": 5.357097392266125,
+      "unit": "channel widths",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_same_visit_dlambda_q75_um": {
+      "value": 0.35777831077575684,
+      "unit": "um",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_same_visit_dlambda_q75_widths": {
+      "value": 9.03585752822499,
+      "unit": "channel widths",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_same_visit_dlambda_q90_um": {
+      "value": 0.5155839920043945,
+      "unit": "um",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_same_visit_dlambda_q90_widths": {
+      "value": 12.343361874846766,
+      "unit": "channel widths",
+      "n": 4393,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_same_visit_dlambda_max_um": {
+      "value": 1.4021589756011963,
+      "unit": "um",
+      "n": 4393,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_same_visit_dlambda_max_widths": {
+      "value": 22.849444995773634,
+      "unit": "channel widths",
+      "n": 4393,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_6mo_dlambda_q10_um": {
+      "value": 0.03383404016494752,
+      "unit": "um",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_6mo_dlambda_q10_widths": {
+      "value": 0.8612232447690287,
+      "unit": "channel widths",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_6mo_dlambda_q25_um": {
+      "value": 0.08703917264938354,
+      "unit": "um",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_6mo_dlambda_q25_widths": {
+      "value": 2.353754133951769,
+      "unit": "channel widths",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_6mo_dlambda_q50_um": {
+      "value": 0.19510418176651,
+      "unit": "um",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_6mo_dlambda_q50_widths": {
+      "value": 5.080210821623936,
+      "unit": "channel widths",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_6mo_dlambda_q75_um": {
+      "value": 0.344307005405426,
+      "unit": "um",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_6mo_dlambda_q75_widths": {
+      "value": 8.742962809876001,
+      "unit": "channel widths",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_6mo_dlambda_q90_um": {
+      "value": 0.49270616769790665,
+      "unit": "um",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_6mo_dlambda_q90_widths": {
+      "value": 11.96461201931018,
+      "unit": "channel widths",
+      "n": 5382,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_6mo_dlambda_max_um": {
+      "value": 1.4049170017242432,
+      "unit": "um",
+      "n": 5382,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_6mo_dlambda_max_widths": {
+      "value": 22.24701594114583,
+      "unit": "channel widths",
+      "n": 5382,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_12mo_dlambda_q10_um": {
+      "value": 0.03474926948547363,
+      "unit": "um",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_12mo_dlambda_q10_widths": {
+      "value": 0.9568329100516235,
+      "unit": "channel widths",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_12mo_dlambda_q25_um": {
+      "value": 0.0900106430053711,
+      "unit": "um",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_12mo_dlambda_q25_widths": {
+      "value": 2.40528503152784,
+      "unit": "channel widths",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_12mo_dlambda_q50_um": {
+      "value": 0.19870567321777344,
+      "unit": "um",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_12mo_dlambda_q50_widths": {
+      "value": 5.143662254312841,
+      "unit": "channel widths",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_12mo_dlambda_q75_um": {
+      "value": 0.33019864559173584,
+      "unit": "um",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_12mo_dlambda_q75_widths": {
+      "value": 8.386067763696762,
+      "unit": "channel widths",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_12mo_dlambda_q90_um": {
+      "value": 0.45455331802368154,
+      "unit": "um",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_12mo_dlambda_q90_widths": {
+      "value": 11.445970378516767,
+      "unit": "channel widths",
+      "n": 3895,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_12mo_dlambda_max_um": {
+      "value": 1.3655998706817627,
+      "unit": "um",
+      "n": 3895,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_12mo_dlambda_max_widths": {
+      "value": 22.020971909364487,
+      "unit": "channel widths",
+      "n": 3895,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_18mo_dlambda_q10_um": {
+      "value": 0.033439493179321295,
+      "unit": "um",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_18mo_dlambda_q10_widths": {
+      "value": 0.9518712869526617,
+      "unit": "channel widths",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_18mo_dlambda_q25_um": {
+      "value": 0.0925743579864502,
+      "unit": "um",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_18mo_dlambda_q25_widths": {
+      "value": 2.4069101117928824,
+      "unit": "channel widths",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_18mo_dlambda_q50_um": {
+      "value": 0.21727025508880615,
+      "unit": "um",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_18mo_dlambda_q50_widths": {
+      "value": 5.786377701476842,
+      "unit": "channel widths",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_18mo_dlambda_q75_um": {
+      "value": 0.3753061294555664,
+      "unit": "um",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_18mo_dlambda_q75_widths": {
+      "value": 9.656495555706964,
+      "unit": "channel widths",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_18mo_dlambda_q90_um": {
+      "value": 0.49649834632873546,
+      "unit": "um",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "epsindi_18mo_dlambda_q90_widths": {
+      "value": 12.852045569821362,
+      "unit": "channel widths",
+      "n": 3137,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "epsindi_18mo_dlambda_max_um": {
+      "value": 0.790605902671814,
+      "unit": "um",
+      "n": 3137,
+      "script": "02_wavelength.py"
+    },
+    "epsindi_18mo_dlambda_max_widths": {
+      "value": 22.442753553417063,
+      "unit": "channel widths",
+      "n": 3137,
+      "script": "02_wavelength.py"
+    },
+    "barnard_same_visit_dlambda_q10_um": {
+      "value": 0.044098186492919925,
+      "unit": "um",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_same_visit_dlambda_q10_widths": {
+      "value": 0.9788790054995296,
+      "unit": "channel widths",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_same_visit_dlambda_q25_um": {
+      "value": 0.0977059006690979,
+      "unit": "um",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_same_visit_dlambda_q25_widths": {
+      "value": 2.7618144443529378,
+      "unit": "channel widths",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_same_visit_dlambda_q50_um": {
+      "value": 0.20258879661560059,
+      "unit": "um",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_same_visit_dlambda_q50_widths": {
+      "value": 5.349028227818842,
+      "unit": "channel widths",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_same_visit_dlambda_q75_um": {
+      "value": 0.35017654299736023,
+      "unit": "um",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_same_visit_dlambda_q75_widths": {
+      "value": 8.692226949432673,
+      "unit": "channel widths",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_same_visit_dlambda_q90_um": {
+      "value": 0.521646010875702,
+      "unit": "um",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_same_visit_dlambda_q90_widths": {
+      "value": 11.714210726682483,
+      "unit": "channel widths",
+      "n": 3052,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_same_visit_dlambda_max_um": {
+      "value": 1.3578705787658691,
+      "unit": "um",
+      "n": 3052,
+      "script": "02_wavelength.py"
+    },
+    "barnard_same_visit_dlambda_max_widths": {
+      "value": 18.340885996671947,
+      "unit": "channel widths",
+      "n": 3052,
+      "script": "02_wavelength.py"
+    },
+    "barnard_6mo_dlambda_q10_um": {
+      "value": 0.03239896893501282,
+      "unit": "um",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_6mo_dlambda_q10_widths": {
+      "value": 0.8922542965180591,
+      "unit": "channel widths",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_6mo_dlambda_q25_um": {
+      "value": 0.08436700701713562,
+      "unit": "um",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_6mo_dlambda_q25_widths": {
+      "value": 2.279606782877516,
+      "unit": "channel widths",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_6mo_dlambda_q50_um": {
+      "value": 0.18915432691574097,
+      "unit": "um",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_6mo_dlambda_q50_widths": {
+      "value": 4.957718241092774,
+      "unit": "channel widths",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_6mo_dlambda_q75_um": {
+      "value": 0.3431949019432068,
+      "unit": "um",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_6mo_dlambda_q75_widths": {
+      "value": 8.589104630906807,
+      "unit": "channel widths",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_6mo_dlambda_q90_um": {
+      "value": 0.5173220634460449,
+      "unit": "um",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_6mo_dlambda_q90_widths": {
+      "value": 11.59309733706549,
+      "unit": "channel widths",
+      "n": 4446,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_6mo_dlambda_max_um": {
+      "value": 1.3694064617156982,
+      "unit": "um",
+      "n": 4446,
+      "script": "02_wavelength.py"
+    },
+    "barnard_6mo_dlambda_max_widths": {
+      "value": 19.01894064742283,
+      "unit": "channel widths",
+      "n": 4446,
+      "script": "02_wavelength.py"
+    },
+    "barnard_12mo_dlambda_q10_um": {
+      "value": 0.031702518463134766,
+      "unit": "um",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_12mo_dlambda_q10_widths": {
+      "value": 0.5824009614917945,
+      "unit": "channel widths",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_12mo_dlambda_q25_um": {
+      "value": 0.08485975861549377,
+      "unit": "um",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_12mo_dlambda_q25_widths": {
+      "value": 2.3363574951475465,
+      "unit": "channel widths",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_12mo_dlambda_q50_um": {
+      "value": 0.1908707618713379,
+      "unit": "um",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_12mo_dlambda_q50_widths": {
+      "value": 5.111551541372297,
+      "unit": "channel widths",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_12mo_dlambda_q75_um": {
+      "value": 0.3471503257751465,
+      "unit": "um",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_12mo_dlambda_q75_widths": {
+      "value": 8.794416204360516,
+      "unit": "channel widths",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_12mo_dlambda_q90_um": {
+      "value": 0.5307473659515385,
+      "unit": "um",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "|dlambda| of same-detector pairs"
+    },
+    "barnard_12mo_dlambda_q90_widths": {
+      "value": 11.81884501514537,
+      "unit": "channel widths",
+      "n": 2323,
+      "script": "02_wavelength.py",
+      "note": "width = mean CBAND of the pair"
+    },
+    "barnard_12mo_dlambda_max_um": {
+      "value": 1.380082368850708,
+      "unit": "um",
+      "n": 2323,
+      "script": "02_wavelength.py"
+    },
+    "barnard_12mo_dlambda_max_widths": {
+      "value": 19.175772077171317,
+      "unit": "channel widths",
+      "n": 2323,
+      "script": "02_wavelength.py"
+    }
+  },
+  "registration_epsindi": {
+    "script": "scripts/03_registration.py",
+    "method": "gauss",
+    "pixscale_arcsec": {
+      "value": 6.1519,
+      "unit": "arcsec/px",
+      "n": 458,
+      "script": "scripts/03_registration.py"
+    },
+    "selection": {
+      "g_window": [
+        12.0,
+        16.5
+      ],
+      "g_window_reason": "G 12.0-16.5. Bright end: SPHEREx non-linearity starts near 11.5 AB (bands 1-4) and ~10 AB (bands 5-6); G=12 stars, even very red ones (G-K ~ 3, i.e. ~1-2 mag brighter than G in AB at 1-2 um), stay below the bands 1-4 onset only marginally, so NONLINEAR/OVERFLOW flags are also required clean in the 5x5 stamp. Faint end: G=16.5 still gives peak S/N >= 10 in the SWIR detectors for typical colours; fainter stars are mostly removed by the S/N cut anyway.",
+      "ruwe_max": 1.4,
+      "isolation": "no Gaia source with G < G_star+3.0 within 20.0 arcsec; none with G < 9.0 within 180.0 arcsec",
+      "edge_px": 4,
+      "snr_min_peak": 10.0,
+      "chi2r_max": 100.0,
+      "max_resid_px": 1.5,
+      "flags_rejected_5x5": [
+        "TRANSIENT",
+        "OVERFLOW",
+        "SUR_ERROR",
+        "NONFUNC",
+        "MISSING_DATA",
+        "HOT",
+        "COLD",
+        "NONLINEAR",
+        "PERSIST",
+        "BLOOM",
+        "SNOWBALL",
+        "HALO",
+        "SATELLITE_HALO",
+        "STREAK"
+      ],
+      "cut_counts_star_frames": {
+        "in_footprint": 412870,
+        "g_window": 98035,
+        "ruwe": 92586,
+        "has_pm": 92586,
+        "isolated": 67042,
+        "flags_ok": 45881,
+        "snr_ok": 31923,
+        "fit_converged": 29048,
+        "resid_sane": 29048
+      },
+      "cut_counts_distinct_stars": {
+        "in_footprint": 1089,
+        "g_window": 256,
+        "ruwe": 239,
+        "has_pm": 239,
+        "isolated": 173,
+        "flags_ok": 173,
+        "snr_ok": 172,
+        "fit_converged": 171,
+        "resid_sane": 171
+      },
+      "flag_hits_5x5": {
+        "BLOOM": 141,
+        "COLD": 867,
+        "GHOST": 0,
+        "HALO": 15394,
+        "HOT": 3,
+        "MISSING_DATA": 0,
+        "NONFUNC": 5406,
+        "NONLINEAR": 0,
+        "NaN_or_bad_variance": 369,
+        "OUTLIER": 394,
+        "OVERFLOW": 459,
+        "PERSIST": 2215,
+        "SATELLITE_HALO": 0,
+        "SNOWBALL": 47,
+        "SOURCE": 67042,
+        "STREAK": 122,
+        "SUR_ERROR": 9156,
+        "TRANSIENT": 13143
+      },
+      "flag_hits_in_accepted": {
+        "GHOST": 0,
+        "OUTLIER": 187,
+        "SOURCE": 45881
+      }
+    },
+    "n_measurements": {
+      "value": 29048,
+      "unit": "count",
+      "script": "scripts/03_registration.py"
+    },
+    "n_stars": {
+      "value": 171,
+      "unit": "count",
+      "script": "scripts/03_registration.py"
+    },
+    "n_frames": {
+      "value": 458,
+      "unit": "count",
+      "script": "scripts/03_registration.py",
+      "note": "of 458 cutouts"
+    },
+    "absolute": {
+      "median_abs_frame_offset_ra": {
+        "value": 0.0658,
+        "unit": "arcsec",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "median_abs_frame_offset_dec": {
+        "value": 0.0764,
+        "unit": "arcsec",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "rsd_frame_offsets_ra": {
+        "value": 0.0978,
+        "unit": "arcsec",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "rsd_frame_offsets_dec": {
+        "value": 0.1138,
+        "unit": "arcsec",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "expected_rsd_frame_offsets_noise_only_ra": {
+        "value": 0.0357,
+        "unit": "arcsec",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "expected_rsd_frame_offsets_noise_only_dec": {
+        "value": 0.0451,
+        "unit": "arcsec",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "per_frame_scatter_median_ra": {
+        "value": 0.2181,
+        "unit": "arcsec",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "per_frame_scatter_median_dec": {
+        "value": 0.2766,
+        "unit": "arcsec",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "per_frame_scatter_median_x": {
+        "value": 0.03239,
+        "unit": "px",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "per_frame_scatter_median_y": {
+        "value": 0.04759,
+        "unit": "px",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      },
+      "stars_per_frame_median": {
+        "value": 65,
+        "unit": "count",
+        "n": 452,
+        "script": "scripts/03_registration.py"
+      }
+    },
+    "pairs": {
+      "same_visit": {
+        "n_pairs": 565282,
+        "n_stars": 170,
+        "raw_ra_arcsec": {
+          "value": 0.32,
+          "unit": "arcsec",
+          "n": 565282,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3969,
+          "unit": "arcsec",
+          "n": 565282,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05201,
+          "unit": "px",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06452,
+          "unit": "px",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.3039,
+          "unit": "arcsec",
+          "n": 563809,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3828,
+          "unit": "arcsec",
+          "n": 563809,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04939,
+          "unit": "px",
+          "n": 563809,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06222,
+          "unit": "px",
+          "n": 563809,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2149,
+          "unit": "arcsec",
+          "n": 563809,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2707,
+          "unit": "arcsec",
+          "n": 563809,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3463,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0080"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4069,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0107"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3202,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0086"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4151,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0087"
+        }
+      },
+      "6mo": {
+        "n_pairs": 988466,
+        "n_stars": 165,
+        "raw_ra_arcsec": {
+          "value": 0.3259,
+          "unit": "arcsec",
+          "n": 988466,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.4066,
+          "unit": "arcsec",
+          "n": 988466,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05297,
+          "unit": "px",
+          "n": 988466,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.0661,
+          "unit": "px",
+          "n": 988466,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.3008,
+          "unit": "arcsec",
+          "n": 987260,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3814,
+          "unit": "arcsec",
+          "n": 987260,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04889,
+          "unit": "px",
+          "n": 987260,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06199,
+          "unit": "px",
+          "n": 987260,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2127,
+          "unit": "arcsec",
+          "n": 987260,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2697,
+          "unit": "arcsec",
+          "n": 987260,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3445,
+          "unit": "arcsec",
+          "n": 165,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0095"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4275,
+          "unit": "arcsec",
+          "n": 165,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0104"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.317,
+          "unit": "arcsec",
+          "n": 165,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0077"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4035,
+          "unit": "arcsec",
+          "n": 165,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0098"
+        }
+      },
+      "12mo": {
+        "n_pairs": 693445,
+        "n_stars": 168,
+        "raw_ra_arcsec": {
+          "value": 0.3201,
+          "unit": "arcsec",
+          "n": 693445,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3986,
+          "unit": "arcsec",
+          "n": 693445,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05203,
+          "unit": "px",
+          "n": 693445,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.0648,
+          "unit": "px",
+          "n": 693445,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.3056,
+          "unit": "arcsec",
+          "n": 691854,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.385,
+          "unit": "arcsec",
+          "n": 691854,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04968,
+          "unit": "px",
+          "n": 691854,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06259,
+          "unit": "px",
+          "n": 691854,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2161,
+          "unit": "arcsec",
+          "n": 691854,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2723,
+          "unit": "arcsec",
+          "n": 691854,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3492,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0089"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4196,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0097"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3275,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0085"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.39,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0097"
+        }
+      },
+      "18mo": {
+        "n_pairs": 277814,
+        "n_stars": 163,
+        "raw_ra_arcsec": {
+          "value": 0.3269,
+          "unit": "arcsec",
+          "n": 277814,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3995,
+          "unit": "arcsec",
+          "n": 277814,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05313,
+          "unit": "px",
+          "n": 277814,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06494,
+          "unit": "px",
+          "n": 277814,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.3111,
+          "unit": "arcsec",
+          "n": 276591,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.391,
+          "unit": "arcsec",
+          "n": 276591,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.05058,
+          "unit": "px",
+          "n": 276591,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06355,
+          "unit": "px",
+          "n": 276591,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.22,
+          "unit": "arcsec",
+          "n": 276591,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2765,
+          "unit": "arcsec",
+          "n": 276591,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3475,
+          "unit": "arcsec",
+          "n": 163,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0093"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4381,
+          "unit": "arcsec",
+          "n": 163,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0099"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3251,
+          "unit": "arcsec",
+          "n": 163,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0095"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4172,
+          "unit": "arcsec",
+          "n": 163,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0095"
+        }
+      },
+      "other": {
+        "n_pairs": 274579,
+        "n_stars": 168,
+        "raw_ra_arcsec": {
+          "value": 0.3155,
+          "unit": "arcsec",
+          "n": 274579,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.416,
+          "unit": "arcsec",
+          "n": 274579,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05128,
+          "unit": "px",
+          "n": 274579,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06762,
+          "unit": "px",
+          "n": 274579,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.3044,
+          "unit": "arcsec",
+          "n": 274147,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3954,
+          "unit": "arcsec",
+          "n": 274147,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04948,
+          "unit": "px",
+          "n": 274147,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06427,
+          "unit": "px",
+          "n": 274147,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2152,
+          "unit": "arcsec",
+          "n": 274147,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2796,
+          "unit": "arcsec",
+          "n": 274147,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3214,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0086"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.42,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0111"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3212,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0078"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4231,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0106"
+        }
+      },
+      "inter_visit": {
+        "n_pairs": 1959725,
+        "n_stars": 168,
+        "raw_ra_arcsec": {
+          "value": 0.325,
+          "unit": "arcsec",
+          "n": 1959725,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.4041,
+          "unit": "arcsec",
+          "n": 1959725,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05282,
+          "unit": "px",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06569,
+          "unit": "px",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.3039,
+          "unit": "arcsec",
+          "n": 1955705,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.384,
+          "unit": "arcsec",
+          "n": 1955705,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04941,
+          "unit": "px",
+          "n": 1955705,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06242,
+          "unit": "px",
+          "n": 1955705,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2149,
+          "unit": "arcsec",
+          "n": 1955705,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2715,
+          "unit": "arcsec",
+          "n": 1955705,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3515,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0094"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4234,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0113"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3259,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0068"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4015,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0103"
+        }
+      },
+      "all": {
+        "n_pairs": 2799586,
+        "n_stars": 171,
+        "raw_ra_arcsec": {
+          "value": 0.3232,
+          "unit": "arcsec",
+          "n": 2799586,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.4042,
+          "unit": "arcsec",
+          "n": 2799586,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05254,
+          "unit": "px",
+          "n": 2799586,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.0657,
+          "unit": "px",
+          "n": 2799586,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.304,
+          "unit": "arcsec",
+          "n": 2793661,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3849,
+          "unit": "arcsec",
+          "n": 2793661,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04941,
+          "unit": "px",
+          "n": 2793661,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06256,
+          "unit": "px",
+          "n": 2793661,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2149,
+          "unit": "arcsec",
+          "n": 2793661,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2721,
+          "unit": "arcsec",
+          "n": 2793661,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3406,
+          "unit": "arcsec",
+          "n": 171,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0085"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.416,
+          "unit": "arcsec",
+          "n": 171,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0105"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3251,
+          "unit": "arcsec",
+          "n": 171,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0080"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4019,
+          "unit": "arcsec",
+          "n": 171,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0096"
+        }
+      },
+      "same_visit_simultaneous": {
+        "n_pairs": 27776,
+        "n_stars": 170,
+        "raw_ra_arcsec": {
+          "value": 0.3159,
+          "unit": "arcsec",
+          "n": 27776,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.4,
+          "unit": "arcsec",
+          "n": 27776,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05135,
+          "unit": "px",
+          "n": 27776,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06503,
+          "unit": "px",
+          "n": 27776,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2966,
+          "unit": "arcsec",
+          "n": 27705,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3866,
+          "unit": "arcsec",
+          "n": 27705,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04822,
+          "unit": "px",
+          "n": 27705,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06284,
+          "unit": "px",
+          "n": 27705,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2098,
+          "unit": "arcsec",
+          "n": 27705,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2733,
+          "unit": "arcsec",
+          "n": 27705,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3329,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0091"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4209,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0111"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3232,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0078"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4082,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0104"
+        }
+      },
+      "same_visit_same_det": {
+        "n_pairs": 158248,
+        "n_stars": 170,
+        "raw_ra_arcsec": {
+          "value": 0.3139,
+          "unit": "arcsec",
+          "n": 158248,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3973,
+          "unit": "arcsec",
+          "n": 158248,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05102,
+          "unit": "px",
+          "n": 158248,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06459,
+          "unit": "px",
+          "n": 158248,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2985,
+          "unit": "arcsec",
+          "n": 157858,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3821,
+          "unit": "arcsec",
+          "n": 157858,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04852,
+          "unit": "px",
+          "n": 157858,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06211,
+          "unit": "px",
+          "n": 157858,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2111,
+          "unit": "arcsec",
+          "n": 157858,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2702,
+          "unit": "arcsec",
+          "n": 157858,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3216,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0091"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4266,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0088"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3085,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0070"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0096"
+        }
+      },
+      "same_visit_diff_det": {
+        "n_pairs": 407034,
+        "n_stars": 168,
+        "raw_ra_arcsec": {
+          "value": 0.3224,
+          "unit": "arcsec",
+          "n": 407034,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3967,
+          "unit": "arcsec",
+          "n": 407034,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05241,
+          "unit": "px",
+          "n": 407034,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06448,
+          "unit": "px",
+          "n": 407034,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.306,
+          "unit": "arcsec",
+          "n": 405951,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3831,
+          "unit": "arcsec",
+          "n": 405951,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04974,
+          "unit": "px",
+          "n": 405951,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06227,
+          "unit": "px",
+          "n": 405951,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2164,
+          "unit": "arcsec",
+          "n": 405951,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2709,
+          "unit": "arcsec",
+          "n": 405951,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3321,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0079"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4178,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0109"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3282,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0079"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4131,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0094"
+        }
+      },
+      "inter_visit_same_det": {
+        "n_pairs": 426737,
+        "n_stars": 168,
+        "raw_ra_arcsec": {
+          "value": 0.3243,
+          "unit": "arcsec",
+          "n": 426737,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.4125,
+          "unit": "arcsec",
+          "n": 426737,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05271,
+          "unit": "px",
+          "n": 426737,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06705,
+          "unit": "px",
+          "n": 426737,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.3042,
+          "unit": "arcsec",
+          "n": 426005,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3924,
+          "unit": "arcsec",
+          "n": 426005,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04945,
+          "unit": "px",
+          "n": 426005,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06378,
+          "unit": "px",
+          "n": 426005,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2151,
+          "unit": "arcsec",
+          "n": 426005,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2775,
+          "unit": "arcsec",
+          "n": 426005,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3214,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0071"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4204,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0105"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3172,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0085"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4074,
+          "unit": "arcsec",
+          "n": 168,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0097"
+        }
+      },
+      "inter_visit_diff_det": {
+        "n_pairs": 1532988,
+        "n_stars": 167,
+        "raw_ra_arcsec": {
+          "value": 0.3252,
+          "unit": "arcsec",
+          "n": 1532988,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.4018,
+          "unit": "arcsec",
+          "n": 1532988,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.05285,
+          "unit": "px",
+          "n": 1532988,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06532,
+          "unit": "px",
+          "n": 1532988,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.3039,
+          "unit": "arcsec",
+          "n": 1529700,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3818,
+          "unit": "arcsec",
+          "n": 1529700,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.04939,
+          "unit": "px",
+          "n": 1529700,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.06206,
+          "unit": "px",
+          "n": 1529700,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.2149,
+          "unit": "arcsec",
+          "n": 1529700,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.27,
+          "unit": "arcsec",
+          "n": 1529700,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.3444,
+          "unit": "arcsec",
+          "n": 167,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0089"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.4387,
+          "unit": "arcsec",
+          "n": 167,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0108"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.3188,
+          "unit": "arcsec",
+          "n": 167,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0104"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.4025,
+          "unit": "arcsec",
+          "n": 167,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0099"
+        }
+      }
+    },
+    "pairs_phase_corrected": {
+      "same_visit": {
+        "n_pairs": 563809,
+        "n_stars": 170,
+        "ra_arcsec": {
+          "value": 0.2338,
+          "unit": "arcsec",
+          "n": 563809,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.2572,
+          "unit": "arcsec",
+          "n": 563809,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.038,
+          "unit": "px",
+          "n": 563809,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.0418,
+          "unit": "px",
+          "n": 563809,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_ra": {
+          "value": 1.598,
+          "unit": "dimensionless",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_dec": {
+          "value": 1.71,
+          "unit": "dimensionless",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_ra_arcsec": {
+          "value": 0.1748,
+          "unit": "arcsec",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_dec_arcsec": {
+          "value": 0.2033,
+          "unit": "arcsec",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "6mo": {
+        "n_pairs": 987260,
+        "n_stars": 165,
+        "ra_arcsec": {
+          "value": 0.2298,
+          "unit": "arcsec",
+          "n": 987260,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.2509,
+          "unit": "arcsec",
+          "n": 987260,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.03736,
+          "unit": "px",
+          "n": 987260,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.04078,
+          "unit": "px",
+          "n": 987260,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "12mo": {
+        "n_pairs": 691854,
+        "n_stars": 168,
+        "ra_arcsec": {
+          "value": 0.2322,
+          "unit": "arcsec",
+          "n": 691854,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.2566,
+          "unit": "arcsec",
+          "n": 691854,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.03774,
+          "unit": "px",
+          "n": 691854,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.0417,
+          "unit": "px",
+          "n": 691854,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "18mo": {
+        "n_pairs": 276591,
+        "n_stars": 163,
+        "ra_arcsec": {
+          "value": 0.2381,
+          "unit": "arcsec",
+          "n": 276591,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.2592,
+          "unit": "arcsec",
+          "n": 276591,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.0387,
+          "unit": "px",
+          "n": 276591,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.04214,
+          "unit": "px",
+          "n": 276591,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "other": {
+        "n_pairs": 274147,
+        "n_stars": 168,
+        "ra_arcsec": {
+          "value": 0.2384,
+          "unit": "arcsec",
+          "n": 274147,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.2587,
+          "unit": "arcsec",
+          "n": 274147,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.03875,
+          "unit": "px",
+          "n": 274147,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.04206,
+          "unit": "px",
+          "n": 274147,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "inter_visit": {
+        "n_pairs": 1955705,
+        "n_stars": 168,
+        "ra_arcsec": {
+          "value": 0.2318,
+          "unit": "arcsec",
+          "n": 1955705,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.2541,
+          "unit": "arcsec",
+          "n": 1955705,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.03768,
+          "unit": "px",
+          "n": 1955705,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.0413,
+          "unit": "px",
+          "n": 1955705,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_ra": {
+          "value": 1.595,
+          "unit": "dimensionless",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_dec": {
+          "value": 1.702,
+          "unit": "dimensionless",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_ra_arcsec": {
+          "value": 0.1731,
+          "unit": "arcsec",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_dec_arcsec": {
+          "value": 0.2002,
+          "unit": "arcsec",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        }
+      }
+    },
+    "noise": {
+      "same_visit": {
+        "floor_ra_arcsec": {
+          "value": 0.1552,
+          "unit": "arcsec",
+          "n": 565282,
+          "script": "scripts/03_registration.py",
+          "note": "median per-pair formal sigma"
+        },
+        "floor_dec_arcsec": {
+          "value": 0.1575,
+          "unit": "arcsec",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_raw_ra": {
+          "value": 2.108,
+          "unit": "dimensionless",
+          "n": 565282,
+          "script": "scripts/03_registration.py",
+          "note": "1 if formal errors calibrated and WCS adds nothing"
+        },
+        "z_rsd_raw_dec": {
+          "value": 2.537,
+          "unit": "dimensionless",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_ra": {
+          "value": 2.014,
+          "unit": "dimensionless",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_dec": {
+          "value": 2.447,
+          "unit": "dimensionless",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_pair_ra_arcsec": {
+          "value": 0.2612,
+          "unit": "arcsec",
+          "n": 565282,
+          "script": "scripts/03_registration.py",
+          "note": "per pair, after LOO frame-shift correction"
+        },
+        "excess_pair_dec_arcsec": {
+          "value": 0.3489,
+          "unit": "arcsec",
+          "n": 565282,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "6mo": {
+        "floor_ra_arcsec": {
+          "value": 0.1527,
+          "unit": "arcsec",
+          "n": 988466,
+          "script": "scripts/03_registration.py",
+          "note": "median per-pair formal sigma"
+        },
+        "floor_dec_arcsec": {
+          "value": 0.1555,
+          "unit": "arcsec",
+          "n": 988466,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_raw_ra": {
+          "value": 2.152,
+          "unit": "dimensionless",
+          "n": 988466,
+          "script": "scripts/03_registration.py",
+          "note": "1 if formal errors calibrated and WCS adds nothing"
+        },
+        "z_rsd_raw_dec": {
+          "value": 2.611,
+          "unit": "dimensionless",
+          "n": 988466,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_ra": {
+          "value": 2.01,
+          "unit": "dimensionless",
+          "n": 988466,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_dec": {
+          "value": 2.459,
+          "unit": "dimensionless",
+          "n": 988466,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_pair_ra_arcsec": {
+          "value": 0.2591,
+          "unit": "arcsec",
+          "n": 988466,
+          "script": "scripts/03_registration.py",
+          "note": "per pair, after LOO frame-shift correction"
+        },
+        "excess_pair_dec_arcsec": {
+          "value": 0.3482,
+          "unit": "arcsec",
+          "n": 988466,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "12mo": {
+        "floor_ra_arcsec": {
+          "value": 0.1538,
+          "unit": "arcsec",
+          "n": 693445,
+          "script": "scripts/03_registration.py",
+          "note": "median per-pair formal sigma"
+        },
+        "floor_dec_arcsec": {
+          "value": 0.1559,
+          "unit": "arcsec",
+          "n": 693445,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_raw_ra": {
+          "value": 2.121,
+          "unit": "dimensionless",
+          "n": 693445,
+          "script": "scripts/03_registration.py",
+          "note": "1 if formal errors calibrated and WCS adds nothing"
+        },
+        "z_rsd_raw_dec": {
+          "value": 2.559,
+          "unit": "dimensionless",
+          "n": 693445,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_ra": {
+          "value": 2.029,
+          "unit": "dimensionless",
+          "n": 693445,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_dec": {
+          "value": 2.471,
+          "unit": "dimensionless",
+          "n": 693445,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_pair_ra_arcsec": {
+          "value": 0.2641,
+          "unit": "arcsec",
+          "n": 693445,
+          "script": "scripts/03_registration.py",
+          "note": "per pair, after LOO frame-shift correction"
+        },
+        "excess_pair_dec_arcsec": {
+          "value": 0.3521,
+          "unit": "arcsec",
+          "n": 693445,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "18mo": {
+        "floor_ra_arcsec": {
+          "value": 0.1611,
+          "unit": "arcsec",
+          "n": 277814,
+          "script": "scripts/03_registration.py",
+          "note": "median per-pair formal sigma"
+        },
+        "floor_dec_arcsec": {
+          "value": 0.161,
+          "unit": "arcsec",
+          "n": 277814,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_raw_ra": {
+          "value": 2.15,
+          "unit": "dimensionless",
+          "n": 277814,
+          "script": "scripts/03_registration.py",
+          "note": "1 if formal errors calibrated and WCS adds nothing"
+        },
+        "z_rsd_raw_dec": {
+          "value": 2.575,
+          "unit": "dimensionless",
+          "n": 277814,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_ra": {
+          "value": 2.03,
+          "unit": "dimensionless",
+          "n": 277814,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_dec": {
+          "value": 2.484,
+          "unit": "dimensionless",
+          "n": 277814,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_pair_ra_arcsec": {
+          "value": 0.2662,
+          "unit": "arcsec",
+          "n": 277814,
+          "script": "scripts/03_registration.py",
+          "note": "per pair, after LOO frame-shift correction"
+        },
+        "excess_pair_dec_arcsec": {
+          "value": 0.3563,
+          "unit": "arcsec",
+          "n": 277814,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "inter_visit": {
+        "floor_ra_arcsec": {
+          "value": 0.1542,
+          "unit": "arcsec",
+          "n": 1959725,
+          "script": "scripts/03_registration.py",
+          "note": "median per-pair formal sigma"
+        },
+        "floor_dec_arcsec": {
+          "value": 0.1564,
+          "unit": "arcsec",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_raw_ra": {
+          "value": 2.141,
+          "unit": "dimensionless",
+          "n": 1959725,
+          "script": "scripts/03_registration.py",
+          "note": "1 if formal errors calibrated and WCS adds nothing"
+        },
+        "z_rsd_raw_dec": {
+          "value": 2.592,
+          "unit": "dimensionless",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_ra": {
+          "value": 2.02,
+          "unit": "dimensionless",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_dec": {
+          "value": 2.467,
+          "unit": "dimensionless",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_pair_ra_arcsec": {
+          "value": 0.2619,
+          "unit": "arcsec",
+          "n": 1959725,
+          "script": "scripts/03_registration.py",
+          "note": "per pair, after LOO frame-shift correction"
+        },
+        "excess_pair_dec_arcsec": {
+          "value": 0.3507,
+          "unit": "arcsec",
+          "n": 1959725,
+          "script": "scripts/03_registration.py"
+        }
+      }
+    },
+    "vs_mag": [
+      {
+        "g_lo": 12.0,
+        "g_hi": 13.0,
+        "cls": "same_visit",
+        "n": 48978,
+        "nstar": 9,
+        "obs_ra": 0.2297,
+        "obs_dec": 0.2861,
+        "floor_ra": 0.0722,
+        "floor_dec": 0.0706,
+        "z_ra": 3.2356,
+        "z_dec": 3.965,
+        "raw_ra": 0.2484,
+        "raw_dec": 0.3003,
+        "ph_ra": 0.1639,
+        "ph_dec": 0.1773
+      },
+      {
+        "g_lo": 12.0,
+        "g_hi": 13.0,
+        "cls": "inter_visit",
+        "n": 166795,
+        "nstar": 9,
+        "obs_ra": 0.2318,
+        "obs_dec": 0.2868,
+        "floor_ra": 0.0692,
+        "floor_dec": 0.0674,
+        "z_ra": 3.3811,
+        "z_dec": 4.0509,
+        "raw_ra": 0.2609,
+        "raw_dec": 0.31,
+        "ph_ra": 0.1635,
+        "ph_dec": 0.1738
+      },
+      {
+        "g_lo": 13.0,
+        "g_hi": 14.0,
+        "cls": "same_visit",
+        "n": 84106,
+        "nstar": 11,
+        "obs_ra": 0.2902,
+        "obs_dec": 0.361,
+        "floor_ra": 0.1442,
+        "floor_dec": 0.1429,
+        "z_ra": 2.2434,
+        "z_dec": 2.7176,
+        "raw_ra": 0.307,
+        "raw_dec": 0.3716,
+        "ph_ra": 0.2163,
+        "ph_dec": 0.2406
+      },
+      {
+        "g_lo": 13.0,
+        "g_hi": 14.0,
+        "cls": "inter_visit",
+        "n": 287182,
+        "nstar": 11,
+        "obs_ra": 0.2897,
+        "obs_dec": 0.3594,
+        "floor_ra": 0.1399,
+        "floor_dec": 0.1384,
+        "z_ra": 2.2736,
+        "z_dec": 2.7623,
+        "raw_ra": 0.3076,
+        "raw_dec": 0.3781,
+        "ph_ra": 0.2131,
+        "ph_dec": 0.2341
+      },
+      {
+        "g_lo": 14.0,
+        "g_hi": 15.0,
+        "cls": "same_visit",
+        "n": 159089,
+        "nstar": 39,
+        "obs_ra": 0.2934,
+        "obs_dec": 0.3798,
+        "floor_ra": 0.1065,
+        "floor_dec": 0.1077,
+        "z_ra": 2.2397,
+        "z_dec": 2.8179,
+        "raw_ra": 0.3055,
+        "raw_dec": 0.3898,
+        "ph_ra": 0.2202,
+        "ph_dec": 0.2449
+      },
+      {
+        "g_lo": 14.0,
+        "g_hi": 15.0,
+        "cls": "inter_visit",
+        "n": 554694,
+        "nstar": 39,
+        "obs_ra": 0.2926,
+        "obs_dec": 0.3821,
+        "floor_ra": 0.1054,
+        "floor_dec": 0.1068,
+        "z_ra": 2.2277,
+        "z_dec": 2.8258,
+        "raw_ra": 0.3119,
+        "raw_dec": 0.3977,
+        "ph_ra": 0.218,
+        "ph_dec": 0.243
+      },
+      {
+        "g_lo": 15.0,
+        "g_hi": 16.0,
+        "cls": "same_visit",
+        "n": 167351,
+        "nstar": 57,
+        "obs_ra": 0.3123,
+        "obs_dec": 0.3885,
+        "floor_ra": 0.1568,
+        "floor_dec": 0.1604,
+        "z_ra": 1.9042,
+        "z_dec": 2.2884,
+        "raw_ra": 0.3291,
+        "raw_dec": 0.4103,
+        "ph_ra": 0.2421,
+        "ph_dec": 0.2666
+      },
+      {
+        "g_lo": 15.0,
+        "g_hi": 16.0,
+        "cls": "inter_visit",
+        "n": 582829,
+        "nstar": 57,
+        "obs_ra": 0.3115,
+        "obs_dec": 0.3915,
+        "floor_ra": 0.1557,
+        "floor_dec": 0.1594,
+        "z_ra": 1.9026,
+        "z_dec": 2.3118,
+        "raw_ra": 0.3322,
+        "raw_dec": 0.4177,
+        "ph_ra": 0.2402,
+        "ph_dec": 0.2634
+      },
+      {
+        "g_lo": 16.0,
+        "g_hi": 16.5,
+        "cls": "same_visit",
+        "n": 105758,
+        "nstar": 54,
+        "obs_ra": 0.3689,
+        "obs_dec": 0.458,
+        "floor_ra": 0.249,
+        "floor_dec": 0.2566,
+        "z_ra": 1.5062,
+        "z_dec": 1.7989,
+        "raw_ra": 0.3861,
+        "raw_dec": 0.4714,
+        "ph_ra": 0.3103,
+        "ph_dec": 0.33
+      },
+      {
+        "g_lo": 16.0,
+        "g_hi": 16.5,
+        "cls": "inter_visit",
+        "n": 368225,
+        "nstar": 52,
+        "obs_ra": 0.3695,
+        "obs_dec": 0.4602,
+        "floor_ra": 0.2481,
+        "floor_dec": 0.2556,
+        "z_ra": 1.5126,
+        "z_dec": 1.8051,
+        "raw_ra": 0.3908,
+        "raw_dec": 0.4733,
+        "ph_ra": 0.3083,
+        "ph_dec": 0.3302
+      }
+    ],
+    "method_comparison": {
+      "median_gauss_minus_win_x": {
+        "value": -0.00862,
+        "unit": "px",
+        "n": 29048,
+        "script": "scripts/03_registration.py"
+      },
+      "median_gauss_minus_win_y": {
+        "value": 0.00863,
+        "unit": "px",
+        "n": 29048,
+        "script": "scripts/03_registration.py"
+      },
+      "rsd_gauss_minus_win_x": {
+        "value": 0.20473,
+        "unit": "px",
+        "n": 29048,
+        "script": "scripts/03_registration.py"
+      },
+      "rsd_gauss_minus_win_y": {
+        "value": 0.19274,
+        "unit": "px",
+        "n": 29048,
+        "script": "scripts/03_registration.py"
+      },
+      "phase_bias_peak_to_peak_x_gauss": {
+        "value": 0.03289,
+        "unit": "px",
+        "n": 29048,
+        "script": "scripts/03_registration.py"
+      },
+      "phase_bias_peak_to_peak_x_win": {
+        "value": 0.4668,
+        "unit": "px",
+        "n": 29048,
+        "script": "scripts/03_registration.py"
+      },
+      "gauss_same_visit_corr_pair_rsd_ra": {
+        "value": 0.3039,
+        "unit": "arcsec",
+        "n": 565282,
+        "script": "scripts/03_registration.py"
+      },
+      "gauss_same_visit_corr_pair_rsd_dec": {
+        "value": 0.3828,
+        "unit": "arcsec",
+        "n": 565282,
+        "script": "scripts/03_registration.py"
+      },
+      "gauss_inter_visit_corr_pair_rsd_ra": {
+        "value": 0.3039,
+        "unit": "arcsec",
+        "n": 1959725,
+        "script": "scripts/03_registration.py"
+      },
+      "gauss_inter_visit_corr_pair_rsd_dec": {
+        "value": 0.384,
+        "unit": "arcsec",
+        "n": 1959725,
+        "script": "scripts/03_registration.py"
+      },
+      "win_same_visit_corr_pair_rsd_ra": {
+        "value": 1.5734,
+        "unit": "arcsec",
+        "n": 565282,
+        "script": "scripts/03_registration.py"
+      },
+      "win_same_visit_corr_pair_rsd_dec": {
+        "value": 1.6455,
+        "unit": "arcsec",
+        "n": 565282,
+        "script": "scripts/03_registration.py"
+      },
+      "win_inter_visit_corr_pair_rsd_ra": {
+        "value": 1.5847,
+        "unit": "arcsec",
+        "n": 1959725,
+        "script": "scripts/03_registration.py"
+      },
+      "win_inter_visit_corr_pair_rsd_dec": {
+        "value": 1.6543,
+        "unit": "arcsec",
+        "n": 1959725,
+        "script": "scripts/03_registration.py"
+      }
+    },
+    "headline": {
+      "note": "Per-pair robust scatter of frame-to-frame differences of Gaia residuals after leave-one-out frame-shift correction, Gaussian-fit centroids. Divide by sqrt(2) for single-frame precision.",
+      "same_visit_corr_ra_arcsec": {
+        "value": 0.3039,
+        "unit": "arcsec",
+        "n": 563809,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+      },
+      "same_visit_corr_dec_arcsec": {
+        "value": 0.3828,
+        "unit": "arcsec",
+        "n": 563809,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+      },
+      "inter_visit_corr_ra_arcsec": {
+        "value": 0.3039,
+        "unit": "arcsec",
+        "n": 1955705,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+      },
+      "inter_visit_corr_dec_arcsec": {
+        "value": 0.384,
+        "unit": "arcsec",
+        "n": 1955705,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+      },
+      "inter_visit_raw_ra_arcsec": {
+        "value": 0.325,
+        "unit": "arcsec",
+        "n": 1959725,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+      },
+      "inter_visit_raw_dec_arcsec": {
+        "value": 0.4041,
+        "unit": "arcsec",
+        "n": 1959725,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+      }
+    },
+    "n_cutouts": {
+      "value": 458,
+      "unit": "count",
+      "script": "scripts/03_registration.py",
+      "note": "of 460 index rows"
+    }
+  },
+  "zodi_flatness": {
+    "epsindi_2025W17_4B_0468_2_D1_median_resid": {
+      "value": 0.12471401691436768,
+      "unit": "MJy/sr",
+      "n": 25221,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=1.082 um, SOURCE masked"
+    },
+    "epsindi_2025W17_4B_0468_2_D1_median_zodi": {
+      "value": 0.15433655679225922,
+      "unit": "MJy/sr",
+      "n": 25221,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W17_4B_0468_2_D1_resid_over_zodi": {
+      "value": 0.8080653055013777,
+      "unit": "ratio",
+      "n": 25221,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W17_4B_0468_2_D1_grad_x": {
+      "value": -0.003679324692207217,
+      "unit": "MJy/sr per 100 px",
+      "n": 25221,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "epsindi_2025W17_4B_0468_2_D1_grad_y": {
+      "value": 0.005485465265394339,
+      "unit": "MJy/sr per 100 px",
+      "n": 25221,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "epsindi_2025W17_4B_0468_2_D1_robust_noise": {
+      "value": 0.10005404115021228,
+      "unit": "MJy/sr",
+      "n": 25221,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "epsindi_2025W17_4B_0468_2_D1_median_sqrt_variance": {
+      "value": 0.01928477710794893,
+      "unit": "MJy/sr",
+      "n": 25221,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W17_4B_0468_2_D1_source_masked_fraction": {
+      "value": 69.06772575250837,
+      "unit": "percent of pixels",
+      "n": 95680,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "epsindi_2025W18_2B_0489_1_D2_median_resid": {
+      "value": 0.04058799892663956,
+      "unit": "MJy/sr",
+      "n": 11780,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=1.566 um, SOURCE masked"
+    },
+    "epsindi_2025W18_2B_0489_1_D2_median_zodi": {
+      "value": 0.14980048686265945,
+      "unit": "MJy/sr",
+      "n": 11780,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W18_2B_0489_1_D2_resid_over_zodi": {
+      "value": 0.2709470428080222,
+      "unit": "ratio",
+      "n": 11780,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W18_2B_0489_1_D2_grad_x": {
+      "value": 0.005390209698706906,
+      "unit": "MJy/sr per 100 px",
+      "n": 11780,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "epsindi_2025W18_2B_0489_1_D2_grad_y": {
+      "value": 0.003969186871543697,
+      "unit": "MJy/sr per 100 px",
+      "n": 11780,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "epsindi_2025W18_2B_0489_1_D2_robust_noise": {
+      "value": 0.017076357136666775,
+      "unit": "MJy/sr",
+      "n": 11780,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "epsindi_2025W18_2B_0489_1_D2_median_sqrt_variance": {
+      "value": 0.015223209145474119,
+      "unit": "MJy/sr",
+      "n": 11780,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W18_2B_0489_1_D2_source_masked_fraction": {
+      "value": 67.56709039548022,
+      "unit": "percent of pixels",
+      "n": 56640,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "epsindi_2025W40_1A_0444_2_D3_median_resid": {
+      "value": 0.033820170909166336,
+      "unit": "MJy/sr",
+      "n": 33440,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=2.204 um, SOURCE masked"
+    },
+    "epsindi_2025W40_1A_0444_2_D3_median_zodi": {
+      "value": 0.10814345628023148,
+      "unit": "MJy/sr",
+      "n": 33440,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W40_1A_0444_2_D3_resid_over_zodi": {
+      "value": 0.3127343259820394,
+      "unit": "ratio",
+      "n": 33440,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W40_1A_0444_2_D3_grad_x": {
+      "value": -0.0005941947463988374,
+      "unit": "MJy/sr per 100 px",
+      "n": 33440,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "epsindi_2025W40_1A_0444_2_D3_grad_y": {
+      "value": -0.0007769262210603441,
+      "unit": "MJy/sr per 100 px",
+      "n": 33440,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "epsindi_2025W40_1A_0444_2_D3_robust_noise": {
+      "value": 0.015525030007213354,
+      "unit": "MJy/sr",
+      "n": 33440,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "epsindi_2025W40_1A_0444_2_D3_median_sqrt_variance": {
+      "value": 0.01353917478175033,
+      "unit": "MJy/sr",
+      "n": 33440,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W40_1A_0444_2_D3_source_masked_fraction": {
+      "value": 46.2158203125,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "epsindi_2025W41_2B_0200_2_D4_median_resid": {
+      "value": 0.01979891210794449,
+      "unit": "MJy/sr",
+      "n": 43240,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=3.612 um, SOURCE masked"
+    },
+    "epsindi_2025W41_2B_0200_2_D4_median_zodi": {
+      "value": 0.08688307926058769,
+      "unit": "MJy/sr",
+      "n": 43240,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W41_2B_0200_2_D4_resid_over_zodi": {
+      "value": 0.2278799540306551,
+      "unit": "ratio",
+      "n": 43240,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W41_2B_0200_2_D4_grad_x": {
+      "value": 0.00046742216830183986,
+      "unit": "MJy/sr per 100 px",
+      "n": 43240,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "epsindi_2025W41_2B_0200_2_D4_grad_y": {
+      "value": -0.0008897241693416032,
+      "unit": "MJy/sr per 100 px",
+      "n": 43240,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "epsindi_2025W41_2B_0200_2_D4_robust_noise": {
+      "value": 0.011917181906104087,
+      "unit": "MJy/sr",
+      "n": 43240,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "epsindi_2025W41_2B_0200_2_D4_median_sqrt_variance": {
+      "value": 0.010844867156883212,
+      "unit": "MJy/sr",
+      "n": 43240,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2025W41_2B_0200_2_D4_source_masked_fraction": {
+      "value": 52.833984375,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "epsindi_2026W17_2A_0355_3_D5_median_resid": {
+      "value": 0.018150106072425842,
+      "unit": "MJy/sr",
+      "n": 45203,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=4.131 um, SOURCE masked"
+    },
+    "epsindi_2026W17_2A_0355_3_D5_median_zodi": {
+      "value": 0.17862863838672638,
+      "unit": "MJy/sr",
+      "n": 45203,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2026W17_2A_0355_3_D5_resid_over_zodi": {
+      "value": 0.10160804133283115,
+      "unit": "ratio",
+      "n": 45203,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2026W17_2A_0355_3_D5_grad_x": {
+      "value": -0.0004803302673209245,
+      "unit": "MJy/sr per 100 px",
+      "n": 45203,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "epsindi_2026W17_2A_0355_3_D5_grad_y": {
+      "value": -0.00026574514940320434,
+      "unit": "MJy/sr per 100 px",
+      "n": 45203,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "epsindi_2026W17_2A_0355_3_D5_robust_noise": {
+      "value": 0.03207014628946781,
+      "unit": "MJy/sr",
+      "n": 45203,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "epsindi_2026W17_2A_0355_3_D5_median_sqrt_variance": {
+      "value": 0.031865998202564805,
+      "unit": "MJy/sr",
+      "n": 45203,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2026W17_2A_0355_3_D5_source_masked_fraction": {
+      "value": 52.4912109375,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "epsindi_2026W39_2A_0312_4_D6_median_resid": {
+      "value": 0.03406283259391785,
+      "unit": "MJy/sr",
+      "n": 59735,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=4.447 um, SOURCE masked"
+    },
+    "epsindi_2026W39_2A_0312_4_D6_median_zodi": {
+      "value": 0.21204033493995667,
+      "unit": "MJy/sr",
+      "n": 59735,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2026W39_2A_0312_4_D6_resid_over_zodi": {
+      "value": 0.16064317481654328,
+      "unit": "ratio",
+      "n": 59735,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2026W39_2A_0312_4_D6_grad_x": {
+      "value": 0.00019885053957254412,
+      "unit": "MJy/sr per 100 px",
+      "n": 59735,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "epsindi_2026W39_2A_0312_4_D6_grad_y": {
+      "value": 0.0005920401498582092,
+      "unit": "MJy/sr per 100 px",
+      "n": 59735,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "epsindi_2026W39_2A_0312_4_D6_robust_noise": {
+      "value": 0.04009032843410969,
+      "unit": "MJy/sr",
+      "n": 59735,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "epsindi_2026W39_2A_0312_4_D6_median_sqrt_variance": {
+      "value": 0.03973469096130157,
+      "unit": "MJy/sr",
+      "n": 59735,
+      "script": "04_zodi.py"
+    },
+    "epsindi_2026W39_2A_0312_4_D6_source_masked_fraction": {
+      "value": 37.78515625,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "barnard_2025W35_2A_0474_1_D1_median_resid": {
+      "value": 0.0836610272526741,
+      "unit": "MJy/sr",
+      "n": 4754,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=0.842 um, SOURCE masked"
+    },
+    "barnard_2025W35_2A_0474_1_D1_median_zodi": {
+      "value": 0.15362126380205154,
+      "unit": "MJy/sr",
+      "n": 4754,
+      "script": "04_zodi.py"
+    },
+    "barnard_2025W35_2A_0474_1_D1_resid_over_zodi": {
+      "value": 0.5445927548185998,
+      "unit": "ratio",
+      "n": 4754,
+      "script": "04_zodi.py"
+    },
+    "barnard_2025W35_2A_0474_1_D1_grad_x": {
+      "value": -0.0003829494406804341,
+      "unit": "MJy/sr per 100 px",
+      "n": 4754,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "barnard_2025W35_2A_0474_1_D1_grad_y": {
+      "value": -0.0003463564338893861,
+      "unit": "MJy/sr per 100 px",
+      "n": 4754,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "barnard_2025W35_2A_0474_1_D1_robust_noise": {
+      "value": 0.022349750393629072,
+      "unit": "MJy/sr",
+      "n": 4754,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "barnard_2025W35_2A_0474_1_D1_median_sqrt_variance": {
+      "value": 0.018328730772786895,
+      "unit": "MJy/sr",
+      "n": 4754,
+      "script": "04_zodi.py"
+    },
+    "barnard_2025W35_2A_0474_1_D1_source_masked_fraction": {
+      "value": 93.361328125,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "barnard_2025W35_1A_0444_1_D2_median_resid": {
+      "value": 0.08362694084644318,
+      "unit": "MJy/sr",
+      "n": 2795,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=1.238 um, SOURCE masked"
+    },
+    "barnard_2025W35_1A_0444_1_D2_median_zodi": {
+      "value": 0.16146238148212433,
+      "unit": "MJy/sr",
+      "n": 2795,
+      "script": "04_zodi.py"
+    },
+    "barnard_2025W35_1A_0444_1_D2_resid_over_zodi": {
+      "value": 0.5179345187330933,
+      "unit": "ratio",
+      "n": 2795,
+      "script": "04_zodi.py"
+    },
+    "barnard_2025W35_1A_0444_1_D2_grad_x": {
+      "value": 0.0005549314220136188,
+      "unit": "MJy/sr per 100 px",
+      "n": 2795,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "barnard_2025W35_1A_0444_1_D2_grad_y": {
+      "value": -0.0013616840505116,
+      "unit": "MJy/sr per 100 px",
+      "n": 2795,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "barnard_2025W35_1A_0444_1_D2_robust_noise": {
+      "value": 0.022406748944520948,
+      "unit": "MJy/sr",
+      "n": 2795,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "barnard_2025W35_1A_0444_1_D2_median_sqrt_variance": {
+      "value": 0.01818999501744898,
+      "unit": "MJy/sr",
+      "n": 2795,
+      "script": "04_zodi.py"
+    },
+    "barnard_2025W35_1A_0444_1_D2_source_masked_fraction": {
+      "value": 95.7802734375,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "barnard_2026W12_2A_0520_1_D3_median_resid": {
+      "value": 0.05475915968418121,
+      "unit": "MJy/sr",
+      "n": 2278,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=2.155 um, SOURCE masked"
+    },
+    "barnard_2026W12_2A_0520_1_D3_median_zodi": {
+      "value": 0.1528274044394493,
+      "unit": "MJy/sr",
+      "n": 2278,
+      "script": "04_zodi.py"
+    },
+    "barnard_2026W12_2A_0520_1_D3_resid_over_zodi": {
+      "value": 0.35830720206909594,
+      "unit": "ratio",
+      "n": 2278,
+      "script": "04_zodi.py"
+    },
+    "barnard_2026W12_2A_0520_1_D3_grad_x": {
+      "value": -0.001743749864778043,
+      "unit": "MJy/sr per 100 px",
+      "n": 2278,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "barnard_2026W12_2A_0520_1_D3_grad_y": {
+      "value": 6.680452371734244e-05,
+      "unit": "MJy/sr per 100 px",
+      "n": 2278,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "barnard_2026W12_2A_0520_1_D3_robust_noise": {
+      "value": 0.019924152758717537,
+      "unit": "MJy/sr",
+      "n": 2278,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "barnard_2026W12_2A_0520_1_D3_median_sqrt_variance": {
+      "value": 0.01599955744921669,
+      "unit": "MJy/sr",
+      "n": 2278,
+      "script": "04_zodi.py"
+    },
+    "barnard_2026W12_2A_0520_1_D3_source_masked_fraction": {
+      "value": 56.5654296875,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "barnard_2025W40_1A_0441_1_D4_median_resid": {
+      "value": 0.038040995597839355,
+      "unit": "MJy/sr",
+      "n": 2249,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=2.780 um, SOURCE masked"
+    },
+    "barnard_2025W40_1A_0441_1_D4_median_zodi": {
+      "value": 0.10485506802797318,
+      "unit": "MJy/sr",
+      "n": 2249,
+      "script": "04_zodi.py"
+    },
+    "barnard_2025W40_1A_0441_1_D4_resid_over_zodi": {
+      "value": 0.36279596507143363,
+      "unit": "ratio",
+      "n": 2249,
+      "script": "04_zodi.py"
+    },
+    "barnard_2025W40_1A_0441_1_D4_grad_x": {
+      "value": -3.77139006521804e-05,
+      "unit": "MJy/sr per 100 px",
+      "n": 2249,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "barnard_2025W40_1A_0441_1_D4_grad_y": {
+      "value": 0.00019838965860697258,
+      "unit": "MJy/sr per 100 px",
+      "n": 2249,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "barnard_2025W40_1A_0441_1_D4_robust_noise": {
+      "value": 0.015235359174013138,
+      "unit": "MJy/sr",
+      "n": 2249,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "barnard_2025W40_1A_0441_1_D4_median_sqrt_variance": {
+      "value": 0.012718014752928828,
+      "unit": "MJy/sr",
+      "n": 2249,
+      "script": "04_zodi.py"
+    },
+    "barnard_2025W40_1A_0441_1_D4_source_masked_fraction": {
+      "value": 94.5634765625,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "barnard_2026W34_2A_0233_1_D5_median_resid": {
+      "value": 0.043302830308675766,
+      "unit": "MJy/sr",
+      "n": 8160,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=4.042 um, SOURCE masked"
+    },
+    "barnard_2026W34_2A_0233_1_D5_median_zodi": {
+      "value": 0.11126147210597992,
+      "unit": "MJy/sr",
+      "n": 8160,
+      "script": "04_zodi.py"
+    },
+    "barnard_2026W34_2A_0233_1_D5_resid_over_zodi": {
+      "value": 0.38919878992279117,
+      "unit": "ratio",
+      "n": 8160,
+      "script": "04_zodi.py"
+    },
+    "barnard_2026W34_2A_0233_1_D5_grad_x": {
+      "value": -0.0003053550042599397,
+      "unit": "MJy/sr per 100 px",
+      "n": 8160,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "barnard_2026W34_2A_0233_1_D5_grad_y": {
+      "value": -0.0007001682848325739,
+      "unit": "MJy/sr per 100 px",
+      "n": 8160,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "barnard_2026W34_2A_0233_1_D5_robust_noise": {
+      "value": 0.030256183976680038,
+      "unit": "MJy/sr",
+      "n": 8160,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "barnard_2026W34_2A_0233_1_D5_median_sqrt_variance": {
+      "value": 0.02890695074801118,
+      "unit": "MJy/sr",
+      "n": 8160,
+      "script": "04_zodi.py"
+    },
+    "barnard_2026W34_2A_0233_1_D5_source_masked_fraction": {
+      "value": 90.091796875,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    },
+    "barnard_2026W34_1A_0308_1_D6_median_resid": {
+      "value": 0.06175091862678528,
+      "unit": "MJy/sr",
+      "n": 15933,
+      "script": "04_zodi.py",
+      "note": "IMAGE-ZODI, lambda=4.595 um, SOURCE masked"
+    },
+    "barnard_2026W34_1A_0308_1_D6_median_zodi": {
+      "value": 0.23570691049098969,
+      "unit": "MJy/sr",
+      "n": 15933,
+      "script": "04_zodi.py"
+    },
+    "barnard_2026W34_1A_0308_1_D6_resid_over_zodi": {
+      "value": 0.26198179127695037,
+      "unit": "ratio",
+      "n": 15933,
+      "script": "04_zodi.py"
+    },
+    "barnard_2026W34_1A_0308_1_D6_grad_x": {
+      "value": -0.0006670500840253738,
+      "unit": "MJy/sr per 100 px",
+      "n": 15933,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, x = column"
+    },
+    "barnard_2026W34_1A_0308_1_D6_grad_y": {
+      "value": -0.0008032168338567749,
+      "unit": "MJy/sr per 100 px",
+      "n": 15933,
+      "script": "04_zodi.py",
+      "note": "plane fit to residual, y = row"
+    },
+    "barnard_2026W34_1A_0308_1_D6_robust_noise": {
+      "value": 0.0443985130906105,
+      "unit": "MJy/sr",
+      "n": 15933,
+      "script": "04_zodi.py",
+      "note": "1.4826*MAD of clipped residual per pixel"
+    },
+    "barnard_2026W34_1A_0308_1_D6_median_sqrt_variance": {
+      "value": 0.04349960695372105,
+      "unit": "MJy/sr",
+      "n": 15933,
+      "script": "04_zodi.py"
+    },
+    "barnard_2026W34_1A_0308_1_D6_source_masked_fraction": {
+      "value": 82.318359375,
+      "unit": "percent of pixels",
+      "n": 102400,
+      "script": "04_zodi.py",
+      "note": "extra pixels removed by SOURCE bit"
+    }
+  },
+  "registration_barnard": {
+    "script": "scripts/03_registration.py",
+    "method": "gauss",
+    "pixscale_arcsec": {
+      "value": 6.1523,
+      "unit": "arcsec/px",
+      "n": 358,
+      "script": "scripts/03_registration.py"
+    },
+    "selection": {
+      "g_window": [
+        12.0,
+        16.5
+      ],
+      "g_window_reason": "G 12.0-16.5. Bright end: SPHEREx non-linearity starts near 11.5 AB (bands 1-4) and ~10 AB (bands 5-6); G=12 stars, even very red ones (G-K ~ 3, i.e. ~1-2 mag brighter than G in AB at 1-2 um), stay below the bands 1-4 onset only marginally, so NONLINEAR/OVERFLOW flags are also required clean in the 5x5 stamp. Faint end: G=16.5 still gives peak S/N >= 10 in the SWIR detectors for typical colours; fainter stars are mostly removed by the S/N cut anyway.",
+      "ruwe_max": 1.4,
+      "isolation": "no Gaia source with G < G_star+3.0 within 20.0 arcsec; none with G < 9.0 within 180.0 arcsec",
+      "edge_px": 4,
+      "snr_min_peak": 10.0,
+      "chi2r_max": 100.0,
+      "max_resid_px": 1.5,
+      "flags_rejected_5x5": [
+        "TRANSIENT",
+        "OVERFLOW",
+        "SUR_ERROR",
+        "NONFUNC",
+        "MISSING_DATA",
+        "HOT",
+        "COLD",
+        "NONLINEAR",
+        "PERSIST",
+        "BLOOM",
+        "SNOWBALL",
+        "HALO",
+        "SATELLITE_HALO",
+        "STREAK"
+      ],
+      "cut_counts_star_frames": {
+        "in_footprint": 3553126,
+        "g_window": 468563,
+        "ruwe": 435767,
+        "has_pm": 435767,
+        "isolated": 80385,
+        "flags_ok": 60637,
+        "snr_ok": 52770,
+        "fit_converged": 47406,
+        "resid_sane": 47406
+      },
+      "cut_counts_distinct_stars": {
+        "in_footprint": 11281,
+        "g_window": 1484,
+        "ruwe": 1380,
+        "has_pm": 1380,
+        "isolated": 257,
+        "flags_ok": 257,
+        "snr_ok": 257,
+        "fit_converged": 257,
+        "resid_sane": 257
+      },
+      "flag_hits_5x5": {
+        "BLOOM": 148,
+        "COLD": 888,
+        "GHOST": 0,
+        "HALO": 7813,
+        "HOT": 0,
+        "MISSING_DATA": 0,
+        "NONFUNC": 6683,
+        "NONLINEAR": 0,
+        "NaN_or_bad_variance": 463,
+        "OUTLIER": 72,
+        "OVERFLOW": 1445,
+        "PERSIST": 6105,
+        "SATELLITE_HALO": 0,
+        "SNOWBALL": 18,
+        "SOURCE": 80385,
+        "STREAK": 66,
+        "SUR_ERROR": 6748,
+        "TRANSIENT": 8654
+      },
+      "flag_hits_in_accepted": {
+        "GHOST": 0,
+        "OUTLIER": 44,
+        "SOURCE": 60637
+      }
+    },
+    "n_measurements": {
+      "value": 47406,
+      "unit": "count",
+      "script": "scripts/03_registration.py"
+    },
+    "n_stars": {
+      "value": 257,
+      "unit": "count",
+      "script": "scripts/03_registration.py"
+    },
+    "n_frames": {
+      "value": 357,
+      "unit": "count",
+      "script": "scripts/03_registration.py",
+      "note": "of 358 cutouts"
+    },
+    "absolute": {
+      "median_abs_frame_offset_ra": {
+        "value": 0.0636,
+        "unit": "arcsec",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "median_abs_frame_offset_dec": {
+        "value": 0.0547,
+        "unit": "arcsec",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "rsd_frame_offsets_ra": {
+        "value": 0.0781,
+        "unit": "arcsec",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "rsd_frame_offsets_dec": {
+        "value": 0.0812,
+        "unit": "arcsec",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "expected_rsd_frame_offsets_noise_only_ra": {
+        "value": 0.0187,
+        "unit": "arcsec",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "expected_rsd_frame_offsets_noise_only_dec": {
+        "value": 0.0268,
+        "unit": "arcsec",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "per_frame_scatter_median_ra": {
+        "value": 0.1749,
+        "unit": "arcsec",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "per_frame_scatter_median_dec": {
+        "value": 0.2401,
+        "unit": "arcsec",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "per_frame_scatter_median_x": {
+        "value": 0.02844,
+        "unit": "px",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "per_frame_scatter_median_y": {
+        "value": 0.03863,
+        "unit": "px",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      },
+      "stars_per_frame_median": {
+        "value": 141,
+        "unit": "count",
+        "n": 356,
+        "script": "scripts/03_registration.py"
+      }
+    },
+    "pairs": {
+      "same_visit": {
+        "n_pairs": 1509085,
+        "n_stars": 255,
+        "raw_ra_arcsec": {
+          "value": 0.2413,
+          "unit": "arcsec",
+          "n": 1509085,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3435,
+          "unit": "arcsec",
+          "n": 1509085,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.03921,
+          "unit": "px",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.05584,
+          "unit": "px",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2247,
+          "unit": "arcsec",
+          "n": 1509012,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3276,
+          "unit": "arcsec",
+          "n": 1509012,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03653,
+          "unit": "px",
+          "n": 1509012,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.05324,
+          "unit": "px",
+          "n": 1509012,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1589,
+          "unit": "arcsec",
+          "n": 1509012,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2316,
+          "unit": "arcsec",
+          "n": 1509012,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.247,
+          "unit": "arcsec",
+          "n": 255,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0057"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3624,
+          "unit": "arcsec",
+          "n": 255,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0079"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.2336,
+          "unit": "arcsec",
+          "n": 255,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0050"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.3434,
+          "unit": "arcsec",
+          "n": 255,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0077"
+        }
+      },
+      "6mo": {
+        "n_pairs": 1992629,
+        "n_stars": 237,
+        "raw_ra_arcsec": {
+          "value": 0.2832,
+          "unit": "arcsec",
+          "n": 1992629,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3451,
+          "unit": "arcsec",
+          "n": 1992629,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.04603,
+          "unit": "px",
+          "n": 1992629,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.05609,
+          "unit": "px",
+          "n": 1992629,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.23,
+          "unit": "arcsec",
+          "n": 1992457,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3217,
+          "unit": "arcsec",
+          "n": 1992457,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03739,
+          "unit": "px",
+          "n": 1992457,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.05229,
+          "unit": "px",
+          "n": 1992457,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1627,
+          "unit": "arcsec",
+          "n": 1992457,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2275,
+          "unit": "arcsec",
+          "n": 1992457,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2927,
+          "unit": "arcsec",
+          "n": 237,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0060"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3556,
+          "unit": "arcsec",
+          "n": 237,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0074"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.2388,
+          "unit": "arcsec",
+          "n": 237,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0050"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.3296,
+          "unit": "arcsec",
+          "n": 237,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0072"
+        }
+      },
+      "12mo": {
+        "n_pairs": 1253858,
+        "n_stars": 251,
+        "raw_ra_arcsec": {
+          "value": 0.2378,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3481,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.03864,
+          "unit": "px",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.05659,
+          "unit": "px",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2237,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3336,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03636,
+          "unit": "px",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.05423,
+          "unit": "px",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1582,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2359,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2514,
+          "unit": "arcsec",
+          "n": 251,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0054"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3568,
+          "unit": "arcsec",
+          "n": 251,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0067"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.235,
+          "unit": "arcsec",
+          "n": 251,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0053"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.3517,
+          "unit": "arcsec",
+          "n": 251,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0079"
+        }
+      },
+      "other": {
+        "n_pairs": 338867,
+        "n_stars": 243,
+        "raw_ra_arcsec": {
+          "value": 0.2554,
+          "unit": "arcsec",
+          "n": 338867,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3779,
+          "unit": "arcsec",
+          "n": 338867,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.04152,
+          "unit": "px",
+          "n": 338867,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.06142,
+          "unit": "px",
+          "n": 338867,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2351,
+          "unit": "arcsec",
+          "n": 338862,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3593,
+          "unit": "arcsec",
+          "n": 338862,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03821,
+          "unit": "px",
+          "n": 338862,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.0584,
+          "unit": "px",
+          "n": 338862,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1662,
+          "unit": "arcsec",
+          "n": 338862,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.254,
+          "unit": "arcsec",
+          "n": 338862,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2668,
+          "unit": "arcsec",
+          "n": 243,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0061"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3871,
+          "unit": "arcsec",
+          "n": 243,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0093"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.2433,
+          "unit": "arcsec",
+          "n": 243,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0061"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.3751,
+          "unit": "arcsec",
+          "n": 243,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0088"
+        }
+      },
+      "inter_visit": {
+        "n_pairs": 3246487,
+        "n_stars": 251,
+        "raw_ra_arcsec": {
+          "value": 0.2645,
+          "unit": "arcsec",
+          "n": 3246487,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3462,
+          "unit": "arcsec",
+          "n": 3246487,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.043,
+          "unit": "px",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.05628,
+          "unit": "px",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2275,
+          "unit": "arcsec",
+          "n": 3246315,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3262,
+          "unit": "arcsec",
+          "n": 3246315,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03698,
+          "unit": "px",
+          "n": 3246315,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.05303,
+          "unit": "px",
+          "n": 3246315,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1609,
+          "unit": "arcsec",
+          "n": 3246315,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2307,
+          "unit": "arcsec",
+          "n": 3246315,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2714,
+          "unit": "arcsec",
+          "n": 251,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0061"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3563,
+          "unit": "arcsec",
+          "n": 251,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0069"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.2387,
+          "unit": "arcsec",
+          "n": 251,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0053"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.3338,
+          "unit": "arcsec",
+          "n": 251,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0066"
+        }
+      },
+      "all": {
+        "n_pairs": 5094439,
+        "n_stars": 256,
+        "raw_ra_arcsec": {
+          "value": 0.2569,
+          "unit": "arcsec",
+          "n": 5094439,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3474,
+          "unit": "arcsec",
+          "n": 5094439,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.04175,
+          "unit": "px",
+          "n": 5094439,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.05647,
+          "unit": "px",
+          "n": 5094439,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2272,
+          "unit": "arcsec",
+          "n": 5094189,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3287,
+          "unit": "arcsec",
+          "n": 5094189,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03693,
+          "unit": "px",
+          "n": 5094189,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.05343,
+          "unit": "px",
+          "n": 5094189,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1606,
+          "unit": "arcsec",
+          "n": 5094189,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2324,
+          "unit": "arcsec",
+          "n": 5094189,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2639,
+          "unit": "arcsec",
+          "n": 256,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0057"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3531,
+          "unit": "arcsec",
+          "n": 256,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0070"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.2327,
+          "unit": "arcsec",
+          "n": 256,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0044"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.3343,
+          "unit": "arcsec",
+          "n": 256,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0075"
+        }
+      },
+      "same_visit_simultaneous": {
+        "n_pairs": 86077,
+        "n_stars": 254,
+        "raw_ra_arcsec": {
+          "value": 0.225,
+          "unit": "arcsec",
+          "n": 86077,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3262,
+          "unit": "arcsec",
+          "n": 86077,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.03657,
+          "unit": "px",
+          "n": 86077,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.05302,
+          "unit": "px",
+          "n": 86077,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2142,
+          "unit": "arcsec",
+          "n": 86073,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3106,
+          "unit": "arcsec",
+          "n": 86073,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03482,
+          "unit": "px",
+          "n": 86073,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.05049,
+          "unit": "px",
+          "n": 86073,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1515,
+          "unit": "arcsec",
+          "n": 86073,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2196,
+          "unit": "arcsec",
+          "n": 86073,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2369,
+          "unit": "arcsec",
+          "n": 254,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0054"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.327,
+          "unit": "arcsec",
+          "n": 254,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0070"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.2257,
+          "unit": "arcsec",
+          "n": 254,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0057"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.316,
+          "unit": "arcsec",
+          "n": 254,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0064"
+        }
+      },
+      "same_visit_same_det": {
+        "n_pairs": 276484,
+        "n_stars": 254,
+        "raw_ra_arcsec": {
+          "value": 0.2264,
+          "unit": "arcsec",
+          "n": 276484,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3219,
+          "unit": "arcsec",
+          "n": 276484,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.0368,
+          "unit": "px",
+          "n": 276484,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.05233,
+          "unit": "px",
+          "n": 276484,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2107,
+          "unit": "arcsec",
+          "n": 276478,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3042,
+          "unit": "arcsec",
+          "n": 276478,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03425,
+          "unit": "px",
+          "n": 276478,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.04944,
+          "unit": "px",
+          "n": 276478,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.149,
+          "unit": "arcsec",
+          "n": 276478,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2151,
+          "unit": "arcsec",
+          "n": 276478,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2336,
+          "unit": "arcsec",
+          "n": 254,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0047"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3339,
+          "unit": "arcsec",
+          "n": 254,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0074"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.217,
+          "unit": "arcsec",
+          "n": 254,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0047"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.3163,
+          "unit": "arcsec",
+          "n": 254,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0077"
+        }
+      },
+      "same_visit_diff_det": {
+        "n_pairs": 1232601,
+        "n_stars": 253,
+        "raw_ra_arcsec": {
+          "value": 0.2446,
+          "unit": "arcsec",
+          "n": 1232601,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3484,
+          "unit": "arcsec",
+          "n": 1232601,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.03975,
+          "unit": "px",
+          "n": 1232601,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.05663,
+          "unit": "px",
+          "n": 1232601,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2279,
+          "unit": "arcsec",
+          "n": 1232534,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3327,
+          "unit": "arcsec",
+          "n": 1232534,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03705,
+          "unit": "px",
+          "n": 1232534,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.05408,
+          "unit": "px",
+          "n": 1232534,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1612,
+          "unit": "arcsec",
+          "n": 1232534,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2353,
+          "unit": "arcsec",
+          "n": 1232534,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2577,
+          "unit": "arcsec",
+          "n": 253,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0070"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3599,
+          "unit": "arcsec",
+          "n": 253,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0079"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.2381,
+          "unit": "arcsec",
+          "n": 253,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0052"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.3407,
+          "unit": "arcsec",
+          "n": 253,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0073"
+        }
+      },
+      "inter_visit_same_det": {
+        "n_pairs": 597577,
+        "n_stars": 250,
+        "raw_ra_arcsec": {
+          "value": 0.2528,
+          "unit": "arcsec",
+          "n": 597577,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3268,
+          "unit": "arcsec",
+          "n": 597577,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.0411,
+          "unit": "px",
+          "n": 597577,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.05312,
+          "unit": "px",
+          "n": 597577,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2139,
+          "unit": "arcsec",
+          "n": 597549,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3027,
+          "unit": "arcsec",
+          "n": 597549,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03476,
+          "unit": "px",
+          "n": 597549,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.04921,
+          "unit": "px",
+          "n": 597549,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1512,
+          "unit": "arcsec",
+          "n": 597549,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2141,
+          "unit": "arcsec",
+          "n": 597549,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2575,
+          "unit": "arcsec",
+          "n": 250,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0044"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3271,
+          "unit": "arcsec",
+          "n": 250,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0075"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.2248,
+          "unit": "arcsec",
+          "n": 250,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0041"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.312,
+          "unit": "arcsec",
+          "n": 250,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0073"
+        }
+      },
+      "inter_visit_diff_det": {
+        "n_pairs": 2648910,
+        "n_stars": 249,
+        "raw_ra_arcsec": {
+          "value": 0.2673,
+          "unit": "arcsec",
+          "n": 2648910,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_dec_arcsec": {
+          "value": 0.3507,
+          "unit": "arcsec",
+          "n": 2648910,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+        },
+        "raw_ra_px": {
+          "value": 0.04344,
+          "unit": "px",
+          "n": 2648910,
+          "script": "scripts/03_registration.py"
+        },
+        "raw_dec_px": {
+          "value": 0.057,
+          "unit": "px",
+          "n": 2648910,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_ra_arcsec": {
+          "value": 0.2308,
+          "unit": "arcsec",
+          "n": 2648766,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_dec_arcsec": {
+          "value": 0.3316,
+          "unit": "arcsec",
+          "n": 2648766,
+          "script": "scripts/03_registration.py",
+          "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+        },
+        "corr_ra_px": {
+          "value": 0.03751,
+          "unit": "px",
+          "n": 2648766,
+          "script": "scripts/03_registration.py"
+        },
+        "corr_dec_px": {
+          "value": 0.0539,
+          "unit": "px",
+          "n": 2648766,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_ra_arcsec": {
+          "value": 0.1632,
+          "unit": "arcsec",
+          "n": 2648766,
+          "script": "scripts/03_registration.py"
+        },
+        "single_frame_equiv_corr_dec_arcsec": {
+          "value": 0.2345,
+          "unit": "arcsec",
+          "n": 2648766,
+          "script": "scripts/03_registration.py"
+        },
+        "eqweight_raw_ra_arcsec": {
+          "value": 0.2807,
+          "unit": "arcsec",
+          "n": 249,
+          "script": "scripts/03_registration.py",
+          "note": "<= 20 pairs/star; err = bootstrap over stars: 0.0061"
+        },
+        "eqweight_raw_dec_arcsec": {
+          "value": 0.3586,
+          "unit": "arcsec",
+          "n": 249,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0079"
+        },
+        "eqweight_corr_ra_arcsec": {
+          "value": 0.2439,
+          "unit": "arcsec",
+          "n": 249,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0054"
+        },
+        "eqweight_corr_dec_arcsec": {
+          "value": 0.3485,
+          "unit": "arcsec",
+          "n": 249,
+          "script": "scripts/03_registration.py",
+          "note": "err 0.0065"
+        }
+      }
+    },
+    "pairs_phase_corrected": {
+      "same_visit": {
+        "n_pairs": 1509012,
+        "n_stars": 255,
+        "ra_arcsec": {
+          "value": 0.167,
+          "unit": "arcsec",
+          "n": 1509012,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.182,
+          "unit": "arcsec",
+          "n": 1509012,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.02714,
+          "unit": "px",
+          "n": 1509012,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.02959,
+          "unit": "px",
+          "n": 1509012,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_ra": {
+          "value": 1.712,
+          "unit": "dimensionless",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_dec": {
+          "value": 1.81,
+          "unit": "dimensionless",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_ra_arcsec": {
+          "value": 0.1349,
+          "unit": "arcsec",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_dec_arcsec": {
+          "value": 0.1523,
+          "unit": "arcsec",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "6mo": {
+        "n_pairs": 1992457,
+        "n_stars": 237,
+        "ra_arcsec": {
+          "value": 0.168,
+          "unit": "arcsec",
+          "n": 1992457,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.1785,
+          "unit": "arcsec",
+          "n": 1992457,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.02731,
+          "unit": "px",
+          "n": 1992457,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.02901,
+          "unit": "px",
+          "n": 1992457,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "12mo": {
+        "n_pairs": 1253858,
+        "n_stars": 251,
+        "ra_arcsec": {
+          "value": 0.1675,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.1841,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.02722,
+          "unit": "px",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.02993,
+          "unit": "px",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "other": {
+        "n_pairs": 338862,
+        "n_stars": 243,
+        "ra_arcsec": {
+          "value": 0.1642,
+          "unit": "arcsec",
+          "n": 338862,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.2569,
+          "unit": "arcsec",
+          "n": 338862,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.02669,
+          "unit": "px",
+          "n": 338862,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.04176,
+          "unit": "px",
+          "n": 338862,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "inter_visit": {
+        "n_pairs": 3246315,
+        "n_stars": 251,
+        "ra_arcsec": {
+          "value": 0.1678,
+          "unit": "arcsec",
+          "n": 3246315,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "dec_arcsec": {
+          "value": 0.1806,
+          "unit": "arcsec",
+          "n": 3246315,
+          "script": "scripts/03_registration.py",
+          "note": "diagnostic; cross-validated empirical pixel-phase correction per detector/axis + LOO frame shift"
+        },
+        "ra_px": {
+          "value": 0.02728,
+          "unit": "px",
+          "n": 3246315,
+          "script": "scripts/03_registration.py"
+        },
+        "dec_px": {
+          "value": 0.02936,
+          "unit": "px",
+          "n": 3246315,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_ra": {
+          "value": 1.719,
+          "unit": "dimensionless",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_dec": {
+          "value": 1.801,
+          "unit": "dimensionless",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_ra_arcsec": {
+          "value": 0.1358,
+          "unit": "arcsec",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_dec_arcsec": {
+          "value": 0.1507,
+          "unit": "arcsec",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        }
+      }
+    },
+    "noise": {
+      "same_visit": {
+        "floor_ra_arcsec": {
+          "value": 0.0985,
+          "unit": "arcsec",
+          "n": 1509085,
+          "script": "scripts/03_registration.py",
+          "note": "median per-pair formal sigma"
+        },
+        "floor_dec_arcsec": {
+          "value": 0.0996,
+          "unit": "arcsec",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_raw_ra": {
+          "value": 2.353,
+          "unit": "dimensionless",
+          "n": 1509085,
+          "script": "scripts/03_registration.py",
+          "note": "1 if formal errors calibrated and WCS adds nothing"
+        },
+        "z_rsd_raw_dec": {
+          "value": 3.175,
+          "unit": "dimensionless",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_ra": {
+          "value": 2.198,
+          "unit": "dimensionless",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_dec": {
+          "value": 3.021,
+          "unit": "dimensionless",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_pair_ra_arcsec": {
+          "value": 0.202,
+          "unit": "arcsec",
+          "n": 1509085,
+          "script": "scripts/03_registration.py",
+          "note": "per pair, after LOO frame-shift correction"
+        },
+        "excess_pair_dec_arcsec": {
+          "value": 0.312,
+          "unit": "arcsec",
+          "n": 1509085,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "6mo": {
+        "floor_ra_arcsec": {
+          "value": 0.1024,
+          "unit": "arcsec",
+          "n": 1992629,
+          "script": "scripts/03_registration.py",
+          "note": "median per-pair formal sigma"
+        },
+        "floor_dec_arcsec": {
+          "value": 0.1032,
+          "unit": "arcsec",
+          "n": 1992629,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_raw_ra": {
+          "value": 2.605,
+          "unit": "dimensionless",
+          "n": 1992629,
+          "script": "scripts/03_registration.py",
+          "note": "1 if formal errors calibrated and WCS adds nothing"
+        },
+        "z_rsd_raw_dec": {
+          "value": 3.108,
+          "unit": "dimensionless",
+          "n": 1992629,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_ra": {
+          "value": 2.185,
+          "unit": "dimensionless",
+          "n": 1992629,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_dec": {
+          "value": 2.892,
+          "unit": "dimensionless",
+          "n": 1992629,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_pair_ra_arcsec": {
+          "value": 0.206,
+          "unit": "arcsec",
+          "n": 1992629,
+          "script": "scripts/03_registration.py",
+          "note": "per pair, after LOO frame-shift correction"
+        },
+        "excess_pair_dec_arcsec": {
+          "value": 0.3047,
+          "unit": "arcsec",
+          "n": 1992629,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "12mo": {
+        "floor_ra_arcsec": {
+          "value": 0.0931,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py",
+          "note": "median per-pair formal sigma"
+        },
+        "floor_dec_arcsec": {
+          "value": 0.0942,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_raw_ra": {
+          "value": 2.426,
+          "unit": "dimensionless",
+          "n": 1253858,
+          "script": "scripts/03_registration.py",
+          "note": "1 if formal errors calibrated and WCS adds nothing"
+        },
+        "z_rsd_raw_dec": {
+          "value": 3.367,
+          "unit": "dimensionless",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_ra": {
+          "value": 2.285,
+          "unit": "dimensionless",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_dec": {
+          "value": 3.217,
+          "unit": "dimensionless",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_pair_ra_arcsec": {
+          "value": 0.2034,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py",
+          "note": "per pair, after LOO frame-shift correction"
+        },
+        "excess_pair_dec_arcsec": {
+          "value": 0.3201,
+          "unit": "arcsec",
+          "n": 1253858,
+          "script": "scripts/03_registration.py"
+        }
+      },
+      "inter_visit": {
+        "floor_ra_arcsec": {
+          "value": 0.0985,
+          "unit": "arcsec",
+          "n": 3246487,
+          "script": "scripts/03_registration.py",
+          "note": "median per-pair formal sigma"
+        },
+        "floor_dec_arcsec": {
+          "value": 0.0996,
+          "unit": "arcsec",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_raw_ra": {
+          "value": 2.533,
+          "unit": "dimensionless",
+          "n": 3246487,
+          "script": "scripts/03_registration.py",
+          "note": "1 if formal errors calibrated and WCS adds nothing"
+        },
+        "z_rsd_raw_dec": {
+          "value": 3.203,
+          "unit": "dimensionless",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_ra": {
+          "value": 2.223,
+          "unit": "dimensionless",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        },
+        "z_rsd_corr_dec": {
+          "value": 3.012,
+          "unit": "dimensionless",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        },
+        "excess_pair_ra_arcsec": {
+          "value": 0.2051,
+          "unit": "arcsec",
+          "n": 3246487,
+          "script": "scripts/03_registration.py",
+          "note": "per pair, after LOO frame-shift correction"
+        },
+        "excess_pair_dec_arcsec": {
+          "value": 0.3107,
+          "unit": "arcsec",
+          "n": 3246487,
+          "script": "scripts/03_registration.py"
+        }
+      }
+    },
+    "vs_mag": [
+      {
+        "g_lo": 12.0,
+        "g_hi": 13.0,
+        "cls": "same_visit",
+        "n": 225295,
+        "nstar": 33,
+        "obs_ra": 0.1873,
+        "obs_dec": 0.2706,
+        "floor_ra": 0.0521,
+        "floor_dec": 0.0515,
+        "z_ra": 3.2761,
+        "z_dec": 4.5583,
+        "raw_ra": 0.2052,
+        "raw_dec": 0.2875,
+        "ph_ra": 0.123,
+        "ph_dec": 0.1336
+      },
+      {
+        "g_lo": 12.0,
+        "g_hi": 13.0,
+        "cls": "inter_visit",
+        "n": 488304,
+        "nstar": 33,
+        "obs_ra": 0.1913,
+        "obs_dec": 0.2701,
+        "floor_ra": 0.0517,
+        "floor_dec": 0.0511,
+        "z_ra": 3.3597,
+        "z_dec": 4.5776,
+        "raw_ra": 0.239,
+        "raw_dec": 0.2961,
+        "ph_ra": 0.1265,
+        "ph_dec": 0.133
+      },
+      {
+        "g_lo": 13.0,
+        "g_hi": 14.0,
+        "cls": "same_visit",
+        "n": 549398,
+        "nstar": 67,
+        "obs_ra": 0.2158,
+        "obs_dec": 0.3101,
+        "floor_ra": 0.0849,
+        "floor_dec": 0.0842,
+        "z_ra": 2.4512,
+        "z_dec": 3.3411,
+        "raw_ra": 0.233,
+        "raw_dec": 0.3274,
+        "ph_ra": 0.1535,
+        "ph_dec": 0.1616
+      },
+      {
+        "g_lo": 13.0,
+        "g_hi": 14.0,
+        "cls": "inter_visit",
+        "n": 1179953,
+        "nstar": 67,
+        "obs_ra": 0.2181,
+        "obs_dec": 0.3082,
+        "floor_ra": 0.0844,
+        "floor_dec": 0.0838,
+        "z_ra": 2.4838,
+        "z_dec": 3.3274,
+        "raw_ra": 0.257,
+        "raw_dec": 0.3307,
+        "ph_ra": 0.1536,
+        "ph_dec": 0.1603
+      },
+      {
+        "g_lo": 14.0,
+        "g_hi": 15.0,
+        "cls": "same_visit",
+        "n": 505442,
+        "nstar": 78,
+        "obs_ra": 0.2401,
+        "obs_dec": 0.3554,
+        "floor_ra": 0.1115,
+        "floor_dec": 0.1121,
+        "z_ra": 1.9521,
+        "z_dec": 2.6884,
+        "raw_ra": 0.2557,
+        "raw_dec": 0.3702,
+        "ph_ra": 0.1866,
+        "ph_dec": 0.2079
+      },
+      {
+        "g_lo": 14.0,
+        "g_hi": 15.0,
+        "cls": "inter_visit",
+        "n": 1086725,
+        "nstar": 76,
+        "obs_ra": 0.242,
+        "obs_dec": 0.3534,
+        "floor_ra": 0.111,
+        "floor_dec": 0.1116,
+        "z_ra": 1.9705,
+        "z_dec": 2.6788,
+        "raw_ra": 0.2749,
+        "raw_dec": 0.3698,
+        "ph_ra": 0.1862,
+        "ph_dec": 0.2062
+      },
+      {
+        "g_lo": 15.0,
+        "g_hi": 16.0,
+        "cls": "same_visit",
+        "n": 205084,
+        "nstar": 64,
+        "obs_ra": 0.2573,
+        "obs_dec": 0.3788,
+        "floor_ra": 0.138,
+        "floor_dec": 0.1413,
+        "z_ra": 1.6731,
+        "z_dec": 2.3186,
+        "raw_ra": 0.2695,
+        "raw_dec": 0.3906,
+        "ph_ra": 0.2235,
+        "ph_dec": 0.2474
+      },
+      {
+        "g_lo": 15.0,
+        "g_hi": 16.0,
+        "cls": "inter_visit",
+        "n": 439129,
+        "nstar": 63,
+        "obs_ra": 0.2605,
+        "obs_dec": 0.3786,
+        "floor_ra": 0.1401,
+        "floor_dec": 0.1433,
+        "z_ra": 1.6717,
+        "z_dec": 2.2971,
+        "raw_ra": 0.2856,
+        "raw_dec": 0.3903,
+        "ph_ra": 0.2247,
+        "ph_dec": 0.2454
+      },
+      {
+        "g_lo": 16.0,
+        "g_hi": 16.5,
+        "cls": "same_visit",
+        "n": 23866,
+        "nstar": 13,
+        "obs_ra": 0.3098,
+        "obs_dec": 0.4367,
+        "floor_ra": 0.2279,
+        "floor_dec": 0.2323,
+        "z_ra": 1.3465,
+        "z_dec": 1.7747,
+        "raw_ra": 0.3228,
+        "raw_dec": 0.4464,
+        "ph_ra": 0.2887,
+        "ph_dec": 0.3269
+      },
+      {
+        "g_lo": 16.0,
+        "g_hi": 16.5,
+        "cls": "inter_visit",
+        "n": 52376,
+        "nstar": 12,
+        "obs_ra": 0.3213,
+        "obs_dec": 0.4438,
+        "floor_ra": 0.231,
+        "floor_dec": 0.236,
+        "z_ra": 1.3553,
+        "z_dec": 1.7762,
+        "raw_ra": 0.3357,
+        "raw_dec": 0.4536,
+        "ph_ra": 0.2931,
+        "ph_dec": 0.3357
+      }
+    ],
+    "method_comparison": {
+      "median_gauss_minus_win_x": {
+        "value": -0.00781,
+        "unit": "px",
+        "n": 47406,
+        "script": "scripts/03_registration.py"
+      },
+      "median_gauss_minus_win_y": {
+        "value": 0.00679,
+        "unit": "px",
+        "n": 47406,
+        "script": "scripts/03_registration.py"
+      },
+      "rsd_gauss_minus_win_x": {
+        "value": 0.1802,
+        "unit": "px",
+        "n": 47406,
+        "script": "scripts/03_registration.py"
+      },
+      "rsd_gauss_minus_win_y": {
+        "value": 0.17708,
+        "unit": "px",
+        "n": 47406,
+        "script": "scripts/03_registration.py"
+      },
+      "phase_bias_peak_to_peak_x_gauss": {
+        "value": 0.03158,
+        "unit": "px",
+        "n": 47406,
+        "script": "scripts/03_registration.py"
+      },
+      "phase_bias_peak_to_peak_x_win": {
+        "value": 0.38935,
+        "unit": "px",
+        "n": 47406,
+        "script": "scripts/03_registration.py"
+      },
+      "gauss_same_visit_corr_pair_rsd_ra": {
+        "value": 0.2247,
+        "unit": "arcsec",
+        "n": 1509085,
+        "script": "scripts/03_registration.py"
+      },
+      "gauss_same_visit_corr_pair_rsd_dec": {
+        "value": 0.3276,
+        "unit": "arcsec",
+        "n": 1509085,
+        "script": "scripts/03_registration.py"
+      },
+      "gauss_inter_visit_corr_pair_rsd_ra": {
+        "value": 0.2275,
+        "unit": "arcsec",
+        "n": 3246487,
+        "script": "scripts/03_registration.py"
+      },
+      "gauss_inter_visit_corr_pair_rsd_dec": {
+        "value": 0.3262,
+        "unit": "arcsec",
+        "n": 3246487,
+        "script": "scripts/03_registration.py"
+      },
+      "win_same_visit_corr_pair_rsd_ra": {
+        "value": 1.4562,
+        "unit": "arcsec",
+        "n": 1509085,
+        "script": "scripts/03_registration.py"
+      },
+      "win_same_visit_corr_pair_rsd_dec": {
+        "value": 1.5413,
+        "unit": "arcsec",
+        "n": 1509085,
+        "script": "scripts/03_registration.py"
+      },
+      "win_inter_visit_corr_pair_rsd_ra": {
+        "value": 1.4623,
+        "unit": "arcsec",
+        "n": 3246487,
+        "script": "scripts/03_registration.py"
+      },
+      "win_inter_visit_corr_pair_rsd_dec": {
+        "value": 1.5447,
+        "unit": "arcsec",
+        "n": 3246487,
+        "script": "scripts/03_registration.py"
+      }
+    },
+    "headline": {
+      "note": "Per-pair robust scatter of frame-to-frame differences of Gaia residuals after leave-one-out frame-shift correction, Gaussian-fit centroids. Divide by sqrt(2) for single-frame precision.",
+      "same_visit_corr_ra_arcsec": {
+        "value": 0.2247,
+        "unit": "arcsec",
+        "n": 1509012,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+      },
+      "same_visit_corr_dec_arcsec": {
+        "value": 0.3276,
+        "unit": "arcsec",
+        "n": 1509012,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+      },
+      "inter_visit_corr_ra_arcsec": {
+        "value": 0.2275,
+        "unit": "arcsec",
+        "n": 3246315,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+      },
+      "inter_visit_corr_dec_arcsec": {
+        "value": 0.3262,
+        "unit": "arcsec",
+        "n": 3246315,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2); leave-one-out per-frame median shift removed"
+      },
+      "inter_visit_raw_ra_arcsec": {
+        "value": 0.2645,
+        "unit": "arcsec",
+        "n": 3246487,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+      },
+      "inter_visit_raw_dec_arcsec": {
+        "value": 0.3462,
+        "unit": "arcsec",
+        "n": 3246487,
+        "script": "scripts/03_registration.py",
+        "note": "per-pair robust scatter (1.4826 MAD); single-frame equivalent = value / sqrt(2)"
+      }
+    },
+    "n_cutouts": {
+      "value": 358,
+      "unit": "count",
+      "script": "scripts/03_registration.py",
+      "note": "of 358 index rows"
+    }
+  }
+}

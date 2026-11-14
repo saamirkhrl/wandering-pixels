@@ -1,13 +1,3 @@
-CLAUDE.md
-.claude/
-AGENTS.md
-.gstack/
-research/
-roundtable/
-project-brief.md
-*.local.md
-office/
-spaceapps-office/
 node_modules/
 dist/
 .vercel/

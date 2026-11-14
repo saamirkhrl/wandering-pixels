@@ -1,5 +1,6 @@
 import type { ViewName, ViewParams } from '../app/types';
 import { listCached } from '../app/data';
+import { groupTargets } from '../app/viewer/target-notes';
 import './shell.css';
 import { createAbout } from './about';
 
@@ -75,7 +76,16 @@ export function createShell(
   menu.id = 'targets-menu';
   menu.hidden = true;
   const items: HTMLButtonElement[] = [];
-  for (const t of listCached()) {
+  const groups = groupTargets(listCached());
+  for (const t of groups.flatMap((g) => g.items)) {
+    const group = groups.length > 1 ? groups.find((g) => g.items[0] === t) : undefined;
+    if (group) {
+      const gh = document.createElement('li');
+      gh.className = 'targets-group';
+      gh.setAttribute('role', 'presentation');
+      gh.textContent = group.heading;
+      menu.append(gh);
+    }
     const li = document.createElement('li');
     const item = document.createElement('button');
     item.type = 'button';

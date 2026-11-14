@@ -5,6 +5,7 @@ import { divergingColor } from './render';
 import type { PlayMode } from './player';
 import { STAGE_WORDS } from './load';
 import { createTimeline } from './timeline';
+import { groupTargets } from './target-notes';
 
 
 export interface FrameInfo {
@@ -77,7 +78,6 @@ export interface PanelHandlers {
   setDiffSource: (s: DiffSource) => void;
   goBack: () => void;
   openPrepared: () => void;
-  recheck: () => void;
   loadLive: () => void;
 }
 
@@ -102,13 +102,13 @@ export interface Panel {
   setHeader: (name: string, meta: string) => void;
   setPreparedNote: (name: string | null) => void;
   setEveryNote: (text: string) => void;
-  setRecheck: (on: boolean) => void;
+  setArchiveLine: (text: string | null) => void;
   setTitleNote: (text: string | null) => void;
   setMatchNote: (text: string | null) => void;
   setProgress: (p: Progress | null, stageWord?: string) => void;
   setNotice: (text: string | null) => void;
   setStopped: (text: string, canTry: boolean) => void;
-  setError: (code: SpherexErrorCode | 'OTHER' | 'ONCE', q: string | null, targets: { name: string }[]) => void;
+  setError: (code: SpherexErrorCode | 'OTHER' | 'ONCE', q: string | null, targets: { name: string; slug?: string }[]) => void;
   clearStatus: () => void;
   setRest: (r: RestState | null) => void;
   update: (m: PanelModel) => void;
@@ -463,9 +463,9 @@ export function createPanel(hd: PanelHandlers): Panel {
   backRow.append(backBtn);
   const skyRow = h('div', 'v-top v-skyline');
   skyRow.hidden = true;
-  const recheckRow = h('div', 'v-top v-skyline');
-  recheckRow.hidden = true;
-  el.append(backRow, skyRow, recheckRow, head, status, matchLine, restBox, empty, controls);
+  const archiveRow = h('div', 'v-top v-skyline');
+  archiveRow.hidden = true;
+  el.append(backRow, skyRow, archiveRow, head, status, matchLine, restBox, empty, controls);
 
   let frames: FrameInfo[] = [];
 
@@ -702,7 +702,7 @@ export function createPanel(hd: PanelHandlers): Panel {
     status.append(box);
   }
 
-  function setError(code: SpherexErrorCode | 'OTHER' | 'ONCE', q: string | null, targets: { name: string }[]): void {
+  function setError(code: SpherexErrorCode | 'OTHER' | 'ONCE', q: string | null, targets: { name: string; slug?: string }[]): void {
     setProgress(null);
     const box = h('div', 'v-msgbox v-error');
     let titleText = '';
@@ -738,12 +738,15 @@ export function createPanel(hd: PanelHandlers): Panel {
     box.append(h('p', 'v-msg-title', titleText), h('p', '', body));
     if (retry) box.append(btn('Try again', 'v-btn', hd.retry));
     status.append(box);
-    status.append(targetList(targets.map((t) => ({ slug: t.name, name: t.name, blurb: '' }))));
+    status.append(targetList(targets.map((t) => ({ slug: t.slug ?? t.name, name: t.name, blurb: '' }))));
   }
 
   function targetList(list: { slug: string; name: string; blurb: string }[]): HTMLElement {
+    const groups = groupTargets(list);
     const ul = h('ul', 'v-targets');
-    for (const t of list) {
+    for (const g of groups) {
+      if (groups.length > 1) ul.append(h('li', 'v-lab v-subhead', g.heading));
+      for (const t of g.items) {
       const li = h('li');
       const b = h('button', 'v-target');
       b.type = 'button';
@@ -752,6 +755,7 @@ export function createPanel(hd: PanelHandlers): Panel {
       b.addEventListener('click', () => hd.openTarget(t.name));
       li.append(b);
       ul.append(li);
+      }
     }
     return ul;
   }
@@ -770,7 +774,7 @@ export function createPanel(hd: PanelHandlers): Panel {
       h(
         'p',
         '',
-        'Type a star name such as Vega, or coordinates such as 269.45 4.69, in the box at the top. Or start with one of these five.',
+        'Type a star name such as Vega, or coordinates such as 269.45 4.69, in the box at the top. Or start with one of these.',
       ),
       targetList(targets),
     );
@@ -804,10 +808,9 @@ export function createPanel(hd: PanelHandlers): Panel {
       everyNote.hidden = text === '';
       everyNote.textContent = text;
     },
-    setRecheck: (on) => {
-      recheckRow.replaceChildren();
-      recheckRow.hidden = !on;
-      if (on) recheckRow.append(h('span', '', 'The archive gave a partial list. '), btn('Check again for more images', 'v-linkbtn', hd.recheck));
+    setArchiveLine: (text) => {
+      archiveRow.textContent = text ?? '';
+      archiveRow.hidden = text === null;
     },
     setPairMarks: (indices) => timeline.setPairMarks(indices),
     attach: (spectrum, quality, planet) => {

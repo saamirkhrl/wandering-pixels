@@ -31,6 +31,7 @@ import type {
   DifferenceImage,
   Detector,
   Exposure,
+  ExposureUpdateStatus,
   Frame,
   Grid,
   Movie,
@@ -54,6 +55,7 @@ import {
   loadViewer,
   normalizeName,
   refineBest,
+  withExposures,
 } from '../viewer/load';
 import type { DetInfo, LiveContext, LiveSearch, LoadResult } from '../viewer/load';
 import {
@@ -180,6 +182,13 @@ export const mount: Mount = (root, ctx) => {
 
   // live state
   let search: LiveSearch | null = null;
+  // live results filling in: latest archive answer, a list that arrived before the view was ready,
+  // a counter that retires updates from an older load, and the archive's own abort controller
+  let archiveStatus: ExposureUpdateStatus | null = null;
+  let pendingList: Exposure[] | null = null;
+  let restAgain = false;
+  let loadGen = 0;
+  let archiveCtrl: AbortController | null = null;
   let cachedData: CachedTarget | null = null;
   let live: LiveContext | null = null;
   let pairFrames: Frame[] = [];
@@ -352,7 +361,6 @@ export const mount: Mount = (root, ctx) => {
       const at = askedAt ?? (loaded ? loaded.target : null);
       if (at) ctx.go('viewer', { ra: String(at.ra), dec: String(at.dec) });
     },
-    recheck: () => startLoad(),
     openPrepared: () => {
       if (skyName) ctx.go('viewer', { q: skyName });
     },
@@ -977,7 +985,7 @@ export const mount: Mount = (root, ctx) => {
       stage.setNote('No images yet');
       return;
     }
-    stage.setNote(null);
+    stage.setNote(archiveLine());
     const m = movie;
     const nearest = (mjd: number): number => {
       let best = 0;
@@ -1376,7 +1384,7 @@ export const mount: Mount = (root, ctx) => {
     planet.set({
       simOn: simShownNow,
       listing: !live ? 'complete' : restCtrl !== null || !refineDone ? 'reading' : remaining.length > 0 ? 'more' : 'complete',
-      partial: !!live && sawPartial,
+      partial: !!live && archiveStatus !== null && !archiveStatus.complete,
       refDate: planetStep === 2 && trackRef !== null ? mjdDate(trackRef) : null,
       jumpPx: jumpAhead,
       step: planetStep,
@@ -1709,7 +1717,9 @@ export const mount: Mount = (root, ctx) => {
       cachedSlug === 'wise-0855' ||
       cachedData?.slug === 'wise-0855' ||
       normalizeName(`${target.name ?? ''} ${params.q ?? ''}`).includes('wise0855');
-    panel.setTitleNote(targetNote(cachedSlug ?? cachedData?.slug) ?? (isWise ? targetNote('wise-0855') : null));
+    const noteSlug: string | null = cachedSlug ?? cachedData?.slug ?? (isWise ? 'wise-0855' : null);
+    const blurb = noteSlug ? listCached().find((c) => c.slug === noteSlug)?.blurb : undefined;
+    panel.setTitleNote(targetNote(noteSlug) ?? blurb ?? null);
     panel.setHeader(
       name,
       `RA ${formatRaDeg(target.ra)} deg, Dec ${formatDecDeg(target.dec)} deg${det !== null ? `. Detector ${det}.` : ''}`,
@@ -1832,6 +1842,10 @@ export const mount: Mount = (root, ctx) => {
         }
         adoptLive(true);
         showRest();
+        if (restAgain) {
+          restAgain = false;
+          if (remaining.length > 0 && remaining.length <= AUTO_REST_LIMIT) startRest();
+        }
       })
       .catch(() => {
         if (!isLive()) return;
@@ -1852,10 +1866,72 @@ export const mount: Mount = (root, ctx) => {
     stage.setNote(loadingLine(loadName(), loadBytes));
   }
 
-  let sawPartial = false;
+  function archiveLine(): string | null {
+    const s = archiveStatus;
+    if (!s || s.complete) return null;
+    return `${s.answered} of ${s.total} archive collections answered; still asking the rest`;
+  }
+
+  function showArchiveLine(): void {
+    const line = archiveLine();
+    panel.setArchiveLine(line);
+    if (movie && rootEl.dataset.state === 'ready') stage.setNote(line);
+  }
+
+  // The archive list grew. Visit numbers may have changed, so everything keyed by them is rebuilt
+  // from the new list; what is on screen stays until the rebuilt state replaces it.
+  function growArchive(list: Exposure[]): void {
+    if (!live || !loaded || !search) return;
+    const was = new Map(search.exposures.map((e) => [e.id, e.visitIndex]));
+    if (list.length === was.size && list.every((e) => was.get(e.id) === e.visitIndex)) return;
+    const byId = new Map(list.map((e) => [e.id, e]));
+    const d = det ?? loaded.det;
+    // the visitor's A and B stay by date while exposures from that date still exist
+    const near = (m: number | null) => m !== null && list.some((e) => e.detector === d && Math.abs(e.mjd - m) <= 2);
+    if (aMjd !== null && !near(aMjd)) {
+      aUser = null;
+      aMjd = null;
+    }
+    if (bMjd !== null && !near(bMjd)) {
+      bUser = null;
+      bMjd = null;
+    }
+    const remap = (f: Frame): Frame => {
+      const e = byId.get(f.exposure.id);
+      return e ? { ...f, exposure: { ...f.exposure, visitIndex: e.visitIndex, inStack: e.inStack } } : f;
+    };
+    pairFrames = pairFrames.map(remap);
+    landed = landed.map(remap);
+    search = withExposures(search, list);
+    live.detExposures = list.filter((e) => e.detector === d);
+    pairMemo = null;
+    matchedMemo = null;
+    pairCache = null;
+    diffCache = null;
+    if (refineDone) {
+      const have = new Set(pairFrames.concat(landed).map((f) => f.exposure.id));
+      remaining = live.detExposures.filter((e) => !have.has(e.id));
+      live.rest = remaining;
+    }
+    loaded = { ...loaded, available: search.available };
+    adoptLive(false);
+    if (!refineDone) return;
+    if (restCtrl) restAgain = true;
+    else if (remaining.length > 0 && remaining.length <= AUTO_REST_LIMIT) startRest();
+    else showRest();
+  }
+
+  function onArchiveUpdate(list: Exposure[], status: ExposureUpdateStatus): void {
+    archiveStatus = status;
+    showArchiveLine();
+    if (!live || !loaded || !search || rootEl.dataset.state !== 'ready') {
+      pendingList = list;
+      return;
+    }
+    growArchive(list);
+  }
 
   function onLoadProgress(p: Progress): void {
-    if (/partial result/i.test(p.message)) sawPartial = true;
     const b = bytesFromProgress(p);
     if (b.bytes !== null) loadBytes = b;
     showLoadingNote();
@@ -1901,7 +1977,7 @@ export const mount: Mount = (root, ctx) => {
   function handleResult(res: LoadResult): void {
     panel.setProgress(null);
     console.info(`[load] ${res.cached ? 'prepared set' : 'first look'} ready at ${Math.round(performance.now() - loadT0)} ms`);
-    panel.setRecheck(sawPartial && !res.cached);
+    panel.setArchiveLine(res.cached ? null : archiveLine());
     askedAt = res.asked ?? null;
     panel.setPreparedNote(res.viaPosition && res.preview ? (res.target.name ?? res.cachedSlug ?? '') : null);
     panel.setMockLine(res.cached && res.preview ? isSimulated(res.preview) : liveIsMock);
@@ -1951,6 +2027,12 @@ export const mount: Mount = (root, ctx) => {
     render();
     restorePlanet();
     if (live) startRefine(res);
+    if (live && pendingList) {
+      const late = pendingList;
+      pendingList = null;
+      growArchive(late);
+    }
+    showArchiveLine();
     if (preview) {
       const want = params.det !== null && params.det !== det && res.available.some((x) => x.detector === params.det) ? params.det : null;
       if (want !== null) startDetLoad(want, true);
@@ -2019,7 +2101,14 @@ export const mount: Mount = (root, ctx) => {
 
   function startLoad(): void {
     console.info('[load] start');
-    sawPartial = false;
+    archiveCtrl?.abort();
+    const archive = new AbortController();
+    archiveCtrl = archive;
+    const gen = ++loadGen;
+    archiveStatus = null;
+    pendingList = null;
+    restAgain = false;
+    panel.setArchiveLine(null);
     refineDone = false;
     simRef = simOn ? params.ref : null;
     resetForLoad();
@@ -2029,6 +2118,10 @@ export const mount: Mount = (root, ctx) => {
     ctrl = new AbortController();
     const signal = ctrl.signal;
     const isCurrent = () => !disposed && mine === token;
+    // a stopped first load stops the archive too; a later detector switch leaves it running
+    signal.addEventListener('abort', () => {
+      if (!loaded) archive.abort();
+    });
 
     skyName = null;
     panel.setSkyEntry(null);
@@ -2048,6 +2141,10 @@ export const mount: Mount = (root, ctx) => {
         onStage: (p: Progress) => {
           if (isCurrent()) onLoadProgress(p);
         },
+        onUpdate: (list, status) => {
+          if (!disposed && gen === loadGen && !archive.signal.aborted) onArchiveUpdate(list, status);
+        },
+        archiveSignal: archive.signal,
       },
       signal,
     )
@@ -2145,6 +2242,7 @@ export const mount: Mount = (root, ctx) => {
   return () => {
     disposed = true;
     token++;
+    archiveCtrl?.abort();
     ctrl?.abort();
     restCtrl?.abort();
     trackCtrl?.abort();

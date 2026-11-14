@@ -283,3 +283,10 @@ html[data-view='viewer'] .view-pending::after {
     border-left: 0;
   }
 }
+
+.targets-menu .targets-group {
+  padding: 12px 16px 4px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--paper-dim);
+}

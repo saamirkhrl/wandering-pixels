@@ -1,6 +1,6 @@
 import * as mock from './mock';
 import * as real from '../../lib/spherex';
-import type { CachedDetectorData, CachedPreview, CachedSlug, CallOptions, Detector } from './types';
+import type { CachedDetectorData, CachedPreview, CachedSlug, CallOptions, Detector, Exposure, FindExposuresOptions } from './types';
 
 // Flip each half to the real library in one line.
 const LIVE_REAL = true;
@@ -49,7 +49,13 @@ export const isMock = liveIsMock && cacheIsMock;
 export const resolveTarget = live.resolveTarget;
 export { matchCachedTarget } from '../../lib/spherex';
 export const positionAt = live.positionAt;
-export const findExposures = live.findExposures;
+// Passes onUpdate through to the live source; a source that ignores it just never calls it.
+export const findExposures = (ra: number, dec: number, opts: FindExposuresOptions = {}): Promise<Exposure[]> =>
+  (live.findExposures as unknown as (ra: number, dec: number, opts: FindExposuresOptions) => Promise<Exposure[]>)(
+    ra,
+    dec,
+    opts,
+  );
 export const makeGrid = live.makeGrid;
 export const loadFrame = live.loadFrame;
 export const loadFrames = live.loadFrames;

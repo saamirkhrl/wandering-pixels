@@ -10,7 +10,18 @@ import {
   resolveTarget,
   summarize,
 } from '../data';
-import type { CachedPreview, CachedSlug, CachedTarget, Detector, Exposure, Frame, Grid, Progress, Target } from '../data';
+import type {
+  CachedPreview,
+  CachedSlug,
+  CachedTarget,
+  Detector,
+  Exposure,
+  ExposureUpdateStatus,
+  Frame,
+  Grid,
+  Progress,
+  Target,
+} from '../data';
 
 export interface LoadRequest {
   q: string | null;
@@ -22,6 +33,10 @@ export interface LoadRequest {
 
 export interface LoadCallbacks {
   onStage: (p: Progress) => void;
+  // The archive list grew after the first answer; the exposures are the whole merged list.
+  onUpdate?: (exposures: Exposure[], status: ExposureUpdateStatus) => void;
+  // Keeps the archive asking alive when the load signal is replaced (a detector or size switch).
+  archiveSignal?: AbortSignal;
 }
 
 export interface DetInfo {
@@ -137,6 +152,11 @@ function availableOf(exposures: Exposure[]): DetInfo[] {
     .sort((x, y) => x.detector - y.detector);
 }
 
+// The same search with a grown exposure list (live results filling in).
+export function withExposures(search: LiveSearch, exposures: Exposure[]): LiveSearch {
+  return { ...search, exposures, available: availableOf(exposures) };
+}
+
 function abortedError(): SpherexError {
   return new SpherexError('ABORTED', 'Loading stopped');
 }
@@ -159,7 +179,14 @@ export async function searchLive(
   }
   if (signal.aborted) throw abortedError();
   stage('search', 'Asking the archive which images cover this spot');
-  const exposures = await findExposures(target.ra, target.dec, { signal, onProgress: cb.onStage });
+  const archive = cb.archiveSignal ?? signal;
+  const exposures = await findExposures(target.ra, target.dec, {
+    signal: archive,
+    onProgress: cb.onStage,
+    onUpdate: (list, status) => {
+      if (!archive.aborted) cb.onUpdate?.(list, status);
+    },
+  });
   if (signal.aborted) throw abortedError();
   if (exposures.length === 0) throw new SpherexError('NO_COVERAGE', 'No images cover this position');
   return { target, exposures, available: availableOf(exposures) };

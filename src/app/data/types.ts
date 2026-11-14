@@ -1,5 +1,6 @@
 import type {
   CachedSlug,
+  CallOptions,
   Detector,
   DifferenceImage,
   Exposure,
@@ -107,3 +108,17 @@ export interface CachedDetectorData {
 }
 
 export type { CachedSlug };
+
+// ---- live results filling in: findExposures resolves early, then keeps reporting through onUpdate
+
+export interface ExposureUpdateStatus {
+  answered: number;
+  total: number;
+  pending: string[];
+  complete: boolean;
+}
+
+export interface FindExposuresOptions extends CallOptions {
+  /** Called as more archive collections answer; `exposures` is the whole merged list each time. */
+  onUpdate?: (exposures: Exposure[], status: ExposureUpdateStatus) => void;
+}

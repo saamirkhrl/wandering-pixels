@@ -10,6 +10,7 @@ import type {
   DifferenceImage,
   DifferenceImageM,
   Exposure,
+  FindExposuresOptions,
   FirstLook,
   Frame,
   FrameOptions,
@@ -1006,7 +1007,7 @@ export async function resolveTarget(text: string, opts: CallOptions = {}): Promi
   return target;
 }
 
-export async function findExposures(ra: number, dec: number, opts: CallOptions = {}): Promise<Exposure[]> {
+export async function findExposures(ra: number, dec: number, opts: FindExposuresOptions = {}): Promise<Exposure[]> {
   throwIfAborted(opts.signal);
   const say = (done: number, total: number, message: string, retrying?: boolean) =>
     emit(opts, retrying ? { stage: 'search', done, total, message, retrying: true } : { stage: 'search', done, total, message });
@@ -1037,6 +1038,36 @@ export async function findExposures(ra: number, dec: number, opts: CallOptions =
 
   const scene = sceneForPosition(ra, dec);
   const list = scene.exposures.map((e) => ({ ...e }));
+  const visitIds = Array.from(new Set(list.map((e) => e.visitIndex))).sort((a, b) => a - b);
+  if (opts.onUpdate && visitIds.length >= 3) {
+    // Three archive collections. The first answers with two visits (enough for a first look), the
+    // earliest visit arrives second so visit numbers shift, the rest arrive last. Updates keep
+    // coming after this resolves.
+    const lastVisit = visitIds[visitIds.length - 1];
+    const groups = [[visitIds[1], lastVisit], [visitIds[0]], visitIds.slice(2, -1)];
+    const upTo = (n: number): Exposure[] => {
+      const keep = new Set(groups.slice(0, n).flat());
+      const order = visitIds.filter((v) => keep.has(v));
+      return list.filter((e) => keep.has(e.visitIndex)).map((e) => ({ ...e, visitIndex: order.indexOf(e.visitIndex) }));
+    };
+    const first = upTo(1);
+    const { onUpdate, signal } = opts;
+    const names = ['collection 1', 'collection 2', 'collection 3'];
+    void (async () => {
+      try {
+        await wait(10, signal);
+        onUpdate(first.map((e) => ({ ...e })), { answered: 1, total: 3, pending: names.slice(1), complete: false });
+        await wait(1500, signal);
+        onUpdate(upTo(2), { answered: 2, total: 3, pending: names.slice(2), complete: false });
+        await wait(1000, signal);
+        onUpdate(upTo(3), { answered: 3, total: 3, pending: [], complete: true });
+      } catch {
+        // aborted: stop quietly
+      }
+    })();
+    say(first.length, first.length, `Found ${first.length} exposures`);
+    return first;
+  }
   say(list.length, list.length, `Found ${list.length} exposures`);
   return list;
 }

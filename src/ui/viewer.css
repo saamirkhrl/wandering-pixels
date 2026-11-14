@@ -64,6 +64,21 @@
   display: none;
 }
 
+/* With an image on screen the note is a small strip in the corner, never over the picture */
+[data-state='ready'] .v-note {
+  inset: 8px auto auto 8px;
+  display: block;
+  max-width: calc(100% - 96px);
+  padding: 4px 8px;
+  font-size: 0.875rem;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+[data-state='ready'] .v-note[hidden] {
+  display: none;
+}
+
 .v-readout {
   min-height: 48px;
   font-size: 0.875rem;

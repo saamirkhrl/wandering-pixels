@@ -1,7 +1,7 @@
 import type { Frame, Grid, MovieMode, Detector, Target, Movie, MovieFrame, DifferenceImage, Exposure, PairedDifference } from './types';
 import { SpherexError, BAD_DATA_MASK } from './types';
 import { positionAt, worldToGrid } from './wcs';
-import { robustPercentiles, sigmaClippedStats } from './stats';
+import { robustPercentiles, sigmaClippedStats, median } from './stats';
 import { saturatedSources } from './saturation';
 import { trackingTolerance } from './parallax';
 
@@ -67,8 +67,30 @@ export function frameBackground(frame: Frame): { level: number; fallback: boolea
   if (usableVals.length < BG_MIN_PIXELS) return { level: 0, fallback: false, plain: 0, nUsed: 0 };
   const plainStats = sigmaClippedStats(subsample(usableVals), 3, 3);
   const plain = plainStats.median;
+  const excluded = exclusionZones(pixels, flags, w, h, saturatedSources(frame), plain + 10 * plainStats.sigma);
+  const kept: number[] = [];
+  for (let i = 0; i < n; i++) if (!excluded[i] && (flags[i] & BAD_DATA_MASK) === 0 && Number.isFinite(pixels[i])) kept.push(pixels[i]);
+  if (kept.length < BG_MIN_PIXELS) return { level: plain, fallback: true, plain, nUsed: usableVals.length };
+  const level = sigmaClippedStats(subsample(kept), 3, 3).median;
+  return { level, fallback: false, plain, nUsed: kept.length };
+}
+
+/**
+ * The exclusion zones of frameBackground as a 0/1 mask: zone 1 around each saturated blob
+ * (Euclidean radius max(8, 3*sqrt(npix/pi)) px), zone 2 = pixels above `thr` (with flags == 0
+ * when flags are given), dilated by 3 px (Chebyshev).
+ */
+function exclusionZones(
+  pixels: ArrayLike<number>,
+  flags: ArrayLike<number> | null,
+  w: number,
+  h: number,
+  saturated: { x: number; y: number; npix: number }[],
+  thr: number,
+): Uint8Array {
+  const n = w * h;
   const excluded = new Uint8Array(n);
-  for (const s of saturatedSources(frame)) {
+  for (const s of saturated) {
     const r = Math.max(8, 3 * Math.sqrt(s.npix / Math.PI));
     const x0 = Math.max(0, Math.floor(s.x - r));
     const x1 = Math.min(w - 1, Math.ceil(s.x + r));
@@ -77,9 +99,8 @@ export function frameBackground(frame: Frame): { level: number; fallback: boolea
     for (let y = y0; y <= y1; y++)
       for (let x = x0; x <= x1; x++) if ((x - s.x) ** 2 + (y - s.y) ** 2 <= r * r) excluded[y * w + x] = 1;
   }
-  const thr = plain + 10 * plainStats.sigma;
   const bright = new Uint8Array(n);
-  for (let i = 0; i < n; i++) if ((flags[i] & BAD_DATA_MASK) === 0 && pixels[i] > thr) bright[i] = 1;
+  for (let i = 0; i < n; i++) if ((!flags || (flags[i] & BAD_DATA_MASK) === 0) && pixels[i] > thr) bright[i] = 1;
   const rowPass = new Uint8Array(n);
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
@@ -91,11 +112,81 @@ export function frameBackground(frame: Frame): { level: number; fallback: boolea
       if (!rowPass[y * w + x]) continue;
       for (let yy = Math.max(0, y - BG_DILATE); yy <= Math.min(h - 1, y + BG_DILATE); yy++) excluded[yy * w + x] = 1;
     }
-  const kept: number[] = [];
-  for (let i = 0; i < n; i++) if (!excluded[i] && (flags[i] & BAD_DATA_MASK) === 0 && Number.isFinite(pixels[i])) kept.push(pixels[i]);
-  if (kept.length < BG_MIN_PIXELS) return { level: plain, fallback: true, plain, nUsed: usableVals.length };
-  const level = sigmaClippedStats(subsample(kept), 3, 3).median;
-  return { level, fallback: false, plain, nUsed: kept.length };
+  return excluded;
+}
+
+/** Exclusion mask of a frame (null when fewer than 100 usable pixels), same zones as frameBackground. */
+function frameExclusion(frame: Frame): Uint8Array | null {
+  const { w, h, pixels, flags } = frame;
+  const vals: number[] = [];
+  for (let i = 0; i < w * h; i++) if ((flags[i] & BAD_DATA_MASK) === 0 && Number.isFinite(pixels[i])) vals.push(pixels[i]);
+  if (vals.length < BG_MIN_PIXELS) return null;
+  const st = sigmaClippedStats(subsample(vals), 3, 3);
+  return exclusionZones(pixels, flags, w, h, saturatedSources(frame), st.median + 10 * st.sigma);
+}
+
+/** Exclusion mask of a movie frame (no flags: finite pixels only; saturated blobs from frame.saturated). */
+export function movieFrameExclusion(f: MovieFrame): Uint8Array | null {
+  const vals: number[] = [];
+  for (let i = 0; i < f.w * f.h; i++) if (Number.isFinite(f.pixels[i])) vals.push(f.pixels[i]);
+  if (vals.length < BG_MIN_PIXELS) return null;
+  const st = sigmaClippedStats(subsample(vals), 3, 3);
+  return exclusionZones(f.pixels, null, f.w, f.h, f.saturated ?? [], st.median + 10 * st.sigma);
+}
+
+function unionMasks(masks: (Uint8Array | null)[], n: number): Uint8Array {
+  const out = new Uint8Array(n);
+  for (const m of masks) if (m) for (let i = 0; i < n; i++) if (m[i]) out[i] = 1;
+  return out;
+}
+
+const SCATTER_MIN_PIXELS = 100;
+
+/**
+ * Empirical scatter of a difference image: 1.4826 x MAD (about the median) of finite pixels not
+ * flagged in excludeMask (nonzero = excluded). Fewer than 100 such pixels -> scatter NaN and
+ * scatterUnits all NaN. scatterUnits = pixels / scatter (NaN where the pixel is NaN).
+ */
+export function differenceScatter(
+  pixels: ArrayLike<number>,
+  w: number,
+  h: number,
+  excludeMask?: Uint8Array,
+): { scatter: number; scatterUnits: Float32Array } {
+  const n = w * h;
+  const vals: number[] = [];
+  for (let i = 0; i < n; i++) if (Number.isFinite(pixels[i]) && !(excludeMask && excludeMask[i])) vals.push(pixels[i]);
+  const units = new Float32Array(n);
+  if (vals.length < SCATTER_MIN_PIXELS) {
+    units.fill(NaN);
+    return { scatter: NaN, scatterUnits: units };
+  }
+  const m = median(vals);
+  const scatter = 1.4826 * median(vals.map((v) => Math.abs(v - m)));
+  for (let i = 0; i < n; i++) units[i] = pixels[i] / scatter;
+  return { scatter, scatterUnits: units };
+}
+
+/**
+ * differenceScatter with a sigma-clipped (3 sigma, 5 iterations) MAD of the image alone as the
+ * only masking. Used where no stacks or flags are available.
+ */
+export function clippedDifferenceScatter(
+  pixels: ArrayLike<number>,
+  w: number,
+  h: number,
+): { scatter: number; scatterUnits: Float32Array } {
+  const n = w * h;
+  const vals: number[] = [];
+  for (let i = 0; i < n; i++) if (Number.isFinite(pixels[i])) vals.push(pixels[i]);
+  const units = new Float32Array(n);
+  if (vals.length < SCATTER_MIN_PIXELS) {
+    units.fill(NaN);
+    return { scatter: NaN, scatterUnits: units };
+  }
+  const scatter = sigmaClippedStats(vals, 5, 3).sigma;
+  for (let i = 0; i < n; i++) units[i] = pixels[i] / scatter;
+  return { scatter, scatterUnits: units };
 }
 
 /** Median of the first n entries of a (scratch) array; reorders them. */
@@ -356,14 +447,13 @@ export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
   const n = a.w * a.h;
   const pixels = new Float32Array(n);
   const variance = new Float32Array(n);
-  const snr = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const d = b.pixels[i] - a.pixels[i];
     const v = a.variance[i] + b.variance[i];
     pixels[i] = d;
     variance[i] = v;
-    snr[i] = d / Math.sqrt(v);
   }
+  const { scatter, scatterUnits } = differenceScatter(pixels, a.w, a.h, unionMasks([movieFrameExclusion(a), movieFrameExclusion(b)], n));
   const [s] = robustPercentiles([pixels], [99.5], Math.abs);
   const sym = Number.isFinite(s) && s > 0 ? s : 1;
   const bw = (channelBandwidth(a.detector, a.wavelength) + channelBandwidth(b.detector, b.wavelength)) / 2;
@@ -371,7 +461,8 @@ export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
     grid: b.grid,
     pixels,
     variance,
-    snr,
+    scatter,
+    scatterUnits,
     w: a.w,
     h: a.h,
     wavelengthA: a.wavelength,
@@ -625,20 +716,22 @@ export function pairedDifference(
   }
   const pixels = new Float32Array(n);
   const variance = new Float32Array(n);
-  const snr = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     if (sw[i] > 0) {
       const d = swd[i] / sw[i];
       const v = 1 / sw[i];
       pixels[i] = d;
       variance[i] = v;
-      snr[i] = d / Math.sqrt(v);
     } else {
       pixels[i] = NaN;
       variance[i] = NaN;
-      snr[i] = NaN;
     }
   }
+  // Exclusion: union of the zones of every member frame (accepted pairs, or all frames if none paired).
+  const zoneFrames = accepted.length ? accepted.flatMap((c) => [c.a, c.b]) : [...A, ...B];
+  const { scatter, scatterUnits } = accepted.length
+    ? differenceScatter(pixels, w, h, unionMasks(zoneFrames.map(frameExclusion), n))
+    : { scatter: NaN, scatterUnits: new Float32Array(n).fill(NaN) };
   const [s] = robustPercentiles([pixels], [99.5], Math.abs);
   const sym = Number.isFinite(s) && s > 0 ? s : 1;
   const memA = accepted.length ? accepted.map((c) => c.a) : A;
@@ -652,7 +745,8 @@ export function pairedDifference(
     grid,
     pixels,
     variance,
-    snr,
+    scatter,
+    scatterUnits,
     w,
     h,
     wavelengthA: meanOf(memA.map(lam)),

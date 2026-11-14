@@ -14,7 +14,7 @@ vi.mock('./wcs', () => ({
 vi.mock('./parallax', () => ({ trackingTolerance: (d: number, a: number, b: number, ra: number, dec: number) => ({ pxPerPercent: d + (b - a) + ra + dec }) }));
 
 import { worldToGrid } from './wcs';
-import { buildMovie, difference, summarize, channelBandwidth, pickBlinkPair, listPairs, frameBackground, pairedDifference, visitDifference, YEAR_PAIR_DAYS, HALF_YEAR_PAIR_DAYS } from './movie';
+import { buildMovie, difference, summarize, channelBandwidth, pickBlinkPair, listPairs, frameBackground, pairedDifference, visitDifference, differenceScatter, movieFrameExclusion, YEAR_PAIR_DAYS, HALF_YEAR_PAIR_DAYS } from './movie';
 
 const grid: Grid = { ra0: 10, dec0: 10, w: 65, h: 65, scaleArcsec: 6.15, epochMjd: 60000 };
 
@@ -216,7 +216,7 @@ describe('background removal', () => {
 });
 
 describe('difference', () => {
-  it('computes b - a with symmetric stretch and snr', () => {
+  it('computes b - a with symmetric stretch and variance', () => {
     const fa = frame(exp('a', 2, 0, 60000, 1.393), 0, 1);
     const fb = frame(exp('b', 2, 1, 60100, 1.394), 0, 3);
     star(fa, 20, 20, 50);
@@ -227,7 +227,6 @@ describe('difference', () => {
     const expected = 50 - 50 * Math.exp(-4 / (2 * 0.36));
     expect(d.pixels[i]).toBeCloseTo(expected, 3);
     expect(d.variance[i]).toBeCloseTo(4, 5);
-    expect(d.snr[i]).toBeCloseTo(expected / 2, 3);
     expect(d.stretch.lo).toBe(-d.stretch.hi);
     expect(d.stretch.hi).toBeGreaterThan(0);
     expect(d.wavelengthMatched).toBe(true);
@@ -643,7 +642,8 @@ describe('pairedDifference', () => {
     return f;
   }
   const slope = (l: number): number => 10 * (l - 1);
-  const at = (f: { snr: Float32Array }, x: number, y: number): number => f.snr[y * 65 + x];
+  const at = (f: { pixels: Float32Array; variance: Float32Array }, x: number, y: number): number =>
+    f.pixels[y * 65 + x] / Math.sqrt(f.variance[y * 65 + x]);
 
   function visits(extraA: [number, number, number][] = [], extraB: [number, number, number][] = []) {
     const A: Frame[] = [];
@@ -763,7 +763,8 @@ describe('pairedDifference', () => {
     expect(p.nUnpairedA).toBe(1);
     expect(p.nUnpairedB).toBe(1);
     expect(p.pixels.every(Number.isNaN)).toBe(true);
-    expect(p.snr.every(Number.isNaN)).toBe(true);
+    expect(p.scatter).toBeNaN();
+    expect(p.scatterUnits.every(Number.isNaN)).toBe(true);
     expect(pairedDifference([], []).nPairs).toBe(0);
   });
 
@@ -835,5 +836,84 @@ describe('MovieFrame.saturated', () => {
     blob(a, 10, 10, 1);
     blob(b, 12, 10, 1);
     expect(buildMovie([a, b], 'visit-stack', 2).frames[0].saturated).toHaveLength(2);
+  });
+});
+
+describe('differenceScatter', () => {
+  // Deterministic Gaussian noise (LCG + Box-Muller).
+  function gauss(n: number, sigma: number, seed = 12345): Float32Array {
+    let s = seed;
+    const u = (): number => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) + 0.5) / 4294967296;
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i++) out[i] = sigma * Math.sqrt(-2 * Math.log(u())) * Math.cos(2 * Math.PI * u());
+    return out;
+  }
+  const robustWidth = (v: ArrayLike<number>): number => {
+    const a = Array.from(v).filter(Number.isFinite).sort((p, q) => p - q);
+    const m = a[a.length >> 1];
+    const d = a.map((x) => Math.abs(x - m)).sort((p, q) => p - q);
+    return 1.4826 * d[d.length >> 1];
+  };
+
+  it('pure Gaussian noise gives scatter about sigma and unit width', () => {
+    const px = gauss(65 * 65, 3.5);
+    const r = differenceScatter(px, 65, 65);
+    expect(r.scatter).toBeGreaterThan(3.5 * 0.93);
+    expect(r.scatter).toBeLessThan(3.5 * 1.07);
+    expect(robustWidth(r.scatterUnits)).toBeCloseTo(1, 5);
+    expect(r.scatterUnits[10]).toBeCloseTo(px[10] / r.scatter, 5);
+  });
+
+  it('a bright star does not inflate the scatter and NaN pixels stay NaN', () => {
+    const px = gauss(65 * 65, 2);
+    const clean = differenceScatter(px, 65, 65).scatter;
+    for (let y = 25; y <= 35; y++) for (let x = 25; x <= 35; x++) px[y * 65 + x] += 500;
+    px[7] = NaN;
+    const r = differenceScatter(px, 65, 65);
+    expect(Math.abs(r.scatter - clean) / clean).toBeLessThan(0.1);
+    expect(r.scatterUnits[7]).toBeNaN();
+    expect(r.scatterUnits[30 * 65 + 30]).toBeGreaterThan(100);
+  });
+
+  it('an exclude mask removes pixels from the estimate', () => {
+    const px = gauss(65 * 65, 1);
+    for (let i = 0; i < 2000; i++) px[i] *= 50;
+    const mask = new Uint8Array(65 * 65);
+    mask.fill(1, 0, 2000);
+    const r = differenceScatter(px, 65, 65, mask);
+    expect(r.scatter).toBeLessThan(1.15);
+    expect(differenceScatter(px, 65, 65).scatter).toBeGreaterThan(2);
+  });
+
+  it('fewer than 100 clean pixels gives NaN', () => {
+    const px = gauss(65 * 65, 1);
+    const mask = new Uint8Array(65 * 65).fill(1);
+    for (let i = 0; i < 99; i++) mask[i] = 0;
+    const r = differenceScatter(px, 65, 65, mask);
+    expect(r.scatter).toBeNaN();
+    expect(r.scatterUnits.every(Number.isNaN)).toBe(true);
+    mask[99] = 0;
+    expect(differenceScatter(px, 65, 65, mask).scatter).toBeGreaterThan(0);
+  });
+
+  it('difference() and visitDifference() carry finite scatter; a star pair does not inflate it', () => {
+    const noise = gauss(65 * 65 * 2, 0.5);
+    const fa = frame(exp('a', 2, 0, 60000, 1.393), 0, 0.25);
+    const fb = frame(exp('b', 2, 1, 60100, 1.394), 0, 0.25);
+    fa.pixels.set(noise.subarray(0, 65 * 65));
+    fb.pixels.set(noise.subarray(65 * 65));
+    star(fa, 20, 20, 400);
+    star(fb, 44, 40, 400);
+    const m = buildMovie([fa, fb], 'visit-stack', 2, undefined, { background: 'none' });
+    expect(movieFrameExclusion(m.frames[0])![20 * 65 + 20]).toBe(1);
+    const d = difference(m.frames[0], m.frames[1]);
+    expect(d.scatter).toBeGreaterThan(0.5);
+    expect(d.scatter).toBeLessThan(1.0);
+    expect(d.scatterUnits.length).toBe(65 * 65);
+    expect('snr' in d).toBe(false);
+    const v = visitDifference([fa, fb], 2, 0, 1);
+    expect(Number.isFinite(v.scatter)).toBe(true);
+    expect(v.scatter).toBeLessThan(1.0);
+    expect(v.scatterUnits.length).toBe(65 * 65);
   });
 });

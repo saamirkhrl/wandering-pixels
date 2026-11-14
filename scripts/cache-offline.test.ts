@@ -118,6 +118,16 @@ describe.each(present)('cache %s', (slug) => {
     expect(hasFinite(diff.pixels)).toBe(true);
   });
 
+  it('prebuilt preview differences carry finite scatter and scatterUnits', () => {
+    expect(p.differences.length).toBeGreaterThan(0);
+    for (const d of p.differences) {
+      expect(Number.isFinite(d.image.scatter)).toBe(true);
+      expect(d.image.scatter).toBeGreaterThan(0);
+      expect(d.image.scatterUnits.length).toBe(d.image.w * d.image.h);
+      expect(hasFinite(d.image.scatterUnits)).toBe(true);
+    }
+  });
+
   it('pair frames equal the frames of loadCached', () => {
     for (const pair of [p.pairs.year, p.pairs.halfYear]) {
       if (!pair) continue;

@@ -318,7 +318,12 @@ describe('format 2', () => {
     expect(p.totalBytes.perDetector[2]).toBeGreaterThan(0);
     expect(p.visits.length).toBeGreaterThan(0);
     for (const d of p.differences) {
-      expect(d.image.snr.length).toBe(PER);
+      expect(d.image.scatterUnits.length).toBe(PER);
+      // A visit pair with no matched exposures has an all-NaN image and NaN scatter.
+      if (d.image.nPairs > 0) {
+        expect(Number.isFinite(d.image.scatter)).toBe(true);
+        expect(d.image.scatter).toBeGreaterThan(0);
+      } else expect(d.image.scatter).toBeNaN();
       expect(d.image.pairs.length).toBe(d.image.nPairs);
     }
   }, 60000);

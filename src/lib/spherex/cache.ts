@@ -30,7 +30,7 @@
 //     pair qualifies. Exposures, coverage, matched and gapDays are in index.preview.pairs.
 //   diff.<i>.pixels (f16), diff.<i>.variance (u8log, own range): visit differences of the default
 //     detector (all visit pairs when there are 4 visits or fewer, else consecutive visits plus
-//     first-last). snr is recomputed on decode as pixels / sqrt(variance).
+//     first-last). scatter and scatterUnits are computed on decode (see decodePreview).
 // stars.json: gaia sorted brightest first (gmag ascending, NaN last) and rounded (ra, dec 1e-6 deg;
 //   pm and parallax 1e-3 mas; gmag 0.01; NaN gmag is stored as null and restored on load); wise is
 //   untouched; wise keeps its catalogue order. Both lists are columnar ({sourceId: [...], ra: [...], ...}) when every row has the
@@ -94,6 +94,7 @@ import type {
 } from './types';
 import { BAD_DATA_MASK, FLAG_BITS, SpherexError } from './types';
 import { floatToHalf, halfToFloat } from './f16';
+import { movieFrameExclusion, differenceScatter, clippedDifferenceScatter } from './movie';
 import type { WiseSource } from './wise';
 
 export const CACHE_FORMAT = 'wp-cache-1';
@@ -625,10 +626,20 @@ function decodePreview(idx: CacheIndexV2, bin: Uint8Array, stars: StarsFile): Ca
     }
     const pixels = readF16(bin, dpx, 0, n);
     const variance = readU8Log(bin, dva, 0, n);
-    const snr = new Float32Array(n);
-    for (let j = 0; j < n; j++) snr[j] = pixels[j] / Math.sqrt(variance[j]);
+    // Scatter at decode time (no rebuild): exclusion zones from the visit stacks of the two visits
+    // when both are in the preview movie, else a sigma-clipped MAD of the difference image alone.
+    const sa = movie.frames.find((f) => f.visitIndex === d.visitA && f.w === d.w && f.h === d.h);
+    const sb = movie.frames.find((f) => f.visitIndex === d.visitB && f.w === d.w && f.h === d.h);
+    let sc: { scatter: number; scatterUnits: Float32Array };
+    if (sa && sb) {
+      const ma = movieFrameExclusion(sa);
+      const mb = movieFrameExclusion(sb);
+      const mask = new Uint8Array(n);
+      for (let j = 0; j < n; j++) mask[j] = (ma && ma[j]) || (mb && mb[j]) ? 1 : 0;
+      sc = differenceScatter(pixels, d.w, d.h, mask);
+    } else sc = clippedDifferenceScatter(pixels, d.w, d.h);
     const image: PairedDifference = {
-      grid: d.grid, pixels, variance, snr, w: d.w, h: d.h,
+      grid: d.grid, pixels, variance, scatter: sc.scatter, scatterUnits: sc.scatterUnits, w: d.w, h: d.h,
       wavelengthA: d.wavelengthA, wavelengthB: d.wavelengthB, wavelengthMatched: d.wavelengthMatched,
       stretch: d.stretch, method: 'paired-stack',
       nPairs: d.nPairs, nUnpairedA: d.nUnpairedA, nUnpairedB: d.nUnpairedB, pairs: d.pairs,

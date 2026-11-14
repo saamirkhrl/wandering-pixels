@@ -85,9 +85,17 @@ export interface Movie {
 
 export interface DifferenceImage {
   grid: Grid;
-  pixels: Float32Array;             // b minus a, MJy/sr
+  pixels: Float32Array;             // b minus a, MJy/sr. For the eye: never present it as significance.
+  // Propagated variance, (MJy/sr)^2. On resampled frames it is known to be about 4x too small
+  // compared with the measured scatter of the image (bilinear weights shrink it). Do not use it
+  // to claim significance.
   variance: Float32Array;
-  snr: Float32Array;
+  // The image's own empirical scatter, MJy/sr: 1.4826 x MAD of finite difference pixels away from
+  // sources and masks. It is NOT a propagated error.
+  scatter: number;
+  // pixels / scatter. A display unit only: values are NOT sigma in a statistical sense.
+  // All NaN (and scatter NaN) when fewer than 100 clean pixels exist.
+  scatterUnits: Float32Array;
   w: number; h: number;
   wavelengthA: number; wavelengthB: number;
   wavelengthMatched: boolean;

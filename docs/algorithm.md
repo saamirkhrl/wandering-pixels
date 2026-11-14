@@ -154,6 +154,15 @@ Over the selected w0 that were not skipped:
   |z| >= 5 for about 0.1 percent false alarms. The plain pair and the paired stack have heavier
   tails (|z| >= 3: 1.3 to 3.6 percent) and need about 4 for 1 percent. The word "changed" is a statement about the measured fluxes, not
   a classification of the cause.
+- Scope of the 1 percent figure: it holds only for stars that are unblended, unsaturated, G 12 to
+  16.5, not Gaia-variable and more than 3 arcmin from any source brighter than G 9. On the five
+  browser fields the raw rate of "changed" is 4.9 to 30 percent (results.json browser_false_alarms);
+  restricted to these cuts it is 1 of 77 (0/18, 0/33, 1/18, 0/8; no star in the R Dra field passes).
+  The excess comes from blends (Barnard 10/81 blended against 0/36 not), saturated targets, and
+  stars within 1 to 2 arcmin of a saturated star (R Dra: 9/9 under 1 arcmin, 15/33 at 1 to 2).
+  Implementations should flag "bright neighbour" (a source with G < 9 within 3 arcmin) and
+  "saturated" (any OVERFLOW pixel in the aperture), and should not print "changed" without
+  qualification when either flag, or "blended", is set.
 - If no w0 survives the result is "no result" (flags explain why).
 
 ### 6. Comparison outputs for the UI

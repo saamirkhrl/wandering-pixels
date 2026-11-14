@@ -1,7 +1,7 @@
 """13: cross-check the data seat's TypeScript change readouts against the Python reference (wp/m2ref.py).
 
 usage: cd validation && uv run python scripts/13_crosscheck_readouts.py <their-readout.json>
-       (e.g. /Users/samir/Desktop/spaceapps/research/samples/readouts/barnards-star.json)
+       (e.g. path/to/readouts/barnards-star.json)
 
 Their file: Barnard field, detector 2, per star (Gaia id, position) the per-exposure photometry
 (`measurements`: id, visit, mjd, wavelength, bandwidth, ok/reason/saturated/flux/varRaw/variance/...) and
@@ -602,7 +602,7 @@ def main(path):
             stats=st, per_exposure=passes[p]["exposures"], disagreements=passes[p]["disagreements"],
             pair_table=passes[p]["pair_table"])
     payload = dict(
-        input=dict(file=str(path), slug=X.d["slug"], detector=X.d["detector"], n_stars=len(X.stars),
+        input=dict(file="<readouts-dir>/" + Path(path).name, slug=X.d["slug"], detector=X.d["detector"], n_stars=len(X.stars),
                    n_pair_blocks=len(jobs), stars_without_pairs=[str(i) for i in stars_without_pairs]),
         n_stars=metric(len(X.stars), "stars", None, SCRIPT),
         n_pairs=metric(len(jobs), "pairs", None, SCRIPT),

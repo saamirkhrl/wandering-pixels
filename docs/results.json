@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "updated_utc": "2026-11-14T17:33:43+00:00"
+    "updated_utc": "2026-11-14T17:44:56+00:00"
   },
   "wavelength_source_check": {
     "random_D1_median_dwave": {
@@ -28256,7 +28256,7 @@
   },
   "browser_crosscheck_barnard": {
     "input": {
-      "file": "/Users/samir/Desktop/spaceapps/research/samples/readouts/barnards-star.json",
+      "file": "<readouts-dir>/barnards-star.json",
       "slug": "barnards-star",
       "detector": 2,
       "n_stars": 41,
@@ -48952,6 +48952,2499 @@
           "dz": 0.000563566813873928
         }
       ]
+    }
+  },
+  "browser_false_alarms": {
+    "input_dir": "<readouts-dir>",
+    "input_files": [
+      "barnards-star.json",
+      "eps-indi-b.json",
+      "rw-aur.json",
+      "wise-0855.json",
+      "r-dra.json"
+    ],
+    "cuts": "steady star: not blended (their blended flag = m2ref.is_blended), no Gaia source G < 9 within 180 arcsec, phot_variable_flag != VARIABLE, 12 <= G <= 16.5, not the target; c2 adds RUWE < 1.4",
+    "interval": "Wilson score, z = 1 (68.3 percent)",
+    "fields": {
+      "barnards-star": {
+        "step1": {
+          "a_all": {
+            "k": 10,
+            "n": 117,
+            "pct": 8.547008547008547,
+            "lo68": 6.300698963890261,
+            "hi68": 11.495911205601264
+          },
+          "b_noflags": {
+            "k": 0,
+            "n": 6,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 14.285714285714285
+          },
+          "c_steady": {
+            "k": 0,
+            "n": 18,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 5.263157894736842
+          },
+          "c2_steady_ruwe": {
+            "k": 0,
+            "n": 18,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 5.263157894736842
+          },
+          "d_distance_arcmin": {
+            "0-1": {
+              "k": 0,
+              "n": 6,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 14.285714285714285
+            },
+            "1-2": {
+              "k": 1,
+              "n": 12,
+              "pct": 8.333333333333334,
+              "lo68": 3.2298196174258207,
+              "hi68": 19.847103459497255
+            },
+            "2-3": {
+              "k": 2,
+              "n": 48,
+              "pct": 4.166666666666667,
+              "lo68": 2.098040521657195,
+              "hi68": 8.106041110995866
+            },
+            "3-inf": {
+              "k": 7,
+              "n": 51,
+              "pct": 13.72549019607843,
+              "lo68": 9.600325244728225,
+              "hi68": 19.245828601425625
+            }
+          },
+          "e_G": {
+            "12.5-14": {
+              "k": 0,
+              "n": 21,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 4.545454545454545
+            },
+            "14-15.5": {
+              "k": 3,
+              "n": 45,
+              "pct": 6.666666666666667,
+              "lo68": 3.812119739875439,
+              "hi68": 11.405271564472388
+            },
+            "15.5-17": {
+              "k": 7,
+              "n": 51,
+              "pct": 13.72549019607843,
+              "lo68": 9.600325244728225,
+              "hi68": 19.245828601425625
+            },
+            "17-inf": {
+              "k": 0,
+              "n": 0,
+              "pct": null,
+              "lo68": null,
+              "hi68": null
+            }
+          },
+          "n_stars_with_results": 39,
+          "n_not_blended_flag": {
+            "k": 0,
+            "n": 36,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 2.7027027027027026
+          },
+          "n_blended_flag": {
+            "k": 10,
+            "n": 81,
+            "pct": 12.345679012345679,
+            "lo68": 9.143206201389791,
+            "hi68": 16.46654989617118
+          },
+          "flag_saturated": {
+            "k": 5,
+            "n": 12,
+            "pct": 41.666666666666664,
+            "lo68": 28.61913044611371,
+            "hi68": 55.99625416927092
+          },
+          "flag_blended": {
+            "k": 10,
+            "n": 81,
+            "pct": 12.345679012345679,
+            "lo68": 9.143206201389791,
+            "hi68": 16.46654989617118
+          },
+          "flag_too_few_samples": {
+            "k": 7,
+            "n": 83,
+            "pct": 8.433734939759036,
+            "lo68": 5.856395773256441,
+            "hi68": 12.000747083886417
+          },
+          "flag_no_bracket": {
+            "k": 2,
+            "n": 18,
+            "pct": 11.11111111111111,
+            "lo68": 5.6631546093705865,
+            "hi68": 20.652634864313622
+          },
+          "flag_partial_visit": {
+            "k": 0,
+            "n": 0,
+            "pct": null,
+            "lo68": null,
+            "hi68": null
+          },
+          "blend_theirs_only_stars": 0,
+          "blend_ours_only_stars": 0,
+          "blend_flag_mismatch_stars": 0
+        },
+        "step3_offenders": [
+          {
+            "star": "4472835983521060096",
+            "G": 15.57,
+            "dist_arcmin": 2.1,
+            "pair": [
+              0,
+              2
+            ],
+            "z": -16.90557218004739,
+            "frac": -0.4335500255208663,
+            "flags": [
+              "saturated",
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 17.60 at 5.2 arcsec)",
+              "bright neighbour G 8.19 at 2.10 arcmin",
+              "2.10 arcmin from the G 8.19 target (saturated in 100% of its exposures)",
+              "few points: accepted [15, 15], flags ['too_few_samples']",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 30,
+              "masked_aperture": 11
+            },
+            "position": {
+              "n_cutouts": 41,
+              "x_median": 165.92655557867621,
+              "y_median": 156.66234772309176,
+              "cutout_nx_ny": [
+                246,
+                198
+              ],
+              "min_margin_px": 8.827435239818655,
+              "median_margin_px": 152.8162491013143,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "4472836288459958656",
+            "G": 15.87,
+            "dist_arcmin": 3.71,
+            "pair": [
+              0,
+              1
+            ],
+            "z": 11.037652066677785,
+            "frac": 0.196158946217777,
+            "flags": [
+              "saturated",
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 17.64 at 15.2 arcsec)",
+              "few points: accepted [18, 18], flags ['too_few_samples']",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 36
+            },
+            "position": {
+              "n_cutouts": 36,
+              "x_median": 159.92448089879113,
+              "y_median": 141.3133525134465,
+              "cutout_nx_ny": [
+                320,
+                320
+              ],
+              "min_margin_px": 77.76161516879638,
+              "median_margin_px": 140.37438407621121,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "4472836185380610688",
+            "G": 15.33,
+            "dist_arcmin": 3.67,
+            "pair": [
+              0,
+              1
+            ],
+            "z": -7.192303451290049,
+            "frac": -0.10693052125186926,
+            "flags": [
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 18.12 at 9.7 arcsec)",
+              "few points: accepted [17, 18], flags ['too_few_samples']"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 35,
+              "masked_aperture": 1
+            },
+            "position": {
+              "n_cutouts": 36,
+              "x_median": 159.96132224608482,
+              "y_median": 158.03004302496402,
+              "cutout_nx_ny": [
+                320,
+                320
+              ],
+              "min_margin_px": 67.24932916067144,
+              "median_margin_px": 130.6604377238935,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "4472837765928741504",
+            "G": 16.49,
+            "dist_arcmin": 3.95,
+            "pair": [
+              1,
+              2
+            ],
+            "z": 5.693287581507735,
+            "frac": 0.06599420641421153,
+            "flags": [
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 13.90 at 10.1 arcsec)",
+              "few points: accepted [16, 21], flags ['too_few_samples']"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "masked_aperture": 3,
+              "ok": 37
+            },
+            "position": {
+              "n_cutouts": 40,
+              "x_median": 157.40513989511044,
+              "y_median": 138.73998088246026,
+              "cutout_nx_ny": [
+                246,
+                198
+              ],
+              "min_margin_px": 16.407913641815895,
+              "median_margin_px": 137.543897227444,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "4472836082301521536",
+            "G": 15.57,
+            "dist_arcmin": 3.26,
+            "pair": [
+              0,
+              1
+            ],
+            "z": -3.398182443174823,
+            "frac": -0.03268554085188569,
+            "flags": [
+              "saturated",
+              "blended"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 11.86 at 10.4 arcsec)",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "masked_aperture": 4,
+              "ok": 32
+            },
+            "position": {
+              "n_cutouts": 36,
+              "x_median": 159.94546748820494,
+              "y_median": 145.45545078575373,
+              "cutout_nx_ny": [
+                320,
+                320
+              ],
+              "min_margin_px": 79.75556146600645,
+              "median_margin_px": 144.55141679025184,
+              "covers_star": true
+            }
+          }
+        ]
+      },
+      "eps-indi-b": {
+        "step1": {
+          "a_all": {
+            "k": 6,
+            "n": 123,
+            "pct": 4.878048780487805,
+            "lo68": 3.2735793738147794,
+            "hi68": 7.210291593927158
+          },
+          "b_noflags": {
+            "k": 1,
+            "n": 34,
+            "pct": 2.9411764705882355,
+            "lo68": 1.1291361393289159,
+            "hi68": 7.442292432099657
+          },
+          "c_steady": {
+            "k": 0,
+            "n": 33,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 2.9411764705882355
+          },
+          "c2_steady_ruwe": {
+            "k": 0,
+            "n": 30,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 3.225806451612903
+          },
+          "d_distance_arcmin": {
+            "0-1": {
+              "k": 3,
+              "n": 15,
+              "pct": 20.0,
+              "lo68": 11.700737127437682,
+              "hi68": 32.049262872562316
+            },
+            "1-2": {
+              "k": 1,
+              "n": 36,
+              "pct": 2.7777777777777777,
+              "lo68": 1.0661037924726127,
+              "hi68": 7.042004315635496
+            },
+            "2-3": {
+              "k": 0,
+              "n": 27,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 3.571428571428571
+            },
+            "3-inf": {
+              "k": 2,
+              "n": 45,
+              "pct": 4.444444444444445,
+              "lo68": 2.238974337507255,
+              "hi68": 8.630590879884052
+            }
+          },
+          "e_G": {
+            "12.5-14": {
+              "k": 0,
+              "n": 6,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 14.285714285714285
+            },
+            "14-15.5": {
+              "k": 0,
+              "n": 3,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 25.0
+            },
+            "15.5-17": {
+              "k": 0,
+              "n": 27,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 3.571428571428571
+            },
+            "17-inf": {
+              "k": 6,
+              "n": 87,
+              "pct": 6.896551724137931,
+              "lo68": 4.641108785730032,
+              "hi68": 10.131618486997239
+            }
+          },
+          "n_stars_with_results": 41,
+          "n_not_blended_flag": {
+            "k": 1,
+            "n": 75,
+            "pct": 1.3333333333333333,
+            "lo68": 0.5104537440690983,
+            "hi68": 3.436914676983533
+          },
+          "n_blended_flag": {
+            "k": 5,
+            "n": 48,
+            "pct": 10.416666666666666,
+            "lo68": 6.786398520170107,
+            "hi68": 15.662581071666631
+          },
+          "flag_saturated": {
+            "k": 0,
+            "n": 2,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 33.33333333333333
+          },
+          "flag_blended": {
+            "k": 5,
+            "n": 48,
+            "pct": 10.416666666666666,
+            "lo68": 6.786398520170107,
+            "hi68": 15.662581071666631
+          },
+          "flag_too_few_samples": {
+            "k": 5,
+            "n": 38,
+            "pct": 13.157894736842104,
+            "lo68": 8.607897952351948,
+            "hi68": 19.597230252776257
+          },
+          "flag_no_bracket": {
+            "k": 2,
+            "n": 46,
+            "pct": 4.3478260869565215,
+            "lo68": 2.1899385244065033,
+            "hi68": 8.44835934793392
+          },
+          "flag_partial_visit": {
+            "k": 0,
+            "n": 0,
+            "pct": null,
+            "lo68": null,
+            "hi68": null
+          },
+          "blend_theirs_only_stars": 3,
+          "blend_ours_only_stars": 0,
+          "blend_flag_mismatch_stars": 3
+        },
+        "step3_offenders": [
+          {
+            "star": "6412596012146801152",
+            "G": 18.03,
+            "dist_arcmin": 0.0,
+            "pair": [
+              1,
+              3
+            ],
+            "z": -15.310158278266652,
+            "frac": -0.22144295228808392,
+            "flags": [
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 19.31 at 15.4 arcsec)",
+              "the target itself (G 18.03, saturated in 0% of exposures)",
+              "few points: accepted [18, 18], flags ['too_few_samples']"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 36,
+              "masked_aperture": 18
+            },
+            "position": {
+              "n_cutouts": 49,
+              "x_median": 215.6417810707676,
+              "y_median": 181.02931221503732,
+              "cutout_nx_ny": [
+                320,
+                320
+              ],
+              "min_margin_px": 16.934032008951277,
+              "median_margin_px": 103.22963946543112,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "6412594530382172416",
+            "G": 18.75,
+            "dist_arcmin": 3.86,
+            "pair": [
+              0,
+              1
+            ],
+            "z": -3.2885679870007283,
+            "frac": -0.28309716130070894,
+            "flags": [],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "none found"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 52,
+              "masked_aperture": 10
+            },
+            "position": {
+              "n_cutouts": 57,
+              "x_median": 138.58343778183934,
+              "y_median": 122.29869907500728,
+              "cutout_nx_ny": [
+                320,
+                320
+              ],
+              "min_margin_px": 29.876009220915755,
+              "median_margin_px": 120.73922933948907,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "6412592709316042880",
+            "G": 19.01,
+            "dist_arcmin": 3.98,
+            "pair": [
+              0,
+              3
+            ],
+            "z": 3.060389854743513,
+            "frac": 0.17659101473838718,
+            "flags": [
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 19.02 at 5.5 arcsec)",
+              "few points: accepted [25, 20], flags ['too_few_samples']"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 45,
+              "masked_aperture": 10
+            },
+            "position": {
+              "n_cutouts": 55,
+              "x_median": 96.9392577913461,
+              "y_median": 102.05486957921165,
+              "cutout_nx_ny": [
+                320,
+                320
+              ],
+              "min_margin_px": 10.71673467911921,
+              "median_margin_px": 94.84717740234328,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "6412596458823395456",
+            "G": 17.11,
+            "dist_arcmin": 1.99,
+            "pair": [
+              0,
+              1
+            ],
+            "z": -3.0265373607718105,
+            "frac": -0.040873312302681014,
+            "flags": [
+              "blended",
+              "too_few_samples",
+              "no_bracket"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 12.95 at 6.6 arcsec)",
+              "few points: accepted [23, 24], flags ['too_few_samples', 'no_bracket']"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 47,
+              "masked_aperture": 15
+            },
+            "position": {
+              "n_cutouts": 57,
+              "x_median": 85.409230911177,
+              "y_median": 141.63779876013967,
+              "cutout_nx_ny": [
+                320,
+                320
+              ],
+              "min_margin_px": 50.6981154107102,
+              "median_margin_px": 84.35033127492838,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "6412596179649649280",
+            "G": 19.3,
+            "dist_arcmin": 0.91,
+            "pair": [
+              0,
+              3
+            ],
+            "z": 2.9811842807775246,
+            "frac": 0.11634315319940788,
+            "flags": [
+              "blended"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 15.77 at 14.5 arcsec)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 45,
+              "masked_aperture": 11
+            },
+            "position": {
+              "n_cutouts": 56,
+              "x_median": 113.68655645718907,
+              "y_median": 140.6305672434845,
+              "cutout_nx_ny": [
+                320,
+                320
+              ],
+              "min_margin_px": 17.85118256646851,
+              "median_margin_px": 112.33159163331814,
+              "covers_star": true
+            }
+          }
+        ]
+      },
+      "rw-aur": {
+        "step1": {
+          "a_all": {
+            "k": 9,
+            "n": 119,
+            "pct": 7.563025210084033,
+            "lo68": 5.47721549161092,
+            "hi68": 10.356117841722412
+          },
+          "b_noflags": {
+            "k": 0,
+            "n": 6,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 14.285714285714285
+          },
+          "c_steady": {
+            "k": 1,
+            "n": 18,
+            "pct": 5.555555555555555,
+            "lo68": 2.142597785699999,
+            "hi68": 13.646875898510528
+          },
+          "c2_steady_ruwe": {
+            "k": 1,
+            "n": 15,
+            "pct": 6.666666666666667,
+            "lo68": 2.576179636633033,
+            "hi68": 16.173820363366968
+          },
+          "d_distance_arcmin": {
+            "0-1": {
+              "k": 3,
+              "n": 14,
+              "pct": 21.428571428571427,
+              "lo68": 12.568900423373986,
+              "hi68": 34.09776624329268
+            },
+            "1-2": {
+              "k": 2,
+              "n": 33,
+              "pct": 6.0606060606060606,
+              "lo68": 3.0616569795525286,
+              "hi68": 11.644225373388647
+            },
+            "2-3": {
+              "k": 2,
+              "n": 45,
+              "pct": 4.444444444444445,
+              "lo68": 2.238974337507255,
+              "hi68": 8.630590879884052
+            },
+            "3-inf": {
+              "k": 2,
+              "n": 27,
+              "pct": 7.407407407407407,
+              "lo68": 3.7507982735317906,
+              "hi68": 14.106344583611067
+            }
+          },
+          "e_G": {
+            "12.5-14": {
+              "k": 2,
+              "n": 7,
+              "pct": 28.571428571428573,
+              "lo68": 15.055038261413342,
+              "hi68": 47.444961738586656
+            },
+            "14-15.5": {
+              "k": 2,
+              "n": 27,
+              "pct": 7.407407407407407,
+              "lo68": 3.7507982735317906,
+              "hi68": 14.106344583611067
+            },
+            "15.5-17": {
+              "k": 4,
+              "n": 84,
+              "pct": 4.761904761904762,
+              "lo68": 2.9237341178666636,
+              "hi68": 7.664501176250983
+            },
+            "17-inf": {
+              "k": 0,
+              "n": 0,
+              "pct": null,
+              "lo68": null,
+              "hi68": null
+            }
+          },
+          "n_stars_with_results": 41,
+          "n_not_blended_flag": {
+            "k": 1,
+            "n": 24,
+            "pct": 4.166666666666667,
+            "lo68": 1.6030313472423605,
+            "hi68": 10.39696865275764
+          },
+          "n_blended_flag": {
+            "k": 8,
+            "n": 95,
+            "pct": 8.421052631578947,
+            "lo68": 5.986967900515307,
+            "hi68": 11.721365432818027
+          },
+          "flag_saturated": {
+            "k": 2,
+            "n": 4,
+            "pct": 50.0,
+            "lo68": 27.639320225002102,
+            "hi68": 72.36067977499789
+          },
+          "flag_blended": {
+            "k": 8,
+            "n": 95,
+            "pct": 8.421052631578947,
+            "lo68": 5.986967900515307,
+            "hi68": 11.721365432818027
+          },
+          "flag_too_few_samples": {
+            "k": 6,
+            "n": 84,
+            "pct": 7.142857142857143,
+            "lo68": 4.8085133186462965,
+            "hi68": 10.48560432841253
+          },
+          "flag_no_bracket": {
+            "k": 1,
+            "n": 14,
+            "pct": 7.142857142857143,
+            "lo68": 2.7625313554425395,
+            "hi68": 17.237468644557456
+          },
+          "flag_partial_visit": {
+            "k": 0,
+            "n": 0,
+            "pct": null,
+            "lo68": null,
+            "hi68": null
+          },
+          "blend_theirs_only_stars": 0,
+          "blend_ours_only_stars": 0,
+          "blend_flag_mismatch_stars": 0
+        },
+        "step3_offenders": [
+          {
+            "star": "156430822114424576",
+            "G": 12.18,
+            "dist_arcmin": 0.0,
+            "pair": [
+              0,
+              1
+            ],
+            "z": -18.398483953006146,
+            "frac": -0.29046336113030186,
+            "flags": [
+              "saturated",
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 13.04 at 1.5 arcsec)",
+              "the target itself (G 12.18, saturated in 98% of exposures)",
+              "few points: accepted [10, 9], flags ['too_few_samples']"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "masked_aperture": 18,
+              "ok": 19
+            },
+            "position": {
+              "n_cutouts": 36,
+              "x_median": 40.036311148608135,
+              "y_median": 40.075117710616524,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 38.51096246402438,
+              "median_margin_px": 38.84838734541263,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "156430817820015232",
+            "G": 13.04,
+            "dist_arcmin": 0.02,
+            "pair": [
+              0,
+              1
+            ],
+            "z": -18.29556683346114,
+            "frac": -0.28871898798239126,
+            "flags": [
+              "saturated",
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 12.18 at 1.5 arcsec)",
+              "few points: accepted [10, 10], flags ['too_few_samples']",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "masked_aperture": 17,
+              "ok": 20
+            },
+            "position": {
+              "n_cutouts": 36,
+              "x_median": 39.9459578840751,
+              "y_median": 40.07690959539134,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 38.45176514573073,
+              "median_margin_px": 38.794925960306465,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "156430096265962240",
+            "G": 16.83,
+            "dist_arcmin": 0.66,
+            "pair": [
+              1,
+              2
+            ],
+            "z": -7.61733205314683,
+            "frac": -0.44086064073322934,
+            "flags": [
+              "blended"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 18.49 at 12.6 arcsec)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 33,
+              "masked_aperture": 3
+            },
+            "position": {
+              "n_cutouts": 36,
+              "x_median": 40.05038877253506,
+              "y_median": 40.06679099292593,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 32.49379465547186,
+              "median_margin_px": 33.28975434691087,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "156430890833907584",
+            "G": 14.66,
+            "dist_arcmin": 1.34,
+            "pair": [
+              1,
+              2
+            ],
+            "z": -6.5335115854382755,
+            "frac": -0.06180180950240522,
+            "flags": [
+              "blended"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 17.61 at 5.5 arcsec)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 34,
+              "masked_aperture": 3
+            },
+            "position": {
+              "n_cutouts": 36,
+              "x_median": 39.98202092728976,
+              "y_median": 39.85562777970752,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 26.919162110754094,
+              "median_margin_px": 27.847685402636877,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "156337329267577088",
+            "G": 16.08,
+            "dist_arcmin": 3.07,
+            "pair": [
+              0,
+              2
+            ],
+            "z": -3.796045193143898,
+            "frac": -0.054332341589936335,
+            "flags": [
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 12.78 at 13.8 arcsec)",
+              "few points: accepted [16, 15], flags ['too_few_samples']"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 31,
+              "masked_aperture": 5
+            },
+            "position": {
+              "n_cutouts": 36,
+              "x_median": 67.81087986618263,
+              "y_median": 50.767050297260184,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 10.604742371570339,
+              "median_margin_px": 11.189120133817369,
+              "covers_star": true
+            }
+          }
+        ]
+      },
+      "wise-0855": {
+        "step1": {
+          "a_all": {
+            "k": 2,
+            "n": 41,
+            "pct": 4.878048780487805,
+            "lo68": 2.459239774922048,
+            "hi68": 9.445522129839857
+          },
+          "b_noflags": {
+            "k": 1,
+            "n": 1,
+            "pct": 100.0,
+            "lo68": 50.0,
+            "hi68": 100.0
+          },
+          "c_steady": {
+            "k": 0,
+            "n": 8,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 11.11111111111111
+          },
+          "c2_steady_ruwe": {
+            "k": 0,
+            "n": 8,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 11.11111111111111
+          },
+          "d_distance_arcmin": {
+            "0-1": {
+              "k": 0,
+              "n": 4,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 20.0
+            },
+            "1-2": {
+              "k": 0,
+              "n": 9,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 10.0
+            },
+            "2-3": {
+              "k": 1,
+              "n": 16,
+              "pct": 6.25,
+              "lo68": 2.4133839065578324,
+              "hi68": 15.233674916971578
+            },
+            "3-inf": {
+              "k": 1,
+              "n": 12,
+              "pct": 8.333333333333334,
+              "lo68": 3.2298196174258207,
+              "hi68": 19.847103459497255
+            }
+          },
+          "e_G": {
+            "12.5-14": {
+              "k": 0,
+              "n": 2,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 33.33333333333333
+            },
+            "14-15.5": {
+              "k": 0,
+              "n": 4,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 20.0
+            },
+            "15.5-17": {
+              "k": 0,
+              "n": 8,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 11.11111111111111
+            },
+            "17-inf": {
+              "k": 2,
+              "n": 26,
+              "pct": 7.6923076923076925,
+              "lo68": 3.896999935977575,
+              "hi68": 14.621518582540943
+            }
+          },
+          "n_stars_with_results": 41,
+          "n_not_blended_flag": {
+            "k": 1,
+            "n": 21,
+            "pct": 4.761904761904762,
+            "lo68": 1.8339485109656044,
+            "hi68": 11.80241512539803
+          },
+          "n_blended_flag": {
+            "k": 1,
+            "n": 20,
+            "pct": 5.0,
+            "lo68": 1.9264518332841332,
+            "hi68": 12.359262452430155
+          },
+          "flag_saturated": {
+            "k": 0,
+            "n": 17,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 5.555555555555555
+          },
+          "flag_blended": {
+            "k": 1,
+            "n": 20,
+            "pct": 5.0,
+            "lo68": 1.9264518332841332,
+            "hi68": 12.359262452430155
+          },
+          "flag_too_few_samples": {
+            "k": 1,
+            "n": 23,
+            "pct": 4.3478260869565215,
+            "lo68": 1.6732590229493547,
+            "hi68": 10.826740977050644
+          },
+          "flag_no_bracket": {
+            "k": 0,
+            "n": 9,
+            "pct": 0.0,
+            "lo68": 0.0,
+            "hi68": 10.0
+          },
+          "flag_partial_visit": {
+            "k": 0,
+            "n": 0,
+            "pct": null,
+            "lo68": null,
+            "hi68": null
+          },
+          "blend_theirs_only_stars": 6,
+          "blend_ours_only_stars": 0,
+          "blend_flag_mismatch_stars": 6
+        },
+        "step3_offenders": [
+          {
+            "star": "5756956330854397824",
+            "G": 18.37,
+            "dist_arcmin": 4.25,
+            "pair": [
+              1,
+              2
+            ],
+            "z": 5.145019482268409,
+            "frac": 0.08567324659124195,
+            "flags": [
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 12.25 at 10.0 arcsec)",
+              "few points: accepted [18, 17], flags ['too_few_samples']"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 35,
+              "masked_aperture": 7
+            },
+            "position": {
+              "n_cutouts": 42,
+              "x_median": 39.90632508720154,
+              "y_median": 39.216037501052625,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 14.035438326591901,
+              "median_margin_px": 14.834296398378505,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "5756956468295793920",
+            "G": 17.84,
+            "dist_arcmin": 2.95,
+            "pair": [
+              1,
+              2
+            ],
+            "z": -5.018441425777086,
+            "frac": -0.9757879290221493,
+            "flags": [],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "none found"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "masked_aperture": 8,
+              "ok": 34
+            },
+            "position": {
+              "n_cutouts": 42,
+              "x_median": 40.38642315773767,
+              "y_median": 39.33838284509283,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 21.715638551356562,
+              "median_margin_px": 23.069070676879903,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "5756958293655270144",
+            "G": 16.03,
+            "dist_arcmin": 3.07,
+            "pair": [
+              1,
+              2
+            ],
+            "z": 2.120663726144511,
+            "frac": 0.8843653029323342,
+            "flags": [
+              "saturated",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "cutout edge: 0 edge/outside rejections, x,y median (41,40) in (80, 80) cutouts, min margin 5 px",
+              "few points: accepted [20, 18], flags ['too_few_samples']",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 38,
+              "masked_aperture": 4
+            },
+            "position": {
+              "n_cutouts": 42,
+              "x_median": 41.33706332710158,
+              "y_median": 40.341216703575505,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 5.346061388440958,
+              "median_margin_px": 6.96731634028813,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "5756957056704690816",
+            "G": 17.16,
+            "dist_arcmin": 2.7,
+            "pair": [
+              1,
+              2
+            ],
+            "z": -1.8392371118719706,
+            "frac": -0.18730865638915886,
+            "flags": [
+              "saturated",
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 19.10 at 14.3 arcsec)",
+              "few points: accepted [15, 18], flags ['too_few_samples']",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 33,
+              "masked_aperture": 9
+            },
+            "position": {
+              "n_cutouts": 42,
+              "x_median": 41.09241241388228,
+              "y_median": 39.591296020655136,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 17.95203302034868,
+              "median_margin_px": 18.566819374505727,
+              "covers_star": true
+            }
+          },
+          {
+            "star": "5756956541308616832",
+            "G": 15.36,
+            "dist_arcmin": 3.4,
+            "pair": [
+              1,
+              2
+            ],
+            "z": 1.7136039581682556,
+            "frac": 0.035951035570254294,
+            "flags": [
+              "saturated",
+              "blended",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend (neighbour G 18.13 at 14.7 arcsec)",
+              "few points: accepted [20, 17], flags ['too_few_samples']",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 37,
+              "masked_aperture": 5
+            },
+            "position": {
+              "n_cutouts": 42,
+              "x_median": 40.51765769562716,
+              "y_median": 39.1782791640938,
+              "cutout_nx_ny": [
+                80,
+                80
+              ],
+              "min_margin_px": 17.18267933950085,
+              "median_margin_px": 18.69394624616348,
+              "covers_star": true
+            }
+          }
+        ]
+      },
+      "r-dra": {
+        "step1": {
+          "a_all": {
+            "k": 34,
+            "n": 114,
+            "pct": 29.82456140350877,
+            "lo68": 25.730297609322395,
+            "hi68": 34.2697023906776
+          },
+          "b_noflags": {
+            "k": 13,
+            "n": 50,
+            "pct": 26.0,
+            "lo68": 20.310479187292156,
+            "hi68": 32.63069728329609
+          },
+          "c_steady": {
+            "k": 0,
+            "n": 0,
+            "pct": null,
+            "lo68": null,
+            "hi68": null
+          },
+          "c2_steady_ruwe": {
+            "k": 0,
+            "n": 0,
+            "pct": null,
+            "lo68": null,
+            "hi68": null
+          },
+          "d_distance_arcmin": {
+            "0-1": {
+              "k": 9,
+              "n": 9,
+              "pct": 100.0,
+              "lo68": 89.99999999999999,
+              "hi68": 100.0
+            },
+            "1-2": {
+              "k": 15,
+              "n": 33,
+              "pct": 45.45454545454545,
+              "lo68": 37.047766709259655,
+              "hi68": 54.128703878975635
+            },
+            "2-3": {
+              "k": 8,
+              "n": 51,
+              "pct": 15.686274509803921,
+              "lo68": 11.259952374397086,
+              "hi68": 21.432355317910606
+            },
+            "3-inf": {
+              "k": 2,
+              "n": 21,
+              "pct": 9.523809523809524,
+              "lo68": 4.840435858909246,
+              "hi68": 17.886836868363474
+            }
+          },
+          "e_G": {
+            "12.5-14": {
+              "k": 0,
+              "n": 3,
+              "pct": 0.0,
+              "lo68": 0.0,
+              "hi68": 25.0
+            },
+            "14-15.5": {
+              "k": 2,
+              "n": 12,
+              "pct": 16.666666666666668,
+              "lo68": 8.581251457797338,
+              "hi68": 29.880287003741124
+            },
+            "15.5-17": {
+              "k": 5,
+              "n": 9,
+              "pct": 55.55555555555556,
+              "lo68": 39.27669811323899,
+              "hi68": 70.72330188676102
+            },
+            "17-inf": {
+              "k": 27,
+              "n": 90,
+              "pct": 30.0,
+              "lo68": 25.410910662188773,
+              "hi68": 35.02864977737166
+            }
+          },
+          "n_stars_with_results": 38,
+          "n_not_blended_flag": {
+            "k": 22,
+            "n": 69,
+            "pct": 31.884057971014492,
+            "lo68": 26.56675887154042,
+            "hi68": 37.71895541417385
+          },
+          "n_blended_flag": {
+            "k": 12,
+            "n": 45,
+            "pct": 26.666666666666668,
+            "lo68": 20.63408306239508,
+            "hi68": 33.71374302456145
+          },
+          "flag_saturated": {
+            "k": 9,
+            "n": 11,
+            "pct": 81.81818181818181,
+            "lo68": 67.72125384110748,
+            "hi68": 90.61207949222586
+          },
+          "flag_blended": {
+            "k": 12,
+            "n": 45,
+            "pct": 26.666666666666668,
+            "lo68": 20.63408306239508,
+            "hi68": 33.71374302456145
+          },
+          "flag_too_few_samples": {
+            "k": 8,
+            "n": 13,
+            "pct": 61.53846153846154,
+            "lo68": 47.68581791057212,
+            "hi68": 73.74275351799933
+          },
+          "flag_no_bracket": {
+            "k": 3,
+            "n": 12,
+            "pct": 25.0,
+            "lo68": 14.76047053781393,
+            "hi68": 39.085683308339924
+          },
+          "flag_partial_visit": {
+            "k": 0,
+            "n": 0,
+            "pct": null,
+            "lo68": null,
+            "hi68": null
+          },
+          "blend_theirs_only_stars": 4,
+          "blend_ours_only_stars": 0,
+          "blend_flag_mismatch_stars": 4
+        },
+        "step3_offenders": [
+          {
+            "star": "1648327187423664000",
+            "G": 17.88,
+            "dist_arcmin": 0.89,
+            "pair": [
+              0,
+              5
+            ],
+            "z": 21.426251206588724,
+            "frac": 0.7278767812053105,
+            "flags": [
+              "saturated",
+              "blended"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "blend",
+              "bright neighbour G 6.37 at 0.89 arcmin",
+              "0.89 arcmin from the G 6.37 target (saturated in 100% of its exposures)",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 41,
+              "masked_aperture": 11
+            },
+            "position": {
+              "n_cutouts": 5,
+              "x_median": 14.485646956318035,
+              "y_median": 3.3178258287452556,
+              "cutout_nx_ny": [
+                12,
+                12
+              ],
+              "min_margin_px": -3.8654537668636877,
+              "median_margin_px": -3.4856469563180354,
+              "covers_star": false,
+              "note": "our local cutouts (target-centred, small) do not cover this star; position not usable"
+            }
+          },
+          {
+            "star": "1648328183856084992",
+            "G": 18.68,
+            "dist_arcmin": 0.98,
+            "pair": [
+              2,
+              5
+            ],
+            "z": 15.198786035251858,
+            "frac": 0.5863834667969036,
+            "flags": [
+              "saturated"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "bright neighbour G 6.37 at 0.98 arcmin",
+              "0.98 arcmin from the G 6.37 target (saturated in 100% of its exposures)",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 54,
+              "masked_aperture": 2
+            },
+            "position": {
+              "n_cutouts": 4,
+              "x_median": 5.947421821056357,
+              "y_median": 6.6018955082504,
+              "cutout_nx_ny": [
+                12,
+                12
+              ],
+              "min_margin_px": -4.333383105780394,
+              "median_margin_px": -3.7393887143710822,
+              "covers_star": false,
+              "note": "our local cutouts (target-centred, small) do not cover this star; position not usable"
+            }
+          },
+          {
+            "star": "1648327294799302400",
+            "G": 18.88,
+            "dist_arcmin": 1.19,
+            "pair": [
+              0,
+              5
+            ],
+            "z": 12.109025875011014,
+            "frac": 0.6584455124629673,
+            "flags": [],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "bright neighbour G 6.37 at 1.19 arcmin",
+              "1.19 arcmin from the G 6.37 target (saturated in 100% of its exposures)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 48,
+              "masked_aperture": 4
+            },
+            "position": {
+              "n_cutouts": 5,
+              "x_median": 8.507378313873193,
+              "y_median": -5.116065301824067,
+              "cutout_nx_ny": [
+                12,
+                12
+              ],
+              "min_margin_px": -5.7036219967822674,
+              "median_margin_px": -5.116065301824067,
+              "covers_star": false,
+              "note": "our local cutouts (target-centred, small) do not cover this star; position not usable"
+            }
+          },
+          {
+            "star": "1648328119433021184",
+            "G": 16.18,
+            "dist_arcmin": 0.83,
+            "pair": [
+              0,
+              2
+            ],
+            "z": 11.286898543690754,
+            "frac": 0.5964507905823094,
+            "flags": [
+              "saturated",
+              "too_few_samples"
+            ],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "bright neighbour G 6.37 at 0.83 arcmin",
+              "0.83 arcmin from the G 6.37 target (saturated in 100% of its exposures)",
+              "few points: accepted [12, 24], flags ['too_few_samples']",
+              "saturated flag (a measured exposure of this star carries the flag)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 36,
+              "masked_aperture": 31
+            },
+            "position": {
+              "n_cutouts": 5,
+              "x_median": 1.1203419715382028,
+              "y_median": 1.216869189954882,
+              "cutout_nx_ny": [
+                12,
+                12
+              ],
+              "min_margin_px": -2.0672379662185474,
+              "median_margin_px": -0.6943302906790745,
+              "covers_star": false,
+              "note": "our local cutouts (target-centred, small) do not cover this star; position not usable"
+            }
+          },
+          {
+            "star": "1648327290502883456",
+            "G": 19.45,
+            "dist_arcmin": 1.21,
+            "pair": [
+              0,
+              5
+            ],
+            "z": 7.960709830770367,
+            "frac": 0.6582297153994563,
+            "flags": [],
+            "gaia_var": "NOT_AVAILABLE",
+            "reasons": [
+              "bright neighbour G 6.37 at 1.21 arcmin",
+              "1.21 arcmin from the G 6.37 target (saturated in 100% of its exposures)"
+            ],
+            "reject_reasons_in_pair_visits": {
+              "ok": 48,
+              "masked_aperture": 4
+            },
+            "position": {
+              "n_cutouts": 5,
+              "x_median": 12.21111162225715,
+              "y_median": -3.999078808366072,
+              "cutout_nx_ny": [
+                12,
+                12
+              ],
+              "min_margin_px": -4.589450450887092,
+              "median_margin_px": -3.999078808366072,
+              "covers_star": false,
+              "note": "our local cutouts (target-centred, small) do not cover this star; position not usable"
+            }
+          }
+        ]
+      }
+    },
+    "reproduce": {
+      "barnards-star": {
+        "k": 10,
+        "n": 117,
+        "expected": [
+          10,
+          117
+        ],
+        "match": true
+      },
+      "eps-indi-b": {
+        "k": 6,
+        "n": 123,
+        "expected": [
+          6,
+          123
+        ],
+        "match": true
+      },
+      "rw-aur": {
+        "k": 9,
+        "n": 119,
+        "expected": [
+          9,
+          119
+        ],
+        "match": true
+      },
+      "wise-0855": {
+        "k": 2,
+        "n": 41,
+        "expected": [
+          2,
+          41
+        ],
+        "match": true
+      },
+      "r-dra": {
+        "k": 34,
+        "n": 114,
+        "expected": [
+          34,
+          114
+        ],
+        "match": true
+      }
+    },
+    "step2": {
+      "barnard": {
+        "recompute_max_abs_dz_vs_cache": 0.0,
+        "recompute_same_rows": true,
+        "recompute_nan_pattern_equal": true,
+        "n_stars": 70,
+        "all_detectors": {
+          "k": 11,
+          "n": 1258,
+          "pct": 0.8744038155802861,
+          "lo68": 0.6481546576157925,
+          "hi68": 1.178692046117329
+        },
+        "detector2": {
+          "k": 3,
+          "n": 210,
+          "pct": 1.4285714285714286,
+          "lo68": 0.8100238111872798,
+          "hi68": 2.507511733836417
+        },
+        "all_detectors_unflagged": {
+          "k": 2,
+          "n": 349,
+          "pct": 0.5730659025787965,
+          "lo68": 0.28680723343828446,
+          "hi68": 1.141764195133144
+        },
+        "all_detectors_unsaturated": {
+          "k": 7,
+          "n": 1011,
+          "pct": 0.6923837784371909,
+          "lo68": 0.47593209083713756,
+          "hi68": 1.0062813478980404
+        },
+        "detector2_unflagged": {
+          "k": 1,
+          "n": 81,
+          "pct": 1.2345679012345678,
+          "lo68": 0.4725620328929009,
+          "hi68": 3.1859745524729526
+        }
+      },
+      "epsindi": {
+        "recompute_max_abs_dz_vs_cache": 0.0,
+        "recompute_same_rows": true,
+        "recompute_nan_pattern_equal": true,
+        "n_stars": 49,
+        "all_detectors": {
+          "k": 9,
+          "n": 1112,
+          "pct": 0.8093525179856115,
+          "lo68": 0.5813672515328411,
+          "hi68": 1.1257306819801867
+        },
+        "detector2": {
+          "k": 0,
+          "n": 221,
+          "pct": 0.0,
+          "lo68": 0.0,
+          "hi68": 0.4504504504504505
+        },
+        "all_detectors_unflagged": {
+          "k": 2,
+          "n": 184,
+          "pct": 1.0869565217391304,
+          "lo68": 0.5444670082207806,
+          "hi68": 2.158235694481922
+        },
+        "all_detectors_unsaturated": {
+          "k": 7,
+          "n": 900,
+          "pct": 0.7777777777777778,
+          "lo68": 0.53468887105097,
+          "hi68": 1.1301279990933142
+        },
+        "detector2_unflagged": {
+          "k": 0,
+          "n": 52,
+          "pct": 0.0,
+          "lo68": 0.0,
+          "hi68": 1.886792452830189
+        }
+      },
+      "pooled_all_detectors": {
+        "k": 20,
+        "n": 2370,
+        "pct": 0.8438818565400844,
+        "lo68": 0.6756133348184388,
+        "hi68": 1.0536148389479045
+      },
+      "pooled_detector2": {
+        "k": 3,
+        "n": 431,
+        "pct": 0.6960556844547564,
+        "lo68": 0.39421880288972605,
+        "hi68": 1.2261515674806442
+      }
+    },
+    "step4_wise0855": {
+      "N": 41,
+      "k": 2,
+      "n_distinct_stars": 41,
+      "max_results_per_star": 1,
+      "P_ge2_p0p009": 0.05270534298177714,
+      "P_ge2_p_like_all_det": 0.04700292720057522,
+      "P_ge2_p_like_det2": 0.03320525133015691,
+      "p_like_all_det": 0.008438818565400845,
+      "p_like_det2": 0.006960556844547564,
+      "P_ge2_p_their_c_steady": null,
+      "steady_cut_rate_in_their_file": {
+        "k": 0,
+        "n": 8,
+        "pct": 0.0,
+        "lo68": 0.0,
+        "hi68": 11.11111111111111
+      },
+      "independence": "each star contributes exactly one visit pair (two visits), so the 41 results are 41 different stars, no repeated star; they are not fully independent noise draws because every star is measured in the same 21 + 21 exposures (common-mode background or zodi errors, and the target aperture neighbours), and the 'target' entry is not a Gaia star"
+    },
+    "step5_rwaur": {
+      "candidates": [
+        {
+          "star": "156430822114424576",
+          "G": 12.18,
+          "pair": [
+            0,
+            1
+          ],
+          "z": -18.398483953006146,
+          "frac": -0.29046336113030186,
+          "plain": -0.26579759625107197,
+          "ps": -0.25019501500964897,
+          "flags": [
+            "saturated",
+            "blended",
+            "too_few_samples"
+          ]
+        },
+        {
+          "star": "156430817820015232",
+          "G": 13.04,
+          "pair": [
+            0,
+            1
+          ],
+          "z": -18.29556683346114,
+          "frac": -0.28871898798239126,
+          "plain": -0.2635860910383795,
+          "ps": -0.2358338609828773,
+          "flags": [
+            "saturated",
+            "blended",
+            "too_few_samples"
+          ]
+        }
+      ],
+      "pair": [
+        0,
+        1
+      ],
+      "second_star_same_result": {
+        "star": "156430817820015232",
+        "G": 13.04,
+        "sep_arcsec": 1.4919352277473008,
+        "note": "the two Gaia sources fall in the same 12.3 arcsec aperture, so the two results are one measurement counted twice"
+      },
+      "per_wavelength": [
+        {
+          "w0": 1.333350524288293,
+          "fluxA": 282.9348179216417,
+          "errA": 2.876680279554318,
+          "fluxB": 379.08040067867086,
+          "errB": 4.36268337029801,
+          "nA": 4,
+          "nB": 4,
+          "D": -96.14558275702916,
+          "z": -18.398483953006146,
+          "idA": "2025W37_1A_0379_2"
+        }
+      ],
+      "skipped": [
+        {
+          "w0": 1.1312672753346191,
+          "reason": "too_few_samples"
+        },
+        {
+          "w0": 1.5483198551268864,
+          "reason": "too_few_samples"
+        }
+      ],
+      "verdict": "changed",
+      "accepted": {
+        "0": 10,
+        "1": 9,
+        "2": 3
+      },
+      "saturation_empirical_MJy_per_sr": {
+        "note": "no saturation keyword in the cutout headers (IMAGE is in MJy/sr, not counts); empirical level from every local detector-2 cutout of the field: IMAGE where raw FLAGS bit 1 (OVERFLOW) is set versus pixels without bits 1, 15, 26 or BAD_DATA",
+        "overflow_pixels": {
+          "n": 194,
+          "min": 0.42738842964172363,
+          "p5": 78.50156631469727,
+          "median": 106.26327896118164
+        },
+        "clean_pixels_max": 87.43500518798828
+      },
+      "feeding_exposures": [
+        {
+          "w0": 1.333350524288293,
+          "visit": 0,
+          "id": "2025W37_1A_0379_2",
+          "lam": 1.333350524288293,
+          "flux": 295.6078436070483,
+          "err": 5.960151535784774,
+          "their_saturated": true,
+          "our_flux": 295.61238361478945,
+          "our_ok": true,
+          "our_saturated": true,
+          "peak_IMAGE_5x5": 139.7412872314453,
+          "peak_P_5x5": 139.39886358380318,
+          "bits_5x5": [
+            1
+          ],
+          "overflow_pixels_5x5": 2
+        },
+        {
+          "w0": 1.333350524288293,
+          "visit": 0,
+          "id": "2025W37_1A_0379_3",
+          "lam": 1.364921812131013,
+          "flux": 283.56589665781945,
+          "err": 5.7176627596180785,
+          "their_saturated": true,
+          "our_flux": 283.5672890473871,
+          "our_ok": true,
+          "our_saturated": true,
+          "peak_IMAGE_5x5": 145.26417541503906,
+          "peak_P_5x5": 144.92165678739548,
+          "bits_5x5": [
+            1
+          ],
+          "overflow_pixels_5x5": 1
+        },
+        {
+          "w0": 1.333350524288293,
+          "visit": 0,
+          "id": "2025W37_1A_0366_4",
+          "lam": 1.2726346310740333,
+          "flux": 257.69953723412925,
+          "err": 5.208393437520734,
+          "their_saturated": true,
+          "our_flux": 257.70152587999985,
+          "our_ok": true,
+          "our_saturated": true,
+          "peak_IMAGE_5x5": 162.12503051757812,
+          "peak_P_5x5": 161.7833994925022,
+          "bits_5x5": [
+            1
+          ],
+          "overflow_pixels_5x5": 1
+        },
+        {
+          "w0": 1.333350524288293,
+          "visit": 0,
+          "id": "2025W37_1A_0379_4",
+          "lam": 1.3970591170914084,
+          "flux": 309.79559268321464,
+          "err": 6.233322386126549,
+          "their_saturated": true,
+          "our_flux": 309.79943303452376,
+          "our_ok": true,
+          "our_saturated": true,
+          "peak_IMAGE_5x5": 111.20332336425781,
+          "peak_P_5x5": 110.8603832423687,
+          "bits_5x5": [
+            1
+          ],
+          "overflow_pixels_5x5": 2
+        },
+        {
+          "w0": 1.333350524288293,
+          "visit": 1,
+          "id": "2026W09_2A_0503_2",
+          "lam": 1.2991646643879966,
+          "flux": 366.92818453017316,
+          "err": 7.39078914864559,
+          "their_saturated": true,
+          "our_flux": 366.92941891665157,
+          "our_ok": true,
+          "our_saturated": true,
+          "peak_IMAGE_5x5": 176.84262084960938,
+          "peak_P_5x5": 176.50794285535812,
+          "bits_5x5": [
+            1
+          ],
+          "overflow_pixels_5x5": 1
+        },
+        {
+          "w0": 1.333350524288293,
+          "visit": 1,
+          "id": "2026W09_2A_0503_3",
+          "lam": 1.3299849572593103,
+          "flux": 383.58887049984384,
+          "err": 7.716758911908622,
+          "their_saturated": true,
+          "our_flux": 383.589237620783,
+          "our_ok": true,
+          "our_saturated": true,
+          "peak_IMAGE_5x5": 140.3812713623047,
+          "peak_P_5x5": 140.04569786787033,
+          "bits_5x5": [
+            1
+          ],
+          "overflow_pixels_5x5": 2
+        },
+        {
+          "w0": 1.333350524288293,
+          "visit": 1,
+          "id": "2026W09_2A_0503_4",
+          "lam": 1.361443412671318,
+          "flux": 384.16149942652476,
+          "err": 7.74978679448959,
+          "their_saturated": true,
+          "our_flux": 384.16312827802585,
+          "our_ok": true,
+          "our_saturated": true,
+          "peak_IMAGE_5x5": 218.66152954101562,
+          "peak_P_5x5": 218.32514852285385,
+          "bits_5x5": [
+            1
+          ],
+          "overflow_pixels_5x5": 1
+        },
+        {
+          "w0": 1.333350524288293,
+          "visit": 1,
+          "id": "2026W09_2A_0503_1",
+          "lam": 1.2691446233613053,
+          "flux": 361.6777321631264,
+          "err": 7.295332903357753,
+          "their_saturated": true,
+          "our_flux": 361.6782409946691,
+          "our_ok": true,
+          "our_saturated": true,
+          "peak_IMAGE_5x5": 203.8338623046875,
+          "peak_P_5x5": 203.49837619066238,
+          "bits_5x5": [
+            1
+          ],
+          "overflow_pixels_5x5": 1
+        },
+        {
+          "w0": 1.333350524288293,
+          "visit": 1,
+          "id": "2026W11_1A_0042_1",
+          "lam": 1.2596987646938018,
+          "flux": 296.2384281787827,
+          "err": 5.965287586366537,
+          "their_saturated": true,
+          "our_flux": 296.2375822579198,
+          "our_ok": true,
+          "our_saturated": true,
+          "peak_IMAGE_5x5": 125.92955780029297,
+          "peak_P_5x5": 125.55423760414124,
+          "bits_5x5": [
+            1
+          ],
+          "overflow_pixels_5x5": 1
+        }
+      ],
+      "n_feed": 9,
+      "n_feed_their_saturated": 9,
+      "n_feed_overflow_in_5x5": 9,
+      "all_exposures_in_pair": [
+        {
+          "id": "2025W37_1A_0068_1",
+          "visit": 0,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.4411604943304694
+        },
+        {
+          "id": "2025W37_1A_0068_4",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 395.4695720832839,
+          "lam": 1.5483198551268864
+        },
+        {
+          "id": "2025W37_1A_0124_1",
+          "visit": 0,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.105458341070087
+        },
+        {
+          "id": "2025W37_1A_0124_3",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 224.2056529962982,
+          "lam": 1.1582121435752593
+        },
+        {
+          "id": "2025W37_1A_0068_3",
+          "visit": 0,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.511643713228369
+        },
+        {
+          "id": "2025W37_1A_0366_1",
+          "visit": 0,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": false,
+          "flux": null,
+          "lam": 1.1855020294323357
+        },
+        {
+          "id": "2025W37_1A_0068_2",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 336.3942075781658,
+          "lam": 1.4758352709125653
+        },
+        {
+          "id": "2025W37_1A_0124_2",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 207.5467413122997,
+          "lam": 1.1312672753346191
+        },
+        {
+          "id": "2025W37_1A_0366_2",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 256.20197402041595,
+          "lam": 1.2140670878454407
+        },
+        {
+          "id": "2025W37_1A_0366_3",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 290.4499908745272,
+          "lam": 1.2428795284601437
+        },
+        {
+          "id": "2025W37_1A_0379_2",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 295.6078436070483,
+          "lam": 1.333350524288293
+        },
+        {
+          "id": "2025W37_1A_0379_3",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 283.56589665781945,
+          "lam": 1.364921812131013
+        },
+        {
+          "id": "2025W37_1A_0379_1",
+          "visit": 0,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.3025351865041328
+        },
+        {
+          "id": "2025W37_1A_0366_4",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 257.69953723412925,
+          "lam": 1.2726346310740333
+        },
+        {
+          "id": "2025W37_1A_0496_2",
+          "visit": 0,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.6233963982313684
+        },
+        {
+          "id": "2025W37_1A_0553_1",
+          "visit": 0,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.4303126937065573
+        },
+        {
+          "id": "2025W37_1A_0379_4",
+          "visit": 0,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 309.79559268321464,
+          "lam": 1.3970591170914084
+        },
+        {
+          "id": "2025W37_1A_0496_1",
+          "visit": 0,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.5852940341183743
+        },
+        {
+          "id": "2026W09_2A_0503_2",
+          "visit": 1,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 366.92818453017316,
+          "lam": 1.2991646643879966
+        },
+        {
+          "id": "2026W09_2A_0503_3",
+          "visit": 1,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 383.58887049984384,
+          "lam": 1.3299849572593103
+        },
+        {
+          "id": "2026W09_2A_0503_4",
+          "visit": 1,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 384.16149942652476,
+          "lam": 1.361443412671318
+        },
+        {
+          "id": "2026W09_2A_0503_1",
+          "visit": 1,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 361.6777321631264,
+          "lam": 1.2691446233613053
+        },
+        {
+          "id": "2026W10_1A_0092_4",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.4967243846551395
+        },
+        {
+          "id": "2026W10_1A_0092_1",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.393582872030342
+        },
+        {
+          "id": "2026W10_1A_0092_2",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.4269905627788206
+        },
+        {
+          "id": "2026W10_1A_0092_3",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.4609931452313316
+        },
+        {
+          "id": "2026W10_1A_0639_3",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.0941054423793302
+        },
+        {
+          "id": "2026W10_1A_0602_4",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.6460243124056593
+        },
+        {
+          "id": "2026W10_1A_0602_3",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.6077829356629048
+        },
+        {
+          "id": "2026W10_1A_0602_2",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.570127402331586
+        },
+        {
+          "id": "2026W10_1A_0639_4",
+          "visit": 1,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 318.03405329704447,
+          "lam": 1.1199658710991978
+        },
+        {
+          "id": "2026W10_1A_0602_1",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.5328180398062754
+        },
+        {
+          "id": "2026W10_2B_0340_1",
+          "visit": 1,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 259.3230673622472,
+          "lam": 1.1461672606578623
+        },
+        {
+          "id": "2026W10_2B_0340_2",
+          "visit": 1,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 277.9231281300758,
+          "lam": 1.1737049346460804
+        },
+        {
+          "id": "2026W10_2B_0340_3",
+          "visit": 1,
+          "ok": false,
+          "reason": "masked_aperture",
+          "saturated": true,
+          "flux": null,
+          "lam": 1.2017103385852375
+        },
+        {
+          "id": "2026W10_2B_0340_4",
+          "visit": 1,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 308.58550354434425,
+          "lam": 1.2303133644625233
+        },
+        {
+          "id": "2026W11_1A_0042_1",
+          "visit": 1,
+          "ok": true,
+          "reason": "ok",
+          "saturated": true,
+          "flux": 296.2384281787827,
+          "lam": 1.2596987646938018
+        }
+      ],
+      "counts": {
+        "accepted": 19,
+        "rejected": 18,
+        "rejected_reasons": {
+          "masked_aperture": 18
+        },
+        "saturated_flag_any": 36,
+        "accepted_with_saturated_flag": 19
+      }
+    }
+  },
+  "phaseb_zeropoint": {
+    "barnard_width_uncorrected_floor0.0": {
+      "value": 1.421094280190895,
+      "unit": "z width",
+      "n": 13101,
+      "script": "07d_zeropoint.py",
+      "note": "bootstrap err 0.050"
+    },
+    "barnard_width_uncorrected_floor0.02": {
+      "value": 0.9816815811670473,
+      "unit": "z width",
+      "n": 13220,
+      "script": "07d_zeropoint.py",
+      "note": "bootstrap err 0.014"
+    },
+    "barnard_width_corrected_floor0.0": {
+      "value": 1.4047780525247673,
+      "unit": "z width",
+      "n": 13101,
+      "script": "07d_zeropoint.py",
+      "note": "bootstrap err 0.049"
+    },
+    "barnard_floor_needed_uncorrected": {
+      "value": 1.9179559566877113,
+      "unit": "percent",
+      "script": "07d_zeropoint.py",
+      "note": "width(b)=1 by interpolation, M2one"
+    },
+    "barnard_floor_needed_after_offset_removal": {
+      "value": 1.9068875471172906,
+      "unit": "percent",
+      "script": "07d_zeropoint.py",
+      "note": "after removing per (pair, detector) median offset"
+    },
+    "epsindi_width_uncorrected_floor0.0": {
+      "value": 1.2498288935423878,
+      "unit": "z width",
+      "n": 10420,
+      "script": "07d_zeropoint.py",
+      "note": "bootstrap err 0.027"
+    },
+    "epsindi_width_uncorrected_floor0.02": {
+      "value": 1.1016480308054835,
+      "unit": "z width",
+      "n": 10464,
+      "script": "07d_zeropoint.py",
+      "note": "bootstrap err 0.022"
+    },
+    "epsindi_width_corrected_floor0.0": {
+      "value": 1.2304405568142007,
+      "unit": "z width",
+      "n": 10420,
+      "script": "07d_zeropoint.py",
+      "note": "bootstrap err 0.034"
+    },
+    "epsindi_floor_needed_uncorrected": {
+      "value": 2.9190250445304753,
+      "unit": "percent",
+      "script": "07d_zeropoint.py",
+      "note": "width(b)=1 by interpolation, M2one"
+    },
+    "epsindi_floor_needed_after_offset_removal": {
+      "value": 2.767049918936543,
+      "unit": "percent",
+      "script": "07d_zeropoint.py",
+      "note": "after removing per (pair, detector) median offset"
+    },
+    "offsets_significant": {
+      "value": 4,
+      "unit": "count",
+      "n": 48,
+      "script": "07d_zeropoint.py",
+      "note": "(field, pair, detector) groups with |median|/SE > 3"
     }
   }
 }

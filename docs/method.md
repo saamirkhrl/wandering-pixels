@@ -242,6 +242,22 @@ inside a pixel, is not explained by crowding and is not a few variable stars (re
 physical cause (flat field, PSF or aperture loss, pointing jitter) was not identified. Background
 pixels of difference images also scatter 1.15 to 1.30 times the propagated error.
 
+The floor is not a zero-point offset between visits or releases (script 07d_zeropoint.py). Barnard
+visits 0 and 2 are DR1 and visit 4 is QR3; Eps Indi visits 0 to 2 are DR1 and visit 3 is QR3. For
+each visit pair and detector, the median fractional M2 flux difference of the steady stars is:
+
+| Field | Groups (pair x detector) | Median offsets | Significant (above 3 SE) |
+|---|---|---|---|
+| Barnard | 18 | -0.53 to +0.61 %, SE 0.1 to 0.7 % | 1 (0-2 D4, -0.29 +/- 0.08 %, DR1 to DR1) |
+| Eps Indi | 30 | mostly within 1.5 %, SE 0.2 to 1 % | 3, all DR1 to QR3 on D2-D3: -0.69 to -1.52 % |
+
+The offsets show no consistent dependence on flux (neither multiplicative nor additive) and no
+systematic trend with wavelength within a detector. Dividing out each group's median changes the
+unfloored z width only from 1.42 to 1.40 (Barnard) and from 1.25 to 1.23 (Eps Indi). The floor
+needed for unit width stays at 1.9 percent (Barnard) and goes from 2.9 to 2.8 percent (Eps Indi).
+The 2 percent term is per-exposure scatter inside each visit, not a visit or release offset. The
+DR1 to QR3 offsets of about 1 percent on two Eps Indi detectors are real but small next to it.
+
 ### Limits
 
 Two fields, 70 and 49 stars, G 12 to 16.5, isolated, not Gaia-variable. Saturated stars are not
@@ -255,6 +271,27 @@ error term is empirical. The website computes the per-star readout from native p
 the step 2 photometry of docs/algorithm.md (validated here), but its paired-stack image view is
 built from bilinearly resampled frames and is not validated at pixel level (the grid products in
 this section show why resampled per-pixel comparisons behave worse).
+
+How far the 1 percent false-alarm rate transfers (script 13b_false_alarm_fields.py, the browser's
+readouts of five fields, one detector, 41 to 123 results each). The browser's per-star z is the
+same statistic as ours (m2ref.compare_visits combined z with the 2 percent term); on our steady
+sample restricted to one detector it gives 3 of 431 (0.7 percent, 68 percent interval 0.4 to 1.2).
+The browser's raw "changed" rates are higher because its star lists are not restricted:
+
+| Field | All results | Our steady-star cuts | What drives the excess |
+|---|---|---|---|
+| Barnard | 10/117 (8.5 %) | 0/18 | blends: 10/81 blended against 0/36 not |
+| Eps Indi | 6/123 (4.9 %) | 0/33 | blends, the faint blended target |
+| RW Aur | 9/119 (7.6 %) | 1/18 | saturated target plus its neighbour at 1.5 arcsec, blends |
+| WISE 0855 | 2/41 (4.9 %) | 0/8 | none clear; P(2 or more of 41 at 0.84 %) = 0.05 |
+| R Dra | 34/114 (30 %) | none pass | saturated G 6.4 target: 9/9 under 1 arcmin, 15/33 at 1 to 2 |
+
+The figure applies to unblended, unsaturated stars of G 12 to 16.5, not Gaia-variable, more than
+3 arcmin from any source brighter than G 9. Close to a saturated star, and for blended stars, the
+false-alarm rate is several times higher and can reach tens of percent. RW Aur's -29 percent
+change between its first two visits (all three estimators agree) rests on 9 exposures that
+all carry OVERFLOW pixels in the core and include its companion 1.5 arcsec away. It is consistent
+with RW Aur's known variability, but it is not a measurement we can vouch for.
 
 ### Choices fixed before any phase B result was computed (2026-11-14, 09:52 CST; see git history)
 

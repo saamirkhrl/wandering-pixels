@@ -205,6 +205,21 @@ export function createShell(
   syncView();
   new MutationObserver(syncView).observe(viewRoot, { childList: true });
 
+  // Warm the viewer chunk once the page is quiet. Same module id as main.ts, so one chunk.
+  const warmViewer = () => {
+    if (document.documentElement.dataset.view === 'viewer') return;
+    try {
+      void import('../app/views/viewer').catch(() => undefined);
+    } catch {
+      /* ignore */
+    }
+  };
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  window.setTimeout(() => {
+    if (w.requestIdleCallback) w.requestIdleCallback(warmViewer, { timeout: 3000 });
+    else warmViewer();
+  }, 1500);
+
   return {
     viewRoot,
     setQuery: (q) => {

@@ -107,6 +107,22 @@
   padding-bottom: 4px;
 }
 
+.v-spec-table caption.v-subhead {
+  margin: 0;
+}
+
+.v-sec .v-qual-body > p {
+  margin: 0 0 4px;
+}
+
+.v-sec .v-qual-body > p + :not(p) {
+  margin-top: 12px;
+}
+
+.v-sec .v-qual-body > p:last-child {
+  margin-bottom: 0;
+}
+
 .v-spec-table th,
 .v-spec-table td {
   padding: 4px 8px 4px 0;

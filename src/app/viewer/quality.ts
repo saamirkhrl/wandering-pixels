@@ -107,7 +107,7 @@ export function createQualityPanel(): QualityPanel {
       const visits = Array.from(byVisit.keys()).sort((a, b) => a - b);
       const scroll = el('div', 'v-spec-scroll');
       const table = el('table', 'v-spec-table');
-      const cap = el('caption', 'v-hint', 'By visit');
+      const cap = el('caption', 'v-lab v-subhead', 'By visit');
       table.appendChild(cap);
       const thead = el('thead');
       const hr = el('tr');

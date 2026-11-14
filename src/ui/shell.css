@@ -224,3 +224,62 @@ html[data-view='sky'] .shell-bar .targets-button,
 html[data-view='sky'] .shell-bar .targets-menu {
   display: none;
 }
+
+/* Viewer route: while its chunk downloads, show the shape of the page instead of a bare word.
+   The pending element is styled inline by main.ts, so these rules need !important. */
+html[data-view='viewer'] .view-pending {
+  top: 0 !important;
+  bottom: 0 !important;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(360px, 30vw, 420px);
+  grid-template-rows: minmax(0, 1fr);
+  background: var(--sky);
+  font-size: 0 !important;
+  text-align: left !important;
+}
+
+html[data-view='viewer'] .view-pending::before {
+  content: 'Opening the viewer';
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  font-size: 0.875rem;
+  color: var(--paper-dim);
+}
+
+html[data-view='viewer'] .view-pending::after {
+  content: '';
+  grid-area: 1 / 2;
+  background-color: var(--paper);
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(rgba(59, 68, 102, 0.16), rgba(59, 68, 102, 0.16)),
+    linear-gradient(rgba(59, 68, 102, 0.12), rgba(59, 68, 102, 0.12)),
+    linear-gradient(rgba(59, 68, 102, 0.16), rgba(59, 68, 102, 0.16)),
+    linear-gradient(rgba(59, 68, 102, 0.12), rgba(59, 68, 102, 0.12)),
+    linear-gradient(rgba(59, 68, 102, 0.12), rgba(59, 68, 102, 0.12)),
+    linear-gradient(rgba(59, 68, 102, 0.16), rgba(59, 68, 102, 0.16)),
+    linear-gradient(rgba(59, 68, 102, 0.12), rgba(59, 68, 102, 0.12)),
+    linear-gradient(rgba(59, 68, 102, 0.12), rgba(59, 68, 102, 0.12));
+  background-size: 55% 22px, 35% 12px, 28% 16px, 80% 12px, 70% 12px, 28% 16px, 90% 12px, 60% 12px;
+  background-position: 20px 20px, 20px 56px, 20px 100px, 20px 130px, 20px 154px, 20px 190px, 20px 220px, 20px 244px;
+  border-left: 1px solid var(--ink);
+}
+
+@media (max-width: 899px) {
+  html[data-view='viewer'] .view-pending {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 45vh 1fr;
+    grid-template-rows: 45dvh 1fr;
+    background: var(--paper);
+  }
+
+  html[data-view='viewer'] .view-pending::before {
+    background: var(--sky);
+  }
+
+  html[data-view='viewer'] .view-pending::after {
+    grid-area: 2 / 1;
+    border-left: 0;
+  }
+}

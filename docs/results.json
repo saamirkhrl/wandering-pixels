@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "updated_utc": "2026-11-14T16:36:45+00:00"
+    "updated_utc": "2026-11-14T17:10:25+00:00"
   },
   "wavelength_source_check": {
     "random_D1_median_dwave": {
@@ -18121,6 +18121,3936 @@
       "unit": "s",
       "script": "07b_phaseb_controls.py",
       "note": "wall time for this field"
+    }
+  },
+  "known_movers": {
+    "barnard": {
+      "n_inside": {
+        "value": 358,
+        "unit": "exposures",
+        "n": 358,
+        "script": "scripts/11_known_movers.py"
+      },
+      "n_saturated": {
+        "value": 358,
+        "unit": "exposures",
+        "n": 358,
+        "script": "scripts/11_known_movers.py",
+        "note": "central 5x5 with OVERFLOW (bit 1), NONLINEAR (15) or BLOOM (26)"
+      },
+      "wings_check_scatter_px": {
+        "value": 0.30053692602961013,
+        "unit": "px per axis",
+        "n": 471,
+        "script": "scripts/11_known_movers.py",
+        "note": "robust scatter of wings minus Gaussian-core centre on unsaturated G 9.5-12.5 stars (includes the core centroid error)"
+      },
+      "wings_check_bias_px": {
+        "value": [
+          -0.24383969422532914,
+          8.874311264150947e-05
+        ],
+        "unit": "px (x, y)",
+        "n": 471,
+        "script": "scripts/11_known_movers.py",
+        "note": "median wings minus core, all detectors"
+      },
+      "wings_bias_px": {
+        "D1": {
+          "bx": {
+            "value": 0.05067073547973422,
+            "unit": "px",
+            "n": 28,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.132"
+          },
+          "by": {
+            "value": -0.17810603086612176,
+            "unit": "px",
+            "n": 28,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.092"
+          }
+        },
+        "D2": {
+          "bx": {
+            "value": -0.24383969422532914,
+            "unit": "px",
+            "n": 471,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.019"
+          },
+          "by": {
+            "value": 8.874311264150947e-05,
+            "unit": "px",
+            "n": 471,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.015"
+          }
+        },
+        "D3": {
+          "bx": {
+            "value": -0.2984558330085889,
+            "unit": "px",
+            "n": 25,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.123"
+          },
+          "by": {
+            "value": -0.24981864821241118,
+            "unit": "px",
+            "n": 25,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.164"
+          }
+        },
+        "D4": {
+          "bx": {
+            "value": -0.4057433507403232,
+            "unit": "px",
+            "n": 61,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.058"
+          },
+          "by": {
+            "value": 0.02645404898146353,
+            "unit": "px",
+            "n": 61,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.032"
+          }
+        },
+        "D5": {
+          "bx": {
+            "value": -0.2363914652794321,
+            "unit": "px",
+            "n": 187,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024"
+          },
+          "by": {
+            "value": 0.03260538676039104,
+            "unit": "px",
+            "n": 187,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.022"
+          }
+        },
+        "D6": {
+          "bx": {
+            "value": -0.25095783042400654,
+            "unit": "px",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.029"
+          },
+          "by": {
+            "value": -0.037314879783345134,
+            "unit": "px",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.022"
+          }
+        }
+      },
+      "disp_v0_v2": {
+        "dra_measured": {
+          "value": 0.11525948201647242,
+          "unit": "arcsec",
+          "n": 153,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.147; predicted 0.581"
+        },
+        "ddec_measured": {
+          "value": 5.7414072753176075,
+          "unit": "arcsec",
+          "n": 153,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.121; predicted 5.675"
+        },
+        "ddec_minus_predicted": {
+          "value": 0.06590748660142687,
+          "unit": "arcsec",
+          "n": 153,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.121"
+        },
+        "dra_minus_predicted": {
+          "value": -0.46606681460952415,
+          "unit": "arcsec",
+          "n": 153,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.147"
+        },
+        "speed_measured": {
+          "value": 1.664743094391408,
+          "unit": "px/yr",
+          "n": 153,
+          "script": "scripts/11_known_movers.py",
+          "note": "predicted 1.65 px/yr"
+        }
+      },
+      "disp_v2_v4": {
+        "dra_measured": {
+          "value": -0.4877871466393636,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.141; predicted -1.361"
+        },
+        "ddec_measured": {
+          "value": 4.481777667462336,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.119; predicted 4.633"
+        },
+        "ddec_minus_predicted": {
+          "value": -0.1508605296429293,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.119"
+        },
+        "dra_minus_predicted": {
+          "value": 0.8734806300708006,
+          "unit": "arcsec",
+          "n": 170,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.141"
+        },
+        "speed_measured": {
+          "value": 1.7093465426034617,
+          "unit": "px/yr",
+          "n": 170,
+          "script": "scripts/11_known_movers.py",
+          "note": "predicted 1.83 px/yr"
+        }
+      },
+      "disp_v0_v4": {
+        "dra_measured": {
+          "value": -0.606140643894292,
+          "unit": "arcsec",
+          "n": 157,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.148; predicted -0.775"
+        },
+        "ddec_measured": {
+          "value": 10.230340503496658,
+          "unit": "arcsec",
+          "n": 157,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.123; predicted 10.258"
+        },
+        "ddec_minus_predicted": {
+          "value": -0.027257973135723645,
+          "unit": "arcsec",
+          "n": 157,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.123"
+        },
+        "dra_minus_predicted": {
+          "value": 0.16845706821818218,
+          "unit": "arcsec",
+          "n": 157,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.148"
+        },
+        "speed_measured": {
+          "value": 1.6836541968729928,
+          "unit": "px/yr",
+          "n": 157,
+          "script": "scripts/11_known_movers.py",
+          "note": "predicted 1.69 px/yr"
+        }
+      },
+      "displacement_without_bias_correction": {
+        "v0_v2": {
+          "ra_minus_pred": {
+            "value": 2.2052990148483422,
+            "unit": "arcsec",
+            "n": 154,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.057"
+          },
+          "dec_minus_pred": {
+            "value": -0.020282334281684022,
+            "unit": "arcsec",
+            "n": 154,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.047"
+          }
+        },
+        "v2_v4": {
+          "ra_minus_pred": {
+            "value": -2.1034541458104927,
+            "unit": "arcsec",
+            "n": 171,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.053"
+          },
+          "dec_minus_pred": {
+            "value": -0.08723288132077567,
+            "unit": "arcsec",
+            "n": 171,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.044"
+          }
+        },
+        "v0_v4": {
+          "ra_minus_pred": {
+            "value": 0.026664041501923474,
+            "unit": "arcsec",
+            "n": 157,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.053"
+          },
+          "dec_minus_pred": {
+            "value": 0.05647099295616442,
+            "unit": "arcsec",
+            "n": 157,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.046"
+          }
+        }
+      },
+      "pooled_offsets": {
+        "visit0": {
+          "dra": {
+            "value": 0.4249438352984818,
+            "unit": "arcsec",
+            "n": 75,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.092"
+          },
+          "ddec": {
+            "value": -0.08596989190486742,
+            "unit": "arcsec",
+            "n": 75,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.094"
+          },
+          "mjd": 60912.05589421213
+        },
+        "visit2": {
+          "dra": {
+            "value": 0.15435794135636868,
+            "unit": "arcsec",
+            "n": 83,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.122"
+          },
+          "ddec": {
+            "value": 0.7145400193127713,
+            "unit": "arcsec",
+            "n": 83,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.088"
+          },
+          "mjd": 61116.92370995716
+        },
+        "visit4": {
+          "dra": {
+            "value": 0.5363243281384952,
+            "unit": "arcsec",
+            "n": 82,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.106"
+          },
+          "ddec": {
+            "value": -0.035277923296582095,
+            "unit": "arcsec",
+            "n": 82,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.062"
+          },
+          "mjd": 61273.56001888398
+        }
+      },
+      "wings_exposure_scatter": {
+        "value": 0.9622861005465646,
+        "unit": "arcsec (RA*, single exposure)",
+        "n": 255,
+        "script": "scripts/11_known_movers.py"
+      }
+    },
+    "epsindib": {
+      "gaia_visit_offsets": {
+        "visit0": {
+          "dra": {
+            "value": 0.24609135862090462,
+            "unit": "arcsec",
+            "n": 111,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.015"
+          },
+          "ddec": {
+            "value": -0.541402943369155,
+            "unit": "arcsec",
+            "n": 111,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.019"
+          },
+          "mjd": 60805.817026389945
+        },
+        "visit1": {
+          "dra": {
+            "value": 0.18211567735789294,
+            "unit": "arcsec",
+            "n": 119,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.019"
+          },
+          "ddec": {
+            "value": -0.5997251093903714,
+            "unit": "arcsec",
+            "n": 119,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025"
+          },
+          "mjd": 60958.564913993905
+        },
+        "visit2": {
+          "dra": {
+            "value": 0.19006958690098388,
+            "unit": "arcsec",
+            "n": 66,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.023"
+          },
+          "ddec": {
+            "value": -0.5047322265322148,
+            "unit": "arcsec",
+            "n": 66,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025"
+          },
+          "mjd": 61155.56292017195
+        },
+        "visit3": {
+          "dra": {
+            "value": 0.16517083273260252,
+            "unit": "arcsec",
+            "n": 111,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.017"
+          },
+          "ddec": {
+            "value": -0.5709076844218052,
+            "unit": "arcsec",
+            "n": 111,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.020"
+          },
+          "mjd": 61310.86913655096
+        }
+      },
+      "gaia_displacements": {
+        "v0_v1": {
+          "ra_meas": {
+            "value": 1.1704318672551546,
+            "unit": "arcsec",
+            "n": 213,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024, predicted 1.255"
+          },
+          "dec_meas": {
+            "value": -1.3878842620112635,
+            "unit": "arcsec",
+            "n": 213,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025, predicted -1.329"
+          },
+          "ra_minus_pred": {
+            "value": -0.08493822537750861,
+            "unit": "arcsec",
+            "n": 213,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024"
+          },
+          "dec_minus_pred": {
+            "value": -0.05922663591713606,
+            "unit": "arcsec",
+            "n": 213,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025"
+          }
+        },
+        "v1_v2": {
+          "ra_meas": {
+            "value": 2.5968594699701764,
+            "unit": "arcsec",
+            "n": 181,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.023, predicted 2.577"
+          },
+          "dec_meas": {
+            "value": -0.9622917799688765,
+            "unit": "arcsec",
+            "n": 181,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.027, predicted -1.019"
+          },
+          "ra_minus_pred": {
+            "value": 0.02020015780897566,
+            "unit": "arcsec",
+            "n": 181,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.023"
+          },
+          "dec_minus_pred": {
+            "value": 0.05715869851885025,
+            "unit": "arcsec",
+            "n": 181,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.027"
+          }
+        },
+        "v2_v3": {
+          "ra_meas": {
+            "value": 1.1814824004021602,
+            "unit": "arcsec",
+            "n": 142,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.028, predicted 1.286"
+          },
+          "dec_meas": {
+            "value": -1.3188983516190484,
+            "unit": "arcsec",
+            "n": 142,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.026, predicted -1.363"
+          },
+          "ra_minus_pred": {
+            "value": -0.10436026904112072,
+            "unit": "arcsec",
+            "n": 142,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.028"
+          },
+          "dec_minus_pred": {
+            "value": 0.04402123376332323,
+            "unit": "arcsec",
+            "n": 142,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.026"
+          }
+        },
+        "v0_v2": {
+          "ra_meas": {
+            "value": 3.809973436249418,
+            "unit": "arcsec",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024, predicted 3.841"
+          },
+          "dec_meas": {
+            "value": -2.404933736189391,
+            "unit": "arcsec",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025, predicted -2.355"
+          },
+          "ra_minus_pred": {
+            "value": -0.031236107521981804,
+            "unit": "arcsec",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024"
+          },
+          "dec_minus_pred": {
+            "value": -0.05007752550888167,
+            "unit": "arcsec",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025"
+          }
+        },
+        "v1_v3": {
+          "ra_meas": {
+            "value": 3.865884074259576,
+            "unit": "arcsec",
+            "n": 193,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.028, predicted 3.894"
+          },
+          "dec_meas": {
+            "value": -2.3736937304648174,
+            "unit": "arcsec",
+            "n": 193,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.026, predicted -2.405"
+          },
+          "ra_minus_pred": {
+            "value": -0.028224117686211248,
+            "unit": "arcsec",
+            "n": 193,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.028"
+          },
+          "dec_minus_pred": {
+            "value": 0.030910656349140364,
+            "unit": "arcsec",
+            "n": 193,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.026"
+          }
+        },
+        "v0_v3": {
+          "ra_meas": {
+            "value": 5.019424768041096,
+            "unit": "arcsec",
+            "n": 216,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.021, predicted 5.108"
+          },
+          "dec_meas": {
+            "value": -3.7392029927890613,
+            "unit": "arcsec",
+            "n": 216,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.021, predicted -3.702"
+          },
+          "ra_minus_pred": {
+            "value": -0.08862272871612387,
+            "unit": "arcsec",
+            "n": 216,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.021"
+          },
+          "dec_minus_pred": {
+            "value": -0.03754499606329009,
+            "unit": "arcsec",
+            "n": 216,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.021"
+          }
+        }
+      },
+      "chen_visit_offsets": {
+        "visit0": {
+          "dra": {
+            "value": 0.19126126386547126,
+            "unit": "arcsec",
+            "n": 111,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.015"
+          },
+          "ddec": {
+            "value": -0.18253623667213695,
+            "unit": "arcsec",
+            "n": 111,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.019"
+          },
+          "mjd": 60805.817026389945
+        },
+        "visit1": {
+          "dra": {
+            "value": 0.13181020054677328,
+            "unit": "arcsec",
+            "n": 119,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.019"
+          },
+          "ddec": {
+            "value": -0.22050024130889756,
+            "unit": "arcsec",
+            "n": 119,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025"
+          },
+          "mjd": 60958.564913993905
+        },
+        "visit2": {
+          "dra": {
+            "value": 0.1301665485816035,
+            "unit": "arcsec",
+            "n": 66,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.023"
+          },
+          "ddec": {
+            "value": -0.10971740414779613,
+            "unit": "arcsec",
+            "n": 66,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024"
+          },
+          "mjd": 61155.56292017195
+        },
+        "visit3": {
+          "dra": {
+            "value": 0.10903089542407433,
+            "unit": "arcsec",
+            "n": 111,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.017"
+          },
+          "ddec": {
+            "value": -0.15417110112315874,
+            "unit": "arcsec",
+            "n": 111,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.020"
+          },
+          "mjd": 61310.86913655096
+        }
+      },
+      "chen_displacements": {
+        "v0_v1": {
+          "ra_meas": {
+            "value": 1.1702186262659477,
+            "unit": "arcsec",
+            "n": 213,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024, predicted 1.251"
+          },
+          "dec_meas": {
+            "value": -1.3880228023520536,
+            "unit": "arcsec",
+            "n": 213,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025, predicted -1.350"
+          },
+          "ra_minus_pred": {
+            "value": -0.08045858447837206,
+            "unit": "arcsec",
+            "n": 213,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024"
+          },
+          "dec_minus_pred": {
+            "value": -0.038502970174305595,
+            "unit": "arcsec",
+            "n": 213,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025"
+          }
+        },
+        "v1_v2": {
+          "ra_meas": {
+            "value": 2.596914852604681,
+            "unit": "arcsec",
+            "n": 181,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.023, predicted 2.586"
+          },
+          "dec_meas": {
+            "value": -0.9622551535644006,
+            "unit": "arcsec",
+            "n": 181,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.027, predicted -1.035"
+          },
+          "ra_minus_pred": {
+            "value": 0.010553507664160744,
+            "unit": "arcsec",
+            "n": 181,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.023"
+          },
+          "dec_minus_pred": {
+            "value": 0.07299830685650344,
+            "unit": "arcsec",
+            "n": 181,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.027"
+          }
+        },
+        "v2_v3": {
+          "ra_meas": {
+            "value": 1.181476326915692,
+            "unit": "arcsec",
+            "n": 142,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.028, predicted 1.282"
+          },
+          "dec_meas": {
+            "value": -1.318820079103157,
+            "unit": "arcsec",
+            "n": 142,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.026, predicted -1.384"
+          },
+          "ra_minus_pred": {
+            "value": -0.10046492769036752,
+            "unit": "arcsec",
+            "n": 142,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.028"
+          },
+          "dec_minus_pred": {
+            "value": 0.06551582471307915,
+            "unit": "arcsec",
+            "n": 142,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.026"
+          }
+        },
+        "v0_v2": {
+          "ra_meas": {
+            "value": 3.8097829466605675,
+            "unit": "arcsec",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024, predicted 3.846"
+          },
+          "dec_meas": {
+            "value": -2.4049876045079035,
+            "unit": "arcsec",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025, predicted -2.392"
+          },
+          "ra_minus_pred": {
+            "value": -0.03646774552894039,
+            "unit": "arcsec",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.024"
+          },
+          "dec_minus_pred": {
+            "value": -0.013360066744633414,
+            "unit": "arcsec",
+            "n": 160,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.025"
+          }
+        },
+        "v1_v3": {
+          "ra_meas": {
+            "value": 3.8659551474798515,
+            "unit": "arcsec",
+            "n": 193,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.028, predicted 3.900"
+          },
+          "dec_meas": {
+            "value": -2.3736151939664016,
+            "unit": "arcsec",
+            "n": 193,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.026, predicted -2.442"
+          },
+          "ra_minus_pred": {
+            "value": -0.03400883888853645,
+            "unit": "arcsec",
+            "n": 193,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.028"
+          },
+          "dec_minus_pred": {
+            "value": 0.0685570346257971,
+            "unit": "arcsec",
+            "n": 193,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.026"
+          }
+        },
+        "v0_v3": {
+          "ra_meas": {
+            "value": 5.019229036763007,
+            "unit": "arcsec",
+            "n": 216,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.021, predicted 5.109"
+          },
+          "dec_meas": {
+            "value": -3.7392392548021713,
+            "unit": "arcsec",
+            "n": 216,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.021, predicted -3.760"
+          },
+          "ra_minus_pred": {
+            "value": -0.0899158797333941,
+            "unit": "arcsec",
+            "n": 216,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.021"
+          },
+          "dec_minus_pred": {
+            "value": 0.020352680242254895,
+            "unit": "arcsec",
+            "n": 216,
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.021"
+          }
+        }
+      },
+      "photocentre_long_minus_short": {
+        "visit0": {
+          "dra": {
+            "value": 0.093899438957077,
+            "unit": "arcsec",
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.032"
+          },
+          "ddec": {
+            "value": -0.11306501979162589,
+            "unit": "arcsec",
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.051"
+          }
+        },
+        "visit1": {
+          "dra": {
+            "value": 0.06652781529504874,
+            "unit": "arcsec",
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.048"
+          },
+          "ddec": {
+            "value": -0.04016345714377781,
+            "unit": "arcsec",
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.061"
+          }
+        },
+        "visit2": {
+          "dra": {
+            "value": 0.10556130639259291,
+            "unit": "arcsec",
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.049"
+          },
+          "ddec": {
+            "value": -0.07206097485309165,
+            "unit": "arcsec",
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.054"
+          }
+        },
+        "visit3": {
+          "dra": {
+            "value": 0.1137584859519479,
+            "unit": "arcsec",
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.035"
+          },
+          "ddec": {
+            "value": -0.16204565311677055,
+            "unit": "arcsec",
+            "script": "scripts/11_known_movers.py",
+            "note": "error 0.043"
+          }
+        }
+      },
+      "halo_background_fraction": {
+        "value": 0.0026316654953605274,
+        "unit": "background / fitted flux (median)",
+        "n": 423,
+        "script": "scripts/11_known_movers.py",
+        "note": "IMAGE-ZODI annulus background at B relative to B's fitted flux; Eps Indi A is G 4.3 at ~6.6 arcmin"
+      },
+      "paired_stack_summary": {
+        "rms_z": {
+          "value": 2.7849903623507326,
+          "unit": "z",
+          "n": 18,
+          "script": "scripts/11_known_movers.py"
+        },
+        "n_abs_z_lt_3": {
+          "value": 16,
+          "unit": "comparisons",
+          "n": 18,
+          "script": "scripts/11_known_movers.py"
+        }
+      },
+      "matched_comparisons": {
+        "n_unflagged": {
+          "value": 5,
+          "unit": "comparisons with no flags",
+          "script": "scripts/11_known_movers.py",
+          "note": "|z|<3 in 3"
+        },
+        "n": {
+          "value": 18,
+          "unit": "detector x visit pair comparisons",
+          "script": "scripts/11_known_movers.py"
+        },
+        "n_abs_z_lt_3": {
+          "value": 13,
+          "unit": "comparisons",
+          "n": 18,
+          "script": "scripts/11_known_movers.py"
+        },
+        "rms_z": {
+          "value": 3.9416037541116933,
+          "unit": "z",
+          "n": 18,
+          "script": "scripts/11_known_movers.py",
+          "note": "1 if constant and errors right (phase B z width on constant stars about 1.3-1.4)"
+        },
+        "median_frac": {
+          "value": 1.1664999278782906,
+          "unit": "percent",
+          "n": 18,
+          "script": "scripts/11_known_movers.py",
+          "note": "matched fractional flux difference A-B"
+        }
+      },
+      "spectral_steepness_pct_per_channel": {
+        "D1": {
+          "median": {
+            "value": 39.35966730957369,
+            "unit": "percent per channel width",
+            "n": 24,
+            "script": "scripts/11_known_movers.py"
+          },
+          "p90": {
+            "value": 94.25917702043634,
+            "unit": "percent per channel width",
+            "n": 24,
+            "script": "scripts/11_known_movers.py"
+          }
+        },
+        "D2": {
+          "median": {
+            "value": 16.946326388498857,
+            "unit": "percent per channel width",
+            "n": 37,
+            "script": "scripts/11_known_movers.py"
+          },
+          "p90": {
+            "value": 49.5249073315865,
+            "unit": "percent per channel width",
+            "n": 37,
+            "script": "scripts/11_known_movers.py"
+          }
+        },
+        "D3": {
+          "median": {
+            "value": 25.195838488994514,
+            "unit": "percent per channel width",
+            "n": 56,
+            "script": "scripts/11_known_movers.py"
+          },
+          "p90": {
+            "value": 43.899610150170645,
+            "unit": "percent per channel width",
+            "n": 56,
+            "script": "scripts/11_known_movers.py"
+          }
+        },
+        "D4": {
+          "median": {
+            "value": 17.413342122720437,
+            "unit": "percent per channel width",
+            "n": 22,
+            "script": "scripts/11_known_movers.py"
+          },
+          "p90": {
+            "value": 42.99756159450631,
+            "unit": "percent per channel width",
+            "n": 22,
+            "script": "scripts/11_known_movers.py"
+          }
+        },
+        "D5": {
+          "median": {
+            "value": 4.678397854275559,
+            "unit": "percent per channel width",
+            "n": 37,
+            "script": "scripts/11_known_movers.py"
+          },
+          "p90": {
+            "value": 14.496197506238612,
+            "unit": "percent per channel width",
+            "n": 37,
+            "script": "scripts/11_known_movers.py"
+          }
+        },
+        "D6": {
+          "median": {
+            "value": 12.324665974106289,
+            "unit": "percent per channel width",
+            "n": 50,
+            "script": "scripts/11_known_movers.py"
+          },
+          "p90": {
+            "value": 29.71916691239798,
+            "unit": "percent per channel width",
+            "n": 50,
+            "script": "scripts/11_known_movers.py"
+          }
+        }
+      },
+      "control_stars_paired_stack_median_frac": {
+        "D2_v0_v1": {
+          "value": -0.03543357337703675,
+          "unit": "percent",
+          "n": 48,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.31"
+        },
+        "D2_v1_v3": {
+          "value": 0.5337630595958452,
+          "unit": "percent",
+          "n": 47,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.28"
+        },
+        "D2_v0_v3": {
+          "value": 0.36558908314866606,
+          "unit": "percent",
+          "n": 49,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.31"
+        },
+        "D3_v0_v1": {
+          "value": -0.442484342312309,
+          "unit": "percent",
+          "n": 49,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.41"
+        },
+        "D3_v1_v3": {
+          "value": 1.2249978044769751,
+          "unit": "percent",
+          "n": 49,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.31"
+        },
+        "D3_v0_v3": {
+          "value": 0.7926356360178166,
+          "unit": "percent",
+          "n": 49,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.31"
+        },
+        "D5_v0_v1": {
+          "value": 1.0281858598673446,
+          "unit": "percent",
+          "n": 45,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 1.32"
+        },
+        "D5_v1_v3": {
+          "value": 0.7835920740457244,
+          "unit": "percent",
+          "n": 46,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 0.89"
+        },
+        "D5_v0_v3": {
+          "value": -1.4442457374324484,
+          "unit": "percent",
+          "n": 48,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 1.32"
+        },
+        "D6_v0_v1": {
+          "value": 2.2107610666684505,
+          "unit": "percent",
+          "n": 48,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 2.16"
+        },
+        "D6_v1_v3": {
+          "value": 2.4904121766217293,
+          "unit": "percent",
+          "n": 49,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 2.78"
+        },
+        "D6_v0_v3": {
+          "value": 2.6702667051985376,
+          "unit": "percent",
+          "n": 49,
+          "script": "scripts/11_known_movers.py",
+          "note": "error 1.92"
+        }
+      }
+    },
+    "_citations": [
+      "Gaia Collaboration 2023, A&A 674, A1 (Gaia DR3)",
+      "Chen et al. 2022, AJ 163, 288 (arXiv:2205.08077)",
+      "McCaughrean et al. 2004, A&A 413, 1029 (Eps Indi B 2MASS photometry)",
+      "Luhman & Esplin 2016, ApJ 827, 52 (arXiv:1605.06655)",
+      "Luhman et al. 2024, AJ 167, 5",
+      "IRSA WISE explanatory supplement (W2 AB offset 3.339)"
+    ]
+  },
+  "thresholds_barnard": {
+    "script": "10_thresholds.py",
+    "field": "barnard",
+    "visits": [
+      0,
+      2,
+      4
+    ],
+    "visit_pairs": [
+      "0-2",
+      "0-4",
+      "2-4"
+    ],
+    "n_stars": 70,
+    "sample": "phase B steady-star sample (stars of forced_phot.ecsv), re-measured with wp.m2ref on the cutouts (browser mask), inflated variance; one value per (star, detector, visit pair)",
+    "per_detector": {
+      "P1": {
+        "n": 1258,
+        "width": 1.030742590322282,
+        "median": 0.002386708031760833,
+        "frac_ge3": {
+          "k": 26,
+          "frac": 0.02066772655007949,
+          "lo68": 0.016667690867115892,
+          "hi68": 0.025505093408369338,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 11,
+          "frac": 0.008744038155802861,
+          "lo68": 0.006153696848292316,
+          "hi68": 0.012233329338329593,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 10,
+          "frac": 0.00794912559618442,
+          "lo68": 0.005482547493529984,
+          "hi68": 0.011321801133473136,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 3.8291558799195897,
+          "lo68": 3.390755929082918,
+          "hi68": 5.875123226788539
+        },
+        "q999": {
+          "value": 7.599927319681155,
+          "lo68": 6.807487487357514,
+          "hi68": 13.70138057631047,
+          "note": "1258 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "PS": {
+        "n": 1238,
+        "width": 1.2870945012650408,
+        "median": -0.010905066171455025,
+        "frac_ge3": {
+          "k": 39,
+          "frac": 0.03150242326332795,
+          "lo68": 0.026536003279105522,
+          "hi68": 0.03728701818834642,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 15,
+          "frac": 0.012116316639741519,
+          "lo68": 0.00903341732814329,
+          "hi68": 0.01608951085937874,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 9,
+          "frac": 0.007269789983844911,
+          "lo68": 0.004896006333819436,
+          "hi68": 0.010572304988674565,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 4.132034296195152,
+          "lo68": 3.7640572130092362,
+          "hi68": 4.816690213340995
+        },
+        "q999": {
+          "value": 9.755793906122067,
+          "lo68": 6.386353026657782,
+          "hi68": 10.796812289392568,
+          "note": "1238 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "M2": {
+        "n": 1258,
+        "width": 0.975620915761269,
+        "median": 0.052004621379899876,
+        "frac_ge3": {
+          "k": 11,
+          "frac": 0.008744038155802861,
+          "lo68": 0.006153696848292316,
+          "hi68": 0.012233329338329593,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 2,
+          "frac": 0.001589825119236884,
+          "lo68": 0.0005629988692863326,
+          "hi68": 0.0036828691712154945,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 2,
+          "frac": 0.001589825119236884,
+          "lo68": 0.0005629988692863326,
+          "hi68": 0.0036828691712154945,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 2.9212083076527717,
+          "lo68": 2.760960512903505,
+          "hi68": 3.033997607993535
+        },
+        "q999": {
+          "value": 12.884109184149224,
+          "lo68": 3.671028247851672,
+          "hi68": 23.21190739095117,
+          "note": "1258 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      }
+    },
+    "six_pooled": {
+      "P1": {
+        "n": 210,
+        "width": 1.107976413039511,
+        "median": 0.07380255675206737,
+        "frac_ge3": {
+          "k": 7,
+          "frac": 0.03333333333333333,
+          "lo68": 0.021120664027994993,
+          "hi68": 0.05082656415539554,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 2,
+          "frac": 0.009523809523809525,
+          "lo68": 0.0033745933141340104,
+          "hi68": 0.021946907009088933,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 1,
+          "frac": 0.004761904761904762,
+          "lo68": 0.0008222690578392981,
+          "hi68": 0.015626450294247952,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 3.8148556447219337,
+          "lo68": 3.155659572414625,
+          "hi68": 4.357952989574881
+        },
+        "q999": {
+          "value": 5.228823749628079,
+          "lo68": 3.7237075989624264,
+          "hi68": 5.458927401778675,
+          "note": "210 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "PS": {
+        "n": 210,
+        "width": 1.385447639936577,
+        "median": 0.05233719615905602,
+        "frac_ge3": {
+          "k": 5,
+          "frac": 0.023809523809523808,
+          "lo68": 0.013562821379687616,
+          "hi68": 0.03959555519923503,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 2,
+          "frac": 0.009523809523809525,
+          "lo68": 0.0033745933141340104,
+          "hi68": 0.021946907009088933,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 1,
+          "frac": 0.004761904761904762,
+          "lo68": 0.0008222690578392981,
+          "hi68": 0.015626450294247952,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 3.3761692099928546,
+          "lo68": 3.014116190586968,
+          "hi68": 4.0165752916679285
+        },
+        "q999": {
+          "value": 5.3471035765228025,
+          "lo68": 3.8870362225799,
+          "hi68": 5.698659090473086,
+          "note": "210 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "M2": {
+        "n": 210,
+        "width": 1.091267166656551,
+        "median": 0.028951244676824597,
+        "frac_ge3": {
+          "k": 4,
+          "frac": 0.01904761904761905,
+          "lo68": 0.009953373046504555,
+          "hi68": 0.03385210576874608,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 3,
+          "frac": 0.014285714285714285,
+          "lo68": 0.006520691697324619,
+          "hi68": 0.027986656411009704,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 2,
+          "frac": 0.009523809523809525,
+          "lo68": 0.0033745933141340104,
+          "hi68": 0.021946907009088933,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 4.428279980899492,
+          "lo68": 2.9410336643586623,
+          "hi68": 9.174980620724886
+        },
+        "q999": {
+          "value": 10.19461664400314,
+          "lo68": 4.175894527839689,
+          "hi68": 10.464027426386401,
+          "note": "210 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      }
+    },
+    "per_detector_unsaturated": {
+      "P1": {
+        "n": 1011,
+        "width": 1.0431887751224662,
+        "median": 0.029977471068526728,
+        "frac_ge3": {
+          "k": 21,
+          "frac": 0.020771513353115726,
+          "lo68": 0.01630382664001648,
+          "hi68": 0.02629133621539301,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 6,
+          "frac": 0.005934718100890208,
+          "lo68": 0.003583092990762053,
+          "hi68": 0.009462637185422307,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 6,
+          "frac": 0.005934718100890208,
+          "lo68": 0.003583092990762053,
+          "hi68": 0.009462637185422307,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 3.658544553035338,
+          "lo68": 3.3080295282516285,
+          "hi68": 3.870491490207559
+        },
+        "q999": {
+          "value": 7.281928099543975,
+          "lo68": 6.9081106978426465,
+          "hi68": 15.720159421636707,
+          "note": "1011 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "PS": {
+        "n": 1013,
+        "width": 1.2970901272614106,
+        "median": -0.08497470024146299,
+        "frac_ge3": {
+          "k": 31,
+          "frac": 0.03060217176702863,
+          "lo68": 0.025192433877010176,
+          "hi68": 0.03702276036721298,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 11,
+          "frac": 0.01085883514313919,
+          "lo68": 0.007643679333521104,
+          "hi68": 0.015185560613265035,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 6,
+          "frac": 0.005923000987166831,
+          "lo68": 0.003576013932369807,
+          "hi68": 0.009443987889479182,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 4.038641279269752,
+          "lo68": 3.659447918620192,
+          "hi68": 4.3084932198432
+        },
+        "q999": {
+          "value": 8.373045360066763,
+          "lo68": 5.367452579933727,
+          "hi68": 10.959141803018712,
+          "note": "1013 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "M2": {
+        "n": 1011,
+        "width": 0.9993651609159946,
+        "median": 0.024185059035493436,
+        "frac_ge3": {
+          "k": 7,
+          "frac": 0.006923837784371909,
+          "lo68": 0.004373840176667281,
+          "hi68": 0.010633302517130482,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 0,
+          "frac": 0.0,
+          "lo68": 0.0,
+          "hi68": 0.0018193664451274323,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 0,
+          "frac": 0.0,
+          "lo68": 0.0,
+          "hi68": 0.0018193664451274323,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 2.866534242398674,
+          "lo68": 2.697193306990057,
+          "hi68": 2.9947253557069775
+        },
+        "q999": {
+          "value": 3.718406001186809,
+          "lo68": 3.1775103761640158,
+          "hi68": 3.779270047693005,
+          "note": "1011 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      }
+    },
+    "recommendation": {
+      "P1": {
+        "threshold_1pct": {
+          "value": 3.83,
+          "unit": "|z|",
+          "n": 1258,
+          "script": "10_thresholds.py",
+          "note": "empirical 99th percentile of |z|, 68% bootstrap over stars 3.39 to 5.88"
+        },
+        "threshold_0p1pct": {
+          "value": 7.6,
+          "unit": "|z|",
+          "n": 1258,
+          "script": "10_thresholds.py",
+          "note": "empirical 99.9th percentile of |z|, 68% bootstrap over stars 6.81 to 13.70; 1258 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "PS": {
+        "threshold_1pct": {
+          "value": 4.13,
+          "unit": "|z|",
+          "n": 1238,
+          "script": "10_thresholds.py",
+          "note": "empirical 99th percentile of |z|, 68% bootstrap over stars 3.76 to 4.82"
+        },
+        "threshold_0p1pct": {
+          "value": 9.76,
+          "unit": "|z|",
+          "n": 1238,
+          "script": "10_thresholds.py",
+          "note": "empirical 99.9th percentile of |z|, 68% bootstrap over stars 6.39 to 10.80; 1238 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "M2": {
+        "threshold_1pct": {
+          "value": 2.92,
+          "unit": "|z|",
+          "n": 1258,
+          "script": "10_thresholds.py",
+          "note": "empirical 99th percentile of |z|, 68% bootstrap over stars 2.76 to 3.03"
+        },
+        "threshold_0p1pct": {
+          "value": 12.88,
+          "unit": "|z|",
+          "n": 1258,
+          "script": "10_thresholds.py",
+          "note": "empirical 99.9th percentile of |z|, 68% bootstrap over stars 3.67 to 23.21; 1258 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      }
+    },
+    "figure": "docs/figures/thresholds_barnard.png",
+    "runtime_s": 59.1
+  },
+  "thresholds_epsindi": {
+    "script": "10_thresholds.py",
+    "field": "epsindi",
+    "visits": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "visit_pairs": [
+      "0-1",
+      "0-2",
+      "0-3",
+      "1-2",
+      "1-3",
+      "2-3"
+    ],
+    "n_stars": 49,
+    "sample": "phase B steady-star sample (stars of forced_phot.ecsv), re-measured with wp.m2ref on the cutouts (browser mask), inflated variance; one value per (star, detector, visit pair)",
+    "per_detector": {
+      "P1": {
+        "n": 1111,
+        "width": 1.1184355945954418,
+        "median": 0.061885332448199874,
+        "frac_ge3": {
+          "k": 14,
+          "frac": 0.012601260126012601,
+          "lo68": 0.00928532277137772,
+          "hi68": 0.01691223236487221,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 6,
+          "frac": 0.0054005400540054005,
+          "lo68": 0.0032603813341715213,
+          "hi68": 0.008612290867346193,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 4,
+          "frac": 0.0036003600360036,
+          "lo68": 0.0018780309036282407,
+          "hi68": 0.006438003420545254,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 3.4017409287814435,
+          "lo68": 2.859544153375925,
+          "hi68": 3.7039698351528054
+        },
+        "q999": {
+          "value": 9.571336398077491,
+          "lo68": 5.246947530299498,
+          "hi68": 13.269870836226085,
+          "note": "1111 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "PS": {
+        "n": 1451,
+        "width": 1.2657375767259986,
+        "median": 0.06215610490010625,
+        "frac_ge3": {
+          "k": 52,
+          "frac": 0.03583735354927636,
+          "lo68": 0.0309501457466375,
+          "hi68": 0.04140933820803982,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 21,
+          "frac": 0.014472777394900068,
+          "lo68": 0.01135376484926832,
+          "hi68": 0.01833442717209023,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 14,
+          "frac": 0.009648518263266712,
+          "lo68": 0.007107539896031143,
+          "hi68": 0.012955964218301122,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 4.282065642517886,
+          "lo68": 4.020811978683479,
+          "hi68": 5.420417290641688
+        },
+        "q999": {
+          "value": 9.925145434683401,
+          "lo68": 8.381017149171843,
+          "hi68": 13.17002072450785,
+          "note": "1451 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "M2": {
+        "n": 1112,
+        "width": 1.147820733267017,
+        "median": 0.19718616504707875,
+        "frac_ge3": {
+          "k": 9,
+          "frac": 0.008093525179856115,
+          "lo68": 0.005451256829998514,
+          "hi68": 0.011768026388434952,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 3,
+          "frac": 0.002697841726618705,
+          "lo68": 0.0012299124784854825,
+          "hi68": 0.005315179351003255,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 0,
+          "frac": 0.0,
+          "lo68": 0.0,
+          "hi68": 0.0016542549943726205,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 2.9150266883459595,
+          "lo68": 2.749890623539796,
+          "hi68": 3.013180769971383
+        },
+        "q999": {
+          "value": 4.2773809698408085,
+          "lo68": 3.809062048993158,
+          "hi68": 4.685102423364116,
+          "note": "1112 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      }
+    },
+    "six_pooled": {
+      "P1": {
+        "n": 291,
+        "width": 1.3785786090672643,
+        "median": 0.04222481579938461,
+        "frac_ge3": {
+          "k": 7,
+          "frac": 0.024054982817869417,
+          "lo68": 0.015225447100625069,
+          "hi68": 0.03677160064196501,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 2,
+          "frac": 0.006872852233676976,
+          "lo68": 0.0024347992962725096,
+          "hi68": 0.01586572246669482,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 2,
+          "frac": 0.006872852233676976,
+          "lo68": 0.0024347992962725096,
+          "hi68": 0.01586572246669482,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 3.304400711209205,
+          "lo68": 3.0648362582864985,
+          "hi68": 5.879747397143353
+        },
+        "q999": {
+          "value": 6.191981230842744,
+          "lo68": 3.4274489912551256,
+          "hi68": 6.319513360100254,
+          "note": "291 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "PS": {
+        "n": 294,
+        "width": 1.437684239625817,
+        "median": 0.24472717858021076,
+        "frac_ge3": {
+          "k": 16,
+          "frac": 0.05442176870748299,
+          "lo68": 0.041169681839349076,
+          "hi68": 0.07108762733877322,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 6,
+          "frac": 0.02040816326530612,
+          "lo68": 0.012342156780220274,
+          "hi68": 0.03239896404385297,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 2,
+          "frac": 0.006802721088435374,
+          "lo68": 0.0024099420032843957,
+          "hi68": 0.01570455442906902,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 4.942540909355527,
+          "lo68": 3.618044513349536,
+          "hi68": 5.04766754898781
+        },
+        "q999": {
+          "value": 6.03101152257913,
+          "lo68": 5.02838057093256,
+          "hi68": 6.302670572185956,
+          "note": "294 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "M2": {
+        "n": 291,
+        "width": 1.2847215236875835,
+        "median": 0.32077856128699206,
+        "frac_ge3": {
+          "k": 9,
+          "frac": 0.030927835051546393,
+          "lo68": 0.020882986942436413,
+          "hi68": 0.04473377102145796,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 0,
+          "frac": 0.0,
+          "lo68": 0.0,
+          "hi68": 0.006306677560327797,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 0,
+          "frac": 0.0,
+          "lo68": 0.0,
+          "hi68": 0.006306677560327797,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 3.205631400417256,
+          "lo68": 3.1702639982533927,
+          "hi68": 3.263457010201993
+        },
+        "q999": {
+          "value": 3.5764006813608855,
+          "lo68": 3.4164863329628514,
+          "hi68": 3.605903677681092,
+          "note": "291 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      }
+    },
+    "per_detector_unsaturated": {
+      "P1": {
+        "n": 900,
+        "width": 1.0871041642174026,
+        "median": 0.06980217976121811,
+        "frac_ge3": {
+          "k": 12,
+          "frac": 0.013333333333333334,
+          "lo68": 0.009551387569449498,
+          "hi68": 0.018353234533881393,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 5,
+          "frac": 0.005555555555555556,
+          "lo68": 0.003157899608497934,
+          "hi68": 0.009296432210675611,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 3,
+          "frac": 0.0033333333333333335,
+          "lo68": 0.0015197272587999491,
+          "hi68": 0.006565168484173522,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 3.4106408366536476,
+          "lo68": 2.935555932759463,
+          "hi68": 3.7070625218889517
+        },
+        "q999": {
+          "value": 6.809986275763876,
+          "lo68": 5.328093085829121,
+          "hi68": 13.656661024276996,
+          "note": "900 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "PS": {
+        "n": 1201,
+        "width": 1.2858461595719792,
+        "median": 0.056032137634436395,
+        "frac_ge3": {
+          "k": 39,
+          "frac": 0.0324729392173189,
+          "lo68": 0.027355324787731946,
+          "hi68": 0.03843220528273734,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 13,
+          "frac": 0.010824313072439634,
+          "lo68": 0.007869584335575882,
+          "hi68": 0.014706928369123663,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 8,
+          "frac": 0.006661115736885929,
+          "lo68": 0.004359224862681576,
+          "hi68": 0.009929720927127936,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 4.054338397390835,
+          "lo68": 3.7485545674233616,
+          "hi68": 4.194594215479952
+        },
+        "q999": {
+          "value": 10.178068940642078,
+          "lo68": 8.628406801910641,
+          "hi68": 14.503962930877762,
+          "note": "1201 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "M2": {
+        "n": 900,
+        "width": 1.2015882313746862,
+        "median": 0.20429738200326847,
+        "frac_ge3": {
+          "k": 7,
+          "frac": 0.0077777777777777776,
+          "lo68": 0.004913756715482846,
+          "hi68": 0.011941989939697287,
+          "normal": 0.002699796063260186
+        },
+        "frac_ge4": {
+          "k": 3,
+          "frac": 0.0033333333333333335,
+          "lo68": 0.0015197272587999491,
+          "hi68": 0.006565168484173522,
+          "normal": 6.334248366623973e-05
+        },
+        "frac_ge5": {
+          "k": 0,
+          "frac": 0.0,
+          "lo68": 0.0,
+          "hi68": 0.0020435255537621824,
+          "normal": 5.733031437583869e-07
+        },
+        "q99": {
+          "value": 2.920441874864745,
+          "lo68": 2.7344922677641494,
+          "hi68": 3.013180769971383
+        },
+        "q999": {
+          "value": 4.3434019273647575,
+          "lo68": 3.81668154590328,
+          "hi68": 4.734471772239719,
+          "note": "900 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      }
+    },
+    "recommendation": {
+      "P1": {
+        "threshold_1pct": {
+          "value": 3.4,
+          "unit": "|z|",
+          "n": 1111,
+          "script": "10_thresholds.py",
+          "note": "empirical 99th percentile of |z|, 68% bootstrap over stars 2.86 to 3.70"
+        },
+        "threshold_0p1pct": {
+          "value": 9.57,
+          "unit": "|z|",
+          "n": 1111,
+          "script": "10_thresholds.py",
+          "note": "empirical 99.9th percentile of |z|, 68% bootstrap over stars 5.25 to 13.27; 1111 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "PS": {
+        "threshold_1pct": {
+          "value": 4.28,
+          "unit": "|z|",
+          "n": 1451,
+          "script": "10_thresholds.py",
+          "note": "empirical 99th percentile of |z|, 68% bootstrap over stars 4.02 to 5.42"
+        },
+        "threshold_0p1pct": {
+          "value": 9.93,
+          "unit": "|z|",
+          "n": 1451,
+          "script": "10_thresholds.py",
+          "note": "empirical 99.9th percentile of |z|, 68% bootstrap over stars 8.38 to 13.17; 1451 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      },
+      "M2": {
+        "threshold_1pct": {
+          "value": 2.92,
+          "unit": "|z|",
+          "n": 1112,
+          "script": "10_thresholds.py",
+          "note": "empirical 99th percentile of |z|, 68% bootstrap over stars 2.75 to 3.01"
+        },
+        "threshold_0p1pct": {
+          "value": 4.28,
+          "unit": "|z|",
+          "n": 1112,
+          "script": "10_thresholds.py",
+          "note": "empirical 99.9th percentile of |z|, 68% bootstrap over stars 3.81 to 4.69; 1112 values: the 99.9th percentile rests on the top 1 value(s)"
+        }
+      }
+    },
+    "figure": "docs/figures/thresholds_epsindi.png",
+    "runtime_s": 41.6
+  },
+  "pair_gaps": {
+    "script": "14_pair_gaps.py",
+    "visit_gap_d": 30.0,
+    "min_exposures": 12,
+    "threshold_channels": 0.95,
+    "summary": {
+      "epsindi": {
+        "n_full_pair_detectors": 26,
+        "full_max_best_gap": 0.4671765041277646,
+        "full_all_under_095": true,
+        "full_n_over_095": 0,
+        "partial_n": 0,
+        "partial_max_best_gap": null,
+        "partial_n_over_095": 0,
+        "missing_detector_in_full_pairs": [
+          [
+            1,
+            3,
+            1
+          ],
+          [
+            1,
+            3,
+            4
+          ],
+          [
+            2,
+            3,
+            1
+          ],
+          [
+            2,
+            3,
+            4
+          ]
+        ],
+        "median_frac_partner_within_1": 0.7620137299771168,
+        "min_frac_partner_within_1": 0.32142857142857145
+      },
+      "barnard": {
+        "n_full_pair_detectors": 18,
+        "full_max_best_gap": 0.33842004224353195,
+        "full_all_under_095": true,
+        "full_n_over_095": 0,
+        "partial_n": 0,
+        "partial_max_best_gap": null,
+        "partial_n_over_095": 0,
+        "missing_detector_in_full_pairs": [],
+        "median_frac_partner_within_1": 1.0,
+        "min_frac_partner_within_1": 0.9767441860465116
+      },
+      "rdra": {
+        "n_full_pair_detectors": 18,
+        "full_max_best_gap": 0.2515233272450913,
+        "full_all_under_095": true,
+        "full_n_over_095": 0,
+        "partial_n": 0,
+        "partial_max_best_gap": null,
+        "partial_n_over_095": 0,
+        "missing_detector_in_full_pairs": [],
+        "median_frac_partner_within_1": 1.0,
+        "min_frac_partner_within_1": 0.9855072463768116
+      }
+    },
+    "fields": {
+      "epsindi": {
+        "n_exposures": 460,
+        "visits": [
+          {
+            "visit": 0,
+            "n": 125,
+            "mjd_mean": 60804.52160537082,
+            "mjd_span": 46.33428986099898,
+            "per_detector": {
+              "1": 4,
+              "2": 32,
+              "3": 28,
+              "4": 4,
+              "5": 30,
+              "6": 27
+            },
+            "full": true
+          },
+          {
+            "visit": 1,
+            "n": 141,
+            "mjd_mean": 60959.34336724349,
+            "mjd_span": 44.893459155005985,
+            "per_detector": {
+              "1": 25,
+              "2": 25,
+              "3": 23,
+              "4": 24,
+              "5": 22,
+              "6": 22
+            },
+            "full": true
+          },
+          {
+            "visit": 2,
+            "n": 75,
+            "mjd_mean": 61155.06486443602,
+            "mjd_span": 15.272159653002745,
+            "per_detector": {
+              "1": 20,
+              "2": 7,
+              "3": 12,
+              "4": 19,
+              "5": 6,
+              "6": 11
+            },
+            "full": true
+          },
+          {
+            "visit": 3,
+            "n": 119,
+            "mjd_mean": 61310.83056295619,
+            "mjd_span": 10.251169490999018,
+            "per_detector": {
+              "1": 0,
+              "2": 24,
+              "3": 36,
+              "4": 0,
+              "5": 24,
+              "6": 35
+            },
+            "full": true
+          }
+        ],
+        "pairs": [
+          {
+            "a": 0,
+            "b": 1,
+            "dt": 154.82176187267032,
+            "cls": "6mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 4,
+                "nb": 24,
+                "best": 0.0007256938130957766,
+                "frac_within_1": 0.32142857142857145
+              },
+              "2": {
+                "na": 32,
+                "nb": 25,
+                "best": 0.007807998875547087,
+                "frac_within_1": 1.0
+              },
+              "3": {
+                "na": 28,
+                "nb": 23,
+                "best": 0.08500458185051459,
+                "frac_within_1": 0.9607843137254902
+              },
+              "4": {
+                "na": 4,
+                "nb": 24,
+                "best": 0.0014808642911993673,
+                "frac_within_1": 0.35714285714285715
+              },
+              "5": {
+                "na": 30,
+                "nb": 21,
+                "best": 0.004394846551921605,
+                "frac_within_1": 0.9803921568627451
+              },
+              "6": {
+                "na": 27,
+                "nb": 22,
+                "best": 0.07014296825572618,
+                "frac_within_1": 0.9591836734693877
+              }
+            }
+          },
+          {
+            "a": 0,
+            "b": 2,
+            "dt": 350.5432590651981,
+            "cls": "12mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 4,
+                "nb": 20,
+                "best": 0.0002687900291498718,
+                "frac_within_1": 0.4583333333333333
+              },
+              "2": {
+                "na": 32,
+                "nb": 7,
+                "best": 0.00042136996898256877,
+                "frac_within_1": 0.5641025641025641
+              },
+              "3": {
+                "na": 28,
+                "nb": 12,
+                "best": 0.0,
+                "frac_within_1": 0.775
+              },
+              "4": {
+                "na": 4,
+                "nb": 19,
+                "best": 0.0,
+                "frac_within_1": 0.4782608695652174
+              },
+              "5": {
+                "na": 30,
+                "nb": 6,
+                "best": 0.0008244689699594233,
+                "frac_within_1": 0.5555555555555556
+              },
+              "6": {
+                "na": 27,
+                "nb": 11,
+                "best": 0.0,
+                "frac_within_1": 0.7631578947368421
+              }
+            }
+          },
+          {
+            "a": 1,
+            "b": 2,
+            "dt": 195.72149719252775,
+            "cls": "6mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 24,
+                "nb": 20,
+                "best": 0.0009878161427204362,
+                "frac_within_1": 1.0
+              },
+              "2": {
+                "na": 25,
+                "nb": 7,
+                "best": 0.4671765041277646,
+                "frac_within_1": 0.53125
+              },
+              "3": {
+                "na": 23,
+                "nb": 12,
+                "best": 0.08468426185789918,
+                "frac_within_1": 0.7428571428571429
+              },
+              "4": {
+                "na": 24,
+                "nb": 19,
+                "best": 0.0038111183733204614,
+                "frac_within_1": 1.0
+              },
+              "5": {
+                "na": 21,
+                "nb": 6,
+                "best": 0.4594021213668024,
+                "frac_within_1": 0.4444444444444444
+              },
+              "6": {
+                "na": 22,
+                "nb": 11,
+                "best": 0.06948815278205012,
+                "frac_within_1": 0.7878787878787878
+              }
+            }
+          },
+          {
+            "a": 1,
+            "b": 3,
+            "dt": 351.4871957126961,
+            "cls": "12mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 24,
+                "nb": 0,
+                "best": null,
+                "frac_within_1": null
+              },
+              "2": {
+                "na": 25,
+                "nb": 24,
+                "best": 0.0,
+                "frac_within_1": 1.0
+              },
+              "3": {
+                "na": 23,
+                "nb": 36,
+                "best": 0.132425881448638,
+                "frac_within_1": 1.0
+              },
+              "4": {
+                "na": 24,
+                "nb": 0,
+                "best": null,
+                "frac_within_1": null
+              },
+              "5": {
+                "na": 21,
+                "nb": 24,
+                "best": 0.0,
+                "frac_within_1": 0.9777777777777777
+              },
+              "6": {
+                "na": 22,
+                "nb": 35,
+                "best": 0.11816759052191177,
+                "frac_within_1": 1.0
+              }
+            }
+          },
+          {
+            "a": 2,
+            "b": 3,
+            "dt": 155.76569852016837,
+            "cls": "6mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 20,
+                "nb": 0,
+                "best": null,
+                "frac_within_1": null
+              },
+              "2": {
+                "na": 7,
+                "nb": 24,
+                "best": 0.031621286937057735,
+                "frac_within_1": 0.5806451612903226
+              },
+              "3": {
+                "na": 12,
+                "nb": 36,
+                "best": 0.21337117623217475,
+                "frac_within_1": 0.75
+              },
+              "4": {
+                "na": 19,
+                "nb": 0,
+                "best": null,
+                "frac_within_1": null
+              },
+              "5": {
+                "na": 6,
+                "nb": 24,
+                "best": 0.03630019589569595,
+                "frac_within_1": 0.5666666666666667
+              },
+              "6": {
+                "na": 11,
+                "nb": 35,
+                "best": 0.19628605738765315,
+                "frac_within_1": 0.7608695652173914
+              }
+            }
+          }
+        ]
+      },
+      "barnard": {
+        "n_exposures": 358,
+        "visits": [
+          {
+            "visit": 0,
+            "n": 118,
+            "mjd_mean": 60916.19437828103,
+            "mjd_span": 46.40119974499976,
+            "per_detector": {
+              "1": 24,
+              "2": 18,
+              "3": 18,
+              "4": 23,
+              "5": 18,
+              "6": 17
+            },
+            "full": true
+          },
+          {
+            "visit": 1,
+            "n": 121,
+            "mjd_mean": 61119.44771269852,
+            "mjd_span": 54.99156865699479,
+            "per_detector": {
+              "1": 18,
+              "2": 18,
+              "3": 24,
+              "4": 18,
+              "5": 19,
+              "6": 24
+            },
+            "full": true
+          },
+          {
+            "visit": 2,
+            "n": 119,
+            "mjd_mean": 61274.6270345179,
+            "mjd_span": 36.997209027998906,
+            "per_detector": {
+              "1": 18,
+              "2": 25,
+              "3": 17,
+              "4": 18,
+              "5": 24,
+              "6": 17
+            },
+            "full": true
+          }
+        ],
+        "pairs": [
+          {
+            "a": 0,
+            "b": 1,
+            "dt": 203.25333441749535,
+            "cls": "6mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 24,
+                "nb": 18,
+                "best": 0.001151085410319437,
+                "frac_within_1": 1.0
+              },
+              "2": {
+                "na": 18,
+                "nb": 18,
+                "best": 0.0020257896379962765,
+                "frac_within_1": 1.0
+              },
+              "3": {
+                "na": 18,
+                "nb": 24,
+                "best": 0.0013257241383116765,
+                "frac_within_1": 1.0
+              },
+              "4": {
+                "na": 23,
+                "nb": 18,
+                "best": 0.0026222447379918765,
+                "frac_within_1": 1.0
+              },
+              "5": {
+                "na": 18,
+                "nb": 19,
+                "best": 0.004450149985050772,
+                "frac_within_1": 1.0
+              },
+              "6": {
+                "na": 17,
+                "nb": 24,
+                "best": 0.013261977676879685,
+                "frac_within_1": 1.0
+              }
+            }
+          },
+          {
+            "a": 0,
+            "b": 2,
+            "dt": 358.4326562368733,
+            "cls": "12mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 24,
+                "nb": 18,
+                "best": 0.20761727146017536,
+                "frac_within_1": 1.0
+              },
+              "2": {
+                "na": 18,
+                "nb": 25,
+                "best": 0.1539563491790152,
+                "frac_within_1": 1.0
+              },
+              "3": {
+                "na": 18,
+                "nb": 17,
+                "best": 0.31659688096738564,
+                "frac_within_1": 1.0
+              },
+              "4": {
+                "na": 23,
+                "nb": 18,
+                "best": 0.21887444516187782,
+                "frac_within_1": 1.0
+              },
+              "5": {
+                "na": 18,
+                "nb": 24,
+                "best": 0.16650051683656053,
+                "frac_within_1": 1.0
+              },
+              "6": {
+                "na": 17,
+                "nb": 17,
+                "best": 0.33842004224353195,
+                "frac_within_1": 1.0
+              }
+            }
+          },
+          {
+            "a": 1,
+            "b": 2,
+            "dt": 155.17932181937795,
+            "cls": "6mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 18,
+                "nb": 18,
+                "best": 0.1773857177952883,
+                "frac_within_1": 1.0
+              },
+              "2": {
+                "na": 18,
+                "nb": 25,
+                "best": 0.073243364073294,
+                "frac_within_1": 0.9767441860465116
+              },
+              "3": {
+                "na": 24,
+                "nb": 17,
+                "best": 0.2834008475203978,
+                "frac_within_1": 1.0
+              },
+              "4": {
+                "na": 18,
+                "nb": 18,
+                "best": 0.1918351324234533,
+                "frac_within_1": 1.0
+              },
+              "5": {
+                "na": 19,
+                "nb": 24,
+                "best": 0.07874698362506932,
+                "frac_within_1": 1.0
+              },
+              "6": {
+                "na": 24,
+                "nb": 17,
+                "best": 0.26660072667188894,
+                "frac_within_1": 1.0
+              }
+            }
+          }
+        ]
+      },
+      "rdra": {
+        "n_exposures": 538,
+        "visits": [
+          {
+            "visit": 0,
+            "n": 153,
+            "mjd_mean": 60845.90315687581,
+            "mjd_span": 66.65239000000292,
+            "per_detector": {
+              "1": 22,
+              "2": 33,
+              "3": 23,
+              "4": 21,
+              "5": 32,
+              "6": 22
+            },
+            "full": true
+          },
+          {
+            "visit": 1,
+            "n": 211,
+            "mjd_mean": 61006.04299225356,
+            "mjd_span": 87.8001179999992,
+            "per_detector": {
+              "1": 45,
+              "2": 37,
+              "3": 24,
+              "4": 44,
+              "5": 37,
+              "6": 24
+            },
+            "full": true
+          },
+          {
+            "visit": 2,
+            "n": 174,
+            "mjd_mean": 61198.92190822127,
+            "mjd_span": 85.54218199999741,
+            "per_detector": {
+              "1": 24,
+              "2": 19,
+              "3": 44,
+              "4": 23,
+              "5": 19,
+              "6": 45
+            },
+            "full": true
+          }
+        ],
+        "pairs": [
+          {
+            "a": 0,
+            "b": 1,
+            "dt": 160.13983537775493,
+            "cls": "6mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 22,
+                "nb": 45,
+                "best": 0.035879010399179546,
+                "frac_within_1": 1.0
+              },
+              "2": {
+                "na": 33,
+                "nb": 37,
+                "best": 0.0010643015940970085,
+                "frac_within_1": 1.0
+              },
+              "3": {
+                "na": 23,
+                "nb": 24,
+                "best": 0.2099448507619491,
+                "frac_within_1": 1.0
+              },
+              "4": {
+                "na": 21,
+                "nb": 44,
+                "best": 0.04795375417046394,
+                "frac_within_1": 1.0
+              },
+              "5": {
+                "na": 32,
+                "nb": 37,
+                "best": 0.0019798538947893266,
+                "frac_within_1": 0.9855072463768116
+              },
+              "6": {
+                "na": 22,
+                "nb": 24,
+                "best": 0.2124867082956212,
+                "frac_within_1": 1.0
+              }
+            }
+          },
+          {
+            "a": 0,
+            "b": 2,
+            "dt": 353.0187513454657,
+            "cls": "12mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 22,
+                "nb": 24,
+                "best": 0.0077457413584179026,
+                "frac_within_1": 1.0
+              },
+              "2": {
+                "na": 33,
+                "nb": 19,
+                "best": 0.2184286947420144,
+                "frac_within_1": 1.0
+              },
+              "3": {
+                "na": 23,
+                "nb": 44,
+                "best": 0.0,
+                "frac_within_1": 1.0
+              },
+              "4": {
+                "na": 21,
+                "nb": 23,
+                "best": 0.012647221070198533,
+                "frac_within_1": 1.0
+              },
+              "5": {
+                "na": 32,
+                "nb": 19,
+                "best": 0.21681345696450735,
+                "frac_within_1": 1.0
+              },
+              "6": {
+                "na": 22,
+                "nb": 45,
+                "best": 0.0,
+                "frac_within_1": 1.0
+              }
+            }
+          },
+          {
+            "a": 1,
+            "b": 2,
+            "dt": 192.87891596771078,
+            "cls": "6mo",
+            "both_full": true,
+            "det": {
+              "1": {
+                "na": 45,
+                "nb": 24,
+                "best": 0.013633191955962187,
+                "frac_within_1": 1.0
+              },
+              "2": {
+                "na": 37,
+                "nb": 19,
+                "best": 0.2515233272450913,
+                "frac_within_1": 1.0
+              },
+              "3": {
+                "na": 24,
+                "nb": 44,
+                "best": 0.002387087631773148,
+                "frac_within_1": 1.0
+              },
+              "4": {
+                "na": 44,
+                "nb": 23,
+                "best": 0.02186688762975404,
+                "frac_within_1": 1.0
+              },
+              "5": {
+                "na": 37,
+                "nb": 19,
+                "best": 0.24815460702915668,
+                "frac_within_1": 1.0
+              },
+              "6": {
+                "na": 24,
+                "nb": 45,
+                "best": 0.006787674364449957,
+                "frac_within_1": 1.0
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "distant_body": {
+    "script": "13_distant_body.py",
+    "field": "barnard",
+    "visits": {
+      "A": 0,
+      "B": 4,
+      "C": 2
+    },
+    "d_true_au": 500.0,
+    "geometry_candidates": [
+      {
+        "field": "barnard",
+        "ecl_lat": 28.107062774820463,
+        "dtAB": 360.9334621062226,
+        "dtAC": 203.08206256552512,
+        "span_A": 20.242488598996715,
+        "span_B": 16.626224444997206,
+        "span_C": 29.938657940001576,
+        "parallax_AB_px": 3.095219221977245,
+        "parallax_AC_px": 128.27469276259532,
+        "pxpct_AC": 1.2704687580099876,
+        "pxpct_AB": 0.030633269369668113,
+        "motion_px_yr": 18.84841813419759,
+        "angle_parallaxAC_vs_motion": 7.212233934563143,
+        "axis_ratio": 0.47112061625048923
+      },
+      {
+        "field": "epsindi",
+        "ecl_lat": -41.39649518029118,
+        "dtAB": 350.5432590651981,
+        "dtAC": 154.82176187267032,
+        "span_A": 46.33428986099898,
+        "span_B": 15.272159653002745,
+        "span_C": 44.893459155005985,
+        "parallax_AB_px": 11.115024829517,
+        "parallax_AC_px": 129.4704710133379,
+        "pxpct_AC": 1.282386496514013,
+        "pxpct_AB": 0.1100543328218179,
+        "motion_px_yr": 18.848418134162312,
+        "angle_parallaxAC_vs_motion": 176.00160034602047,
+        "axis_ratio": 0.6612659793095098
+      }
+    ],
+    "astropy_crosscheck": {
+      "n_epochs": 43,
+      "max_earth_vector_diff_arcsec": {
+        "value": 0.03623894620641954,
+        "unit": "arcsec",
+        "n": 43,
+        "note": "ours vs astropy GCRS(500 au) - GCRS(infinity), same barycentric reference direction"
+      },
+      "max_convention_diff_arcsec": {
+        "value": 1.929982922712769,
+        "unit": "arcsec",
+        "n": 43,
+        "note": "ours (apparent - heliocentric direction) vs astropy (apparent - barycentric direction); the Sun's barycentric offset / D"
+      },
+      "convention_diff_px": 0.3138183614167104
+    },
+    "curvature_residual": {
+      "one_year": {
+        "motion_arcsec_yr": [
+          115.91664721134158,
+          -0.5104951023853912
+        ],
+        "max_arcsec": 4.844622864652592e-06,
+        "max_px": 7.877435552280637e-07,
+        "span_days": 365.25
+      },
+      "visit_span": {
+        "motion_arcsec_yr": [
+          115.9166473740898,
+          -0.5104951031012258
+        ],
+        "max_arcsec": 5.0045608190885105e-06,
+        "max_px": 8.137497266810585e-07,
+        "span_days": 379.36781862821954
+      }
+    },
+    "motion_true_arcsec_yr": [
+      115.91664707454655,
+      -0.5104951017856283
+    ],
+    "brightness": {
+      "bright_ab": 12.8,
+      "faint_ab": 13.4,
+      "step1_5sigma_ab": {
+        "value": 13.581211962198342,
+        "unit": "AB",
+        "note": "5 sigma per lobe of the filtered A-B stack difference, step 1 untracked"
+      },
+      "step2_5sigma_ab": {
+        "value": 16.020526288322614,
+        "unit": "AB",
+        "n": 110,
+        "note": "5 sigma in the tracked stack of visit C at the true D, single known-D trial"
+      }
+    },
+    "pairs": {
+      "bright": {
+        "ab": 12.8,
+        "flux_ujy": 0.027543951749309598,
+        "snr_pos_lobe": 14.965162833927849,
+        "snr_neg_lobe": 8.117797328255627,
+        "blind_global_extremum_on_body": [
+          false,
+          false
+        ],
+        "other_pos_blobs_gt5": 87,
+        "other_neg_blobs_gt5": 182,
+        "pair_stat_sigma": 6.896144545878622,
+        "other_pairs_gt5": 107,
+        "smear_px": {
+          "A": 9.721669653047655,
+          "B": 7.903197738167393
+        },
+        "centroid_err_px": [
+          [
+            11.64489455461677,
+            12.686182259779798
+          ],
+          [
+            1.8717932088497946,
+            -2.640300546584257
+          ]
+        ],
+        "separation_measured_px": 33.426042364619725,
+        "separation_true_px": 20.96784140004696,
+        "motion_measured_px_yr": 33.82568117897743
+      },
+      "faint": {
+        "ab": 13.4,
+        "flux_ujy": 0.015849889868640415,
+        "snr_pos_lobe": 14.965162833927652,
+        "snr_neg_lobe": 8.117797328255124,
+        "blind_global_extremum_on_body": [
+          false,
+          false
+        ],
+        "other_pos_blobs_gt5": 87,
+        "other_neg_blobs_gt5": 182,
+        "pair_stat_sigma": 6.896143340416794,
+        "other_pairs_gt5": 107,
+        "smear_px": {
+          "A": 9.721669653047655,
+          "B": 7.903197738167393
+        },
+        "centroid_err_px": [
+          [
+            11.64489455461677,
+            12.686182259779798
+          ],
+          [
+            1.8717932059542193,
+            -2.640300521316931
+          ]
+        ],
+        "separation_measured_px": 33.42604235718763,
+        "separation_true_px": 20.96784140004696,
+        "motion_measured_px_yr": 33.825681171444224
+      }
+    },
+    "oracle_position_check_px": 3.21790190475218e-07,
+    "null_dscan_peak_snr": {
+      "n": 40,
+      "median": 377.0488633263542,
+      "max": 5142.807036761897,
+      "q95": 1200.2385165135743
+    },
+    "recovered": {
+      "bright_naive": {
+        "ab": 12.8,
+        "D_au": 431.99059762065065,
+        "bias_percent": -13.601880475869866,
+        "stat_interval_au": [
+          432.00000000003,
+          432.00000000003
+        ],
+        "bootstrap_sd_au": 0.021413945130082344,
+        "peak_snr": 1580.0867834466958,
+        "peak_above_null_q95": true
+      },
+      "bright_interp": {
+        "ab": 12.8,
+        "D_au": 494.4500697625047,
+        "bias_percent": -1.1099860474990564,
+        "stat_interval_au": [
+          494.5000000000442,
+          494.5000000000442
+        ],
+        "bootstrap_sd_au": 0.0577671298603421,
+        "peak_snr": 669.9246001742895,
+        "peak_above_null_q95": false
+      },
+      "bright_oracle": {
+        "ab": 12.8,
+        "D_au": 412.0899194863968,
+        "bias_percent": -17.582016102720644,
+        "stat_interval_au": [
+          412.1000000000255,
+          412.1000000000255
+        ],
+        "bootstrap_sd_au": 39.7887956114021,
+        "peak_snr": 68.20533792348792,
+        "peak_above_null_q95": false
+      },
+      "faint_naive": {
+        "ab": 13.4,
+        "D_au": 431.99059762065065,
+        "bias_percent": -13.601880475869866,
+        "stat_interval_au": [
+          432.00000000003,
+          432.00000000003
+        ],
+        "bootstrap_sd_au": 0.023585870834814986,
+        "peak_snr": 1580.0867834466958,
+        "peak_above_null_q95": true
+      },
+      "faint_interp": {
+        "ab": 13.4,
+        "D_au": 494.45006976959644,
+        "bias_percent": -1.1099860460807132,
+        "stat_interval_au": [
+          494.5000000000442,
+          494.5000000000442
+        ],
+        "bootstrap_sd_au": 0.0559355529345805,
+        "peak_snr": 669.9246072566472,
+        "peak_above_null_q95": false
+      },
+      "faint_oracle": {
+        "ab": 13.4,
+        "D_au": 412.0899194863968,
+        "bias_percent": -17.582016102720644,
+        "stat_interval_au": [
+          412.1000000000255,
+          412.1000000000255
+        ],
+        "bootstrap_sd_au": 36.09960621426771,
+        "peak_snr": 68.20533792348792,
+        "peak_above_null_q95": false
+      }
+    },
+    "px_per_percent": {
+      "A_to_C": {
+        "value": 1.2710698709157218,
+        "unit": "px per 1 percent of D",
+        "note": "203 d"
+      },
+      "A_to_B": {
+        "value": 0.03058138243775541,
+        "unit": "px per 1 percent of D",
+        "note": "361 d"
+      },
+      "per_exposure_C_range": [
+        1.2260373725953284,
+        1.2711244106396313
+      ]
+    },
+    "wrong_distance_table": [
+      {
+        "brightness": "bright",
+        "pct": -10,
+        "D": 450.0,
+        "snr_F": 4.366518719663211,
+        "snr_stack": 29.437671399996795,
+        "off_E": -11.165345980660518,
+        "off_N": 5.702320638562586
+      },
+      {
+        "brightness": "bright",
+        "pct": -5,
+        "D": 475.0,
+        "snr_F": 56.7749002457764,
+        "snr_stack": 113.30035467213912,
+        "off_E": -12.25714848148958,
+        "off_N": -8.987192693611384
+      },
+      {
+        "brightness": "bright",
+        "pct": -1,
+        "D": 495.0,
+        "snr_F": 629.7580040514605,
+        "snr_stack": 144.4524389446194,
+        "off_E": -6.909573974818034,
+        "off_N": -9.8489406375218
+      },
+      {
+        "brightness": "bright",
+        "pct": 0,
+        "D": 500.0,
+        "snr_F": 34.38664995933612,
+        "snr_stack": 145.15061451213043,
+        "off_E": -5.638513055743957,
+        "off_N": -10.0718570377063
+      },
+      {
+        "brightness": "bright",
+        "pct": 1,
+        "D": 505.0,
+        "snr_F": -0.7125350262202707,
+        "snr_stack": 151.90037302683783,
+        "off_E": -4.365931016320083,
+        "off_N": -10.214837710679566
+      },
+      {
+        "brightness": "bright",
+        "pct": 5,
+        "D": 525.0,
+        "snr_F": 13.283987592446017,
+        "snr_stack": 164.43535100020506,
+        "off_E": 0.36452556865684116,
+        "off_N": -11.03365296915783
+      },
+      {
+        "brightness": "bright",
+        "pct": 10,
+        "D": 550.0,
+        "snr_F": 17.04185241498671,
+        "snr_stack": 183.38484240718492,
+        "off_E": 5.833888756264411,
+        "off_N": -11.902451895367888
+      },
+      {
+        "brightness": "faint",
+        "pct": -10,
+        "D": 450.0,
+        "snr_F": 4.366518670265768,
+        "snr_stack": 29.437671547057406,
+        "off_E": -11.16534597806329,
+        "off_N": 5.702320636184034
+      },
+      {
+        "brightness": "faint",
+        "pct": -5,
+        "D": 475.0,
+        "snr_F": 56.77490008220985,
+        "snr_stack": 113.30035459154418,
+        "off_E": -12.25714848584414,
+        "off_N": -8.987192706424123
+      },
+      {
+        "brightness": "faint",
+        "pct": -1,
+        "D": 495.0,
+        "snr_F": 629.7580108703341,
+        "snr_stack": 144.45243991127896,
+        "off_E": -6.909573969790987,
+        "off_N": -9.848940646372048
+      },
+      {
+        "brightness": "faint",
+        "pct": 0,
+        "D": 500.0,
+        "snr_F": 34.38664984123216,
+        "snr_stack": 145.1506139881806,
+        "off_E": -5.638513052527543,
+        "off_N": -10.071857046633422
+      },
+      {
+        "brightness": "faint",
+        "pct": 1,
+        "D": 505.0,
+        "snr_F": -0.7125350383292965,
+        "snr_stack": 151.9003713552691,
+        "off_E": -4.365931014955137,
+        "off_N": -10.214837718263054
+      },
+      {
+        "brightness": "faint",
+        "pct": 5,
+        "D": 525.0,
+        "snr_F": 13.283987771570562,
+        "snr_stack": 164.43535207351303,
+        "off_E": 0.3645255684859485,
+        "off_N": -11.033652984400248
+      },
+      {
+        "brightness": "faint",
+        "pct": 10,
+        "D": 550.0,
+        "snr_F": 17.0418526756287,
+        "snr_stack": 183.3848406978156,
+        "off_E": 5.833888754019947,
+        "off_N": -11.902451908155014
+      }
+    ],
+    "measured_offset_px_per_percent": 2.9679363469955264,
+    "limiting_magnitude": {
+      "step1_5sigma_ab": 13.581211962198342,
+      "step2_5sigma_known_D_ab": 16.020526288322614,
+      "step2_null95_dscan_ab": 10.069782400476015,
+      "two_step_ab": 10.069782400476015,
+      "criterion": "step 1: both lobes of the filtered visit-stack difference >= 5 sigma (robust scatter of the whole filtered difference); step 2: tracked stack of visit C, S/N at the D-scan peak above the 95th percentile of the null D-scan peaks (random start offsets)"
+    },
+    "snr_at_true_D": {
+      "bright": 21.79773811966721,
+      "faint": 21.79769702765377
+    },
+    "orbit": {
+      "a_au": 500.0,
+      "period_yr": 11180.339887498949,
+      "rate_arcsec_yr": 115.91776395358909,
+      "inc_deg": 28.119574827737328,
+      "ecl_lat_deg": 28.119574827737328,
+      "psf": "archive ePSF (wp.inject), flat F_nu",
+      "n_exposures": {
+        "A": 108,
+        "B": 113,
+        "C": 110
+      }
+    },
+    "step1_centroid_note": "centroid of the smeared arc = flux-weighted mean position; reference epoch taken as the exposure-mean MJD of the visit"
+  },
+  "variable_demo": {
+    "rdra": {
+      "n_exposures": {
+        "value": 539,
+        "unit": "exposures",
+        "script": "scripts/12_variables.py",
+        "note": "SIA2, DR1+QR3 deduplicated"
+      },
+      "n_sampled_checked": {
+        "value": 56,
+        "unit": "exposures",
+        "n": 60,
+        "script": "scripts/12_variables.py",
+        "note": "evenly spaced in time"
+      },
+      "n_saturated": {
+        "value": 56,
+        "unit": "exposures",
+        "n": 56,
+        "script": "scripts/12_variables.py",
+        "note": "central 5x5 with OVERFLOW (1), NONLINEAR (15) or BLOOM (26)"
+      },
+      "per_detector_saturated": {
+        "D1": {
+          "value": 7,
+          "unit": "exposures",
+          "n": 7,
+          "script": "scripts/12_variables.py"
+        },
+        "D2": {
+          "value": 7,
+          "unit": "exposures",
+          "n": 7,
+          "script": "scripts/12_variables.py"
+        },
+        "D3": {
+          "value": 13,
+          "unit": "exposures",
+          "n": 13,
+          "script": "scripts/12_variables.py"
+        },
+        "D4": {
+          "value": 13,
+          "unit": "exposures",
+          "n": 13,
+          "script": "scripts/12_variables.py"
+        },
+        "D5": {
+          "value": 9,
+          "unit": "exposures",
+          "n": 9,
+          "script": "scripts/12_variables.py"
+        },
+        "D6": {
+          "value": 7,
+          "unit": "exposures",
+          "n": 7,
+          "script": "scripts/12_variables.py"
+        }
+      },
+      "download_bytes": {
+        "value": 0,
+        "unit": "bytes",
+        "script": "scripts/12_variables.py",
+        "note": "headers and cutouts fetched this run (0 when cached)"
+      }
+    },
+    "barnard_cuts": {
+      "total": {
+        "value": 26,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      },
+      "g_window": {
+        "value": 20,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      },
+      "ruwe": {
+        "value": 20,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      },
+      "isolated": {
+        "value": 8,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      },
+      "in_cutout": {
+        "value": 6,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      }
+    },
+    "epsindi_cuts": {
+      "total": {
+        "value": 5,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      },
+      "g_window": {
+        "value": 3,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      },
+      "ruwe": {
+        "value": 2,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      },
+      "isolated": {
+        "value": 2,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      },
+      "in_cutout": {
+        "value": 1,
+        "unit": "stars",
+        "script": "scripts/12_variables.py"
+      }
+    },
+    "amplitude_measure": "std_dev_mag_g_fov from gaiadr3.vari_summary (standard deviation of the G magnitudes of the field-of-view transits)",
+    "candidates": {
+      "4472838904098844288": {
+        "field": "barnard",
+        "G": {
+          "value": 15.405831336975098,
+          "unit": "mag",
+          "script": "scripts/12_variables.py"
+        },
+        "std_dev_mag_g_fov": {
+          "value": 0.2270260453224182,
+          "unit": "mag",
+          "n": 279,
+          "script": "scripts/12_variables.py",
+          "note": "Gaia DR3 vari_summary"
+        },
+        "accepted_fraction": {
+          "value": 0.8649425287356322,
+          "unit": "fraction",
+          "n": 348,
+          "script": "scripts/12_variables.py"
+        }
+      },
+      "4472819623984651392": {
+        "field": "barnard",
+        "G": {
+          "value": 12.657776832580566,
+          "unit": "mag",
+          "script": "scripts/12_variables.py"
+        },
+        "std_dev_mag_g_fov": {
+          "value": 0.16071350872516632,
+          "unit": "mag",
+          "n": 190,
+          "script": "scripts/12_variables.py",
+          "note": "Gaia DR3 vari_summary"
+        },
+        "accepted_fraction": {
+          "value": 0.8595988538681948,
+          "unit": "fraction",
+          "n": 349,
+          "script": "scripts/12_variables.py"
+        }
+      },
+      "4472841584158037248": {
+        "field": "barnard",
+        "G": {
+          "value": 15.247688293457031,
+          "unit": "mag",
+          "script": "scripts/12_variables.py"
+        },
+        "std_dev_mag_g_fov": {
+          "value": 0.1046326607465744,
+          "unit": "mag",
+          "n": 295,
+          "script": "scripts/12_variables.py",
+          "note": "Gaia DR3 vari_summary"
+        },
+        "accepted_fraction": {
+          "value": 0.8720238095238095,
+          "unit": "fraction",
+          "n": 336,
+          "script": "scripts/12_variables.py"
+        }
+      },
+      "4472807396218715648": {
+        "field": "barnard",
+        "G": {
+          "value": 15.861357688903809,
+          "unit": "mag",
+          "script": "scripts/12_variables.py"
+        },
+        "std_dev_mag_g_fov": {
+          "value": 0.07568701356649399,
+          "unit": "mag",
+          "n": 288,
+          "script": "scripts/12_variables.py",
+          "note": "Gaia DR3 vari_summary"
+        },
+        "accepted_fraction": {
+          "value": 0.8662790697674418,
+          "unit": "fraction",
+          "n": 344,
+          "script": "scripts/12_variables.py"
+        }
+      },
+      "4472811244508710656": {
+        "field": "barnard",
+        "G": {
+          "value": 15.046826362609863,
+          "unit": "mag",
+          "script": "scripts/12_variables.py"
+        },
+        "std_dev_mag_g_fov": {
+          "value": 0.009121176786720753,
+          "unit": "mag",
+          "n": 330,
+          "script": "scripts/12_variables.py",
+          "note": "Gaia DR3 vari_summary"
+        },
+        "accepted_fraction": {
+          "value": 0.8767908309455588,
+          "unit": "fraction",
+          "n": 349,
+          "script": "scripts/12_variables.py"
+        }
+      },
+      "6412584123677794688": {
+        "field": "epsindi",
+        "G": {
+          "value": 15.06415843963623,
+          "unit": "mag",
+          "script": "scripts/12_variables.py"
+        },
+        "std_dev_mag_g_fov": {
+          "value": 0.007344177458435297,
+          "unit": "mag",
+          "n": 414,
+          "script": "scripts/12_variables.py",
+          "note": "Gaia DR3 vari_summary"
+        },
+        "accepted_fraction": {
+          "value": 0.8014184397163121,
+          "unit": "fraction",
+          "n": 423,
+          "script": "scripts/12_variables.py"
+        }
+      },
+      "4472890718584338432": {
+        "field": "barnard",
+        "G": {
+          "value": 14.08649730682373,
+          "unit": "mag",
+          "script": "scripts/12_variables.py"
+        },
+        "std_dev_mag_g_fov": {
+          "value": 0.005548545159399509,
+          "unit": "mag",
+          "n": 416,
+          "script": "scripts/12_variables.py",
+          "note": "Gaia DR3 vari_summary"
+        },
+        "accepted_fraction": {
+          "value": 0.8348082595870207,
+          "unit": "fraction",
+          "n": 339,
+          "script": "scripts/12_variables.py"
+        }
+      }
+    },
+    "chosen": {
+      "4472838904098844288": {
+        "variable_id": "4472838904098844288",
+        "field": "barnard",
+        "G": 15.405831336975098,
+        "std_dev_mag_g_fov": 0.2270260453224182,
+        "range_mag_g_fov": 0.7938119769096375,
+        "partner_id": "4472844126778698880",
+        "variable": {
+          "rms_z_matched": {
+            "value": 2.336411371757942,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_matched": {
+            "value": 7.749002240376949,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "max_abs_frac_matched": {
+            "value": 56.70100319706768,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "rms_z_plain": {
+            "value": 1.2341977839871843,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_plain": {
+            "value": 6.592304912694996,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_z_paired_stack": {
+            "value": 1.5070439723067146,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          }
+        },
+        "constant": {
+          "rms_z_matched": {
+            "value": 0.9061003543086236,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_matched": {
+            "value": 1.8258077519498583,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "max_abs_frac_matched": {
+            "value": 26.347959780224826,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "rms_z_plain": {
+            "value": 0.9867010392460241,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_plain": {
+            "value": 4.290791143398779,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_z_paired_stack": {
+            "value": 0.7984903725808048,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          }
+        }
+      },
+      "4472819623984651392": {
+        "variable_id": "4472819623984651392",
+        "field": "barnard",
+        "G": 12.657776832580566,
+        "std_dev_mag_g_fov": 0.16071350872516632,
+        "range_mag_g_fov": 0.6470373868942261,
+        "partner_id": "4472831551114789632",
+        "variable": {
+          "rms_z_matched": {
+            "value": 18.212101492147717,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_matched": {
+            "value": 13.874580558581902,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "max_abs_frac_matched": {
+            "value": 46.40256487716218,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "rms_z_plain": {
+            "value": 10.791564736729693,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_plain": {
+            "value": 8.94824754873263,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_z_paired_stack": {
+            "value": 7.684353511093358,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          }
+        },
+        "constant": {
+          "rms_z_matched": {
+            "value": 0.9272937779529303,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_matched": {
+            "value": 0.5654673169375771,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "max_abs_frac_matched": {
+            "value": 3.170013060598505,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "rms_z_plain": {
+            "value": 0.8644145198888106,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_plain": {
+            "value": 1.233636034503371,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_z_paired_stack": {
+            "value": 0.8370048528411229,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          }
+        }
+      },
+      "4472841584158037248": {
+        "variable_id": "4472841584158037248",
+        "field": "barnard",
+        "G": 15.247688293457031,
+        "std_dev_mag_g_fov": 0.1046326607465744,
+        "range_mag_g_fov": 0.2995535731315613,
+        "partner_id": "4472831825992700288",
+        "variable": {
+          "rms_z_matched": {
+            "value": 2.638439259410059,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_matched": {
+            "value": 8.006948754071699,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "max_abs_frac_matched": {
+            "value": 47.61213411821202,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "rms_z_plain": {
+            "value": 1.737341719365378,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_plain": {
+            "value": 12.465938075838432,
+            "unit": "percent",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_z_paired_stack": {
+            "value": 1.9538531611122512,
+            "unit": "z",
+            "n": 18,
+            "script": "scripts/12_variables.py"
+          }
+        },
+        "constant": {
+          "rms_z_matched": {
+            "value": 1.2514087591109666,
+            "unit": "z",
+            "n": 17,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_matched": {
+            "value": 2.491265069154381,
+            "unit": "percent",
+            "n": 17,
+            "script": "scripts/12_variables.py"
+          },
+          "max_abs_frac_matched": {
+            "value": 18.849181257237582,
+            "unit": "percent",
+            "n": 17,
+            "script": "scripts/12_variables.py"
+          },
+          "rms_z_plain": {
+            "value": 1.0494090849085453,
+            "unit": "z",
+            "n": 17,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_frac_plain": {
+            "value": 5.295063680685204,
+            "unit": "percent",
+            "n": 17,
+            "script": "scripts/12_variables.py"
+          },
+          "median_abs_z_paired_stack": {
+            "value": 0.7446963411258513,
+            "unit": "z",
+            "n": 17,
+            "script": "scripts/12_variables.py"
+          }
+        }
+      }
+    },
+    "_text": [
+      "\n=== a. R Dra saturation check ===",
+      "R Dra (Gaia DR3 1648328016354496384, G 6.4, Mira) SIA2 at (248.16723, 66.75502): 539 exposures, MJD 60812.0 to 61237.9",
+      "   sampled 60 exposures evenly in time (60), 56 on detector with tiny cutouts (half=6); download 0.0 MB; errors 0",
+      "   exposures checked: 56; central 5x5 with OVERFLOW/NONLINEAR/BLOOM: 56",
+      "   D1: 7/7 saturated (OVERFLOW 7, NONLINEAR 0, BLOOM 7)",
+      "   D2: 7/7 saturated (OVERFLOW 7, NONLINEAR 0, BLOOM 7)",
+      "   D3: 13/13 saturated (OVERFLOW 13, NONLINEAR 0, BLOOM 13)",
+      "   D4: 13/13 saturated (OVERFLOW 13, NONLINEAR 0, BLOOM 13)",
+      "   D5: 9/9 saturated (OVERFLOW 9, NONLINEAR 0, BLOOM 9)",
+      "   D6: 7/7 saturated (OVERFLOW 7, NONLINEAR 0, BLOOM 7)",
+      "   median peak 3x3 value 3622 MJy/sr where finite (31 of 56 have NaN in the 3x3, i.e. masked); Barnard's Star peaks near 1000 MJy/sr",
+      "   => R Dra is unusable for this readout: saturated in every sampled exposure (like Barnard's Star and RW Aur).",
+      "\n=== b. known Gaia variables in the Barnard and Eps Indi cutouts ===",
+      "barnard: Gaia DR3 phot_variable_flag = VARIABLE, G 10-17, within 0.3 deg: 26 sources",
+      "   cuts: G 11-16 20, RUWE < 1.4 20, isolated (no G < G+3 within 20\", none G<9 within 3') 8, inside the central 280 px of the cutout 6",
+      "epsindi: Gaia DR3 phot_variable_flag = VARIABLE, G 10-17, within 0.3 deg: 5 sources",
+      "   cuts: G 11-16 3, RUWE < 1.4 2, isolated (no G < G+3 within 20\", none G<9 within 3') 2, inside the central 280 px of the cutout 1",
+      "7 isolated, unflagged candidate variables; measuring all of them in every exposure (flags checked by measure_pixels)",
+      "Amplitude measure: std_dev_mag_g_fov from gaiadr3.vari_summary (standard deviation of the G magnitudes of the field-of-view transits)",
+      "Candidates (sorted by amplitude): Gaia id, field, G, BP-RP, amplitude std (mag), range (mag), Gaia class flags, accepted/in-cutout exposures, saturated-flag frames",
+      "   4472838904098844288 barnard  G 15.41 BP-RP 0.81  std 0.227 range 0.794  [rrl]  accepted 86% of 348; saturated frames 2",
+      "   4472819623984651392 barnard  G 12.66 BP-RP 0.59  std 0.161 range 0.647  [ecl]  accepted 86% of 349; saturated frames 2",
+      "   4472841584158037248 barnard  G 15.25 BP-RP 0.79  std 0.105 range 0.300  [ecl,shortt]  accepted 87% of 336; saturated frames 0",
+      "   4472807396218715648 barnard  G 15.86 BP-RP 0.80  std 0.076 range 0.239  [ecl]  accepted 87% of 344; saturated frames 3",
+      "   4472811244508710656 barnard  G 15.05 BP-RP 1.16  std 0.009 range 0.038  [classified-none]  accepted 88% of 349; saturated frames 4",
+      "   6412584123677794688 epsindi  G 15.06 BP-RP 1.23  std 0.007 range 0.032  [classified-none]  accepted 80% of 423; saturated frames 9",
+      "   4472890718584338432 barnard  G 14.09 BP-RP 2.21  std 0.006 range 0.027  [classified-none]  accepted 83% of 339; saturated frames 2",
+      "Usable (accepted >= 50% of in-cutout exposures and saturation flags in the 5x5 in at most 5% of them; those few frames, flagged by a bright neighbour, are dropped by measure_pixels): 7",
+      "Partner for 4472838904098844288 (G 15.41, BP-RP 0.81): Gaia 4472844126778698880 G 15.26 BP-RP 1.07, accepted 89% of 346",
+      "Partner for 4472819623984651392 (G 12.66, BP-RP 0.59): Gaia 4472831551114789632 G 12.91 BP-RP 1.07, accepted 89% of 354",
+      "Partner for 4472841584158037248 (G 15.25, BP-RP 0.79): Gaia 4472831825992700288 G 15.02 BP-RP 1.02, accepted 87% of 355",
+      "\n=== c. matched and plain visit-to-visit differences (per detector and visit pair) ===",
+      "variable Gaia 4472838904098844288 (barnard, G 15.41): 18 detector x visit-pair comparisons; matched: median |z| 1.23, rms z 2.34, median |frac| 7.7%, max |frac| 56.7%;  plain best pair: median |z| 0.79, rms z 1.23, median |frac| 6.6%;  paired stack: median |z| 1.51, median |frac| 7.1%",
+      "constant Gaia 4472844126778698880 (barnard, G 15.26): 18 detector x visit-pair comparisons; matched: median |z| 0.71, rms z 0.91, median |frac| 1.8%, max |frac| 26.3%;  plain best pair: median |z| 0.76, rms z 0.99, median |frac| 4.3%;  paired stack: median |z| 0.80, median |frac| 2.1%",
+      "   detail per detector and visit pair (matched frac +/- err, z | plain frac, z | n_w0):",
+      "      variable D1 v0->v2: matched  -11.3% (z   -5.8) | plain   -5.3% (z   -1.4) | n_w0 2  nA/nB 18/15",
+      "      variable D1 v0->v4: matched   -4.6% (z   -2.4) | plain   -1.8% (z   -0.4) | n_w0 2  nA/nB 18/17",
+      "      variable D1 v2->v4: matched   +8.4% (z   +4.6) | plain   +0.5% (z   +0.1) | n_w0 3  nA/nB 15/17",
+      "      variable D2 v0->v2: matched   +1.5% (z   +0.7) | plain   +3.2% (z   +0.8) | n_w0 2  nA/nB 16/17",
+      "      variable D2 v0->v4: matched   +4.4% (z   +2.5) | plain   +7.0% (z   +2.1) | n_w0 3  nA/nB 16/21",
+      "      variable D2 v2->v4: matched   +2.4% (z   +1.3) | plain   -6.2% (z   -1.4) | n_w0 2  nA/nB 17/21",
+      "      variable D3 v0->v2: matched   +7.5% (z   +3.4) | plain  +12.7% (z   +3.1) | n_w0 3  nA/nB 16/17",
+      "      variable D3 v0->v4: matched   +1.4% (z   +0.6) | plain   +2.9% (z   +0.6) | n_w0 2  nA/nB 16/17",
+      "      variable D3 v2->v4: matched   -2.1% (z   -0.8) | plain   +2.1% (z   +0.4) | n_w0 2  nA/nB 17/17",
+      "      variable D4 v0->v2: matched   -7.2% (z   -2.2) | plain   -3.1% (z   -0.5) | n_w0 3  nA/nB 15/16",
+      "      variable D4 v0->v4: matched   +0.9% (z   +0.2) | plain   +7.7% (z   +1.3) | n_w0 3  nA/nB 15/11",
+      "      variable D4 v2->v4: matched   +8.0% (z   +2.2) | plain   +9.7% (z   +1.6) | n_w0 3  nA/nB 16/11",
+      "      variable D5 v0->v2: matched  -12.4% (z   -0.9) | plain   -3.9% (z   -0.2) | n_w0 3  nA/nB 17/16",
+      "      variable D5 v0->v4: matched  -18.9% (z   -1.5) | plain  -16.0% (z   -0.7) | n_w0 3  nA/nB 17/15",
+      "      variable D5 v2->v4: matched  -20.1% (z   -1.2) | plain  -30.5% (z   -1.1) | n_w0 2  nA/nB 16/15",
+      "      variable D6 v0->v2: matched  +56.7% (z   +1.1) | plain  +11.0% (z   +0.2) | n_w0 2  nA/nB 11/17",
+      "      variable D6 v0->v4: matched  +47.8% (z   +0.7) | plain  +77.7% (z   +0.8) | n_w0 1  nA/nB 11/13",
+      "      variable D6 v2->v4: matched  -36.7% (z   -0.9) | plain  +89.3% (z   +1.1) | n_w0 1  nA/nB 17/13",
+      "      constant D1 v0->v2: matched   -2.2% (z   -1.3) | plain   -0.5% (z   -0.2) | n_w0 3  nA/nB 15/17",
+      "      constant D1 v0->v4: matched   -1.4% (z   -0.9) | plain   -4.4% (z   -1.4) | n_w0 3  nA/nB 15/16",
+      "      constant D1 v2->v4: matched   +0.1% (z   +0.1) | plain   +1.4% (z   +0.4) | n_w0 3  nA/nB 17/16",
+      "      constant D2 v0->v2: matched   +2.3% (z   +1.4) | plain   +3.5% (z   +1.0) | n_w0 2  nA/nB 16/16",
+      "      constant D2 v0->v4: matched   +0.1% (z   +0.1) | plain   -1.2% (z   -0.3) | n_w0 2  nA/nB 16/22",
+      "      constant D2 v2->v4: matched   -1.6% (z   -0.9) | plain   -3.8% (z   -1.0) | n_w0 2  nA/nB 16/22",
+      "      constant D3 v0->v2: matched   +1.4% (z   +0.8) | plain   +3.6% (z   +1.1) | n_w0 3  nA/nB 17/16",
+      "      constant D3 v0->v4: matched   +2.1% (z   +1.2) | plain   -6.2% (z   -1.6) | n_w0 2  nA/nB 17/15",
+      "      constant D3 v2->v4: matched   +1.0% (z   +0.6) | plain   -9.2% (z   -2.3) | n_w0 2  nA/nB 16/15",
+      "      constant D4 v0->v2: matched   +2.4% (z   +0.8) | plain   +4.5% (z   +0.9) | n_w0 2  nA/nB 13/14",
+      "      constant D4 v0->v4: matched   +3.7% (z   +1.6) | plain   +1.8% (z   +0.4) | n_w0 3  nA/nB 13/16",
+      "      constant D4 v2->v4: matched   +0.4% (z   +0.1) | plain   -4.2% (z   -0.7) | n_w0 2  nA/nB 14/16",
+      "      constant D5 v0->v2: matched   +6.1% (z   +0.6) | plain  +10.2% (z   +0.6) | n_w0 2  nA/nB 15/17",
+      "      constant D5 v0->v4: matched   -0.6% (z   -0.1) | plain   +1.0% (z   +0.1) | n_w0 2  nA/nB 15/20",
+      "      constant D5 v2->v4: matched   -3.8% (z   -0.5) | plain  +14.2% (z   +0.8) | n_w0 2  nA/nB 17/20",
+      "      constant D6 v0->v2: matched   -1.3% (z   -0.1) | plain  -27.3% (z   -0.7) | n_w0 2  nA/nB 12/17",
+      "      constant D6 v0->v4: matched   -9.5% (z   -0.6) | plain   +9.2% (z   +0.3) | n_w0 2  nA/nB 12/17",
+      "      constant D6 v2->v4: matched  -26.3% (z   -1.7) | plain  -32.1% (z   -1.1) | n_w0 3  nA/nB 17/17",
+      "   matched flux per visit at up to 3 common wavelengths per detector, variable Gaia 4472838904098844288 (MJy/sr summed): w0 [um]; flux relative to the first visit",
+      "      D1 w0 0.871: v0 1.000+/-0.021  v2 1.403+/-0.028  v4 1.327+/-0.023",
+      "      D1 w0 1.003: v0 1.000+/-0.018  v2 0.912+/-0.016  v4 0.783+/-0.016",
+      "      D2 w0 1.265: v0 1.000+/-0.021  v2 0.955+/-0.019  v4 0.994+/-0.018",
+      "      D2 w0 1.457: v0 1.000+/-0.019  v2 0.989+/-0.020  v4 0.925+/-0.018",
+      "      D3 w0 1.946: v0 1.000+/-0.021  v2 0.887+/-0.023  v4 0.973+/-0.022",
+      "      D3 w0 2.233: v0 1.000+/-0.029  v2 1.004+/-0.031  v4 0.952+/-0.022",
+      "      D4 w0 2.902: v0 1.000+/-0.038  v2 1.118+/-0.035  v4 1.122+/-0.041",
+      "      D4 w0 3.412: v0 1.000+/-0.034  v2 1.062+/-0.043  v4 0.975+/-0.054",
+      "      D5 w0 3.836: v0 1.000+/-0.247  v2 0.800+/-0.244  v4 1.553+/-0.183",
+      "      D5 w0 4.040: v0 1.000+/-0.141  v2 1.264+/-0.180  v4 1.000+/-0.155",
+      "      D5 w0 4.255: v0 1.000+/-0.170  v2 1.165+/-0.196  v4 1.231+/-0.152",
+      "   same for the constant partner Gaia 4472844126778698880:",
+      "      D1 w0 0.871: v0 1.000+/-0.017  v2 1.017+/-0.018  v4 1.004+/-0.017",
+      "      D1 w0 1.027: v0 1.000+/-0.018  v2 1.041+/-0.020  v4 1.069+/-0.021",
+      "      D2 w0 1.269: v0 1.000+/-0.017  v2 0.981+/-0.021  v4 0.977+/-0.016",
+      "      D2 w0 1.462: v0 1.000+/-0.017  v2 0.957+/-0.016  v4 0.986+/-0.014",
+      "      D3 w0 1.898: v0 1.000+/-0.017  v2 0.961+/-0.017  v4 0.972+/-0.015",
+      "      D3 w0 2.178: v0 1.000+/-0.019  v2 1.032+/-0.024  v4 0.988+/-0.019",
+      "      D4 w0 2.938: v0 1.000+/-0.023  v2 0.955+/-0.021  v4 0.955+/-0.021",
+      "      D4 w0 3.517: v0 1.000+/-0.048  v2 0.943+/-0.038  v4 0.951+/-0.027",
+      "      D5 w0 4.027: v0 1.000+/-0.077  v2 0.929+/-0.072  v4 0.898+/-0.063",
+      "      D5 w0 4.277: v0 1.000+/-0.077  v2 0.943+/-0.114  v4 1.109+/-0.079",
+      "      D6 w0 4.669: v0 1.000+/-0.132  v2 0.818+/-0.154  v4 0.971+/-0.114",
+      "      D6 w0 4.876: v0 1.000+/-0.219  v2 0.915+/-0.220  v4 0.963+/-0.172",
+      "variable Gaia 4472819623984651392 (barnard, G 12.66): 18 detector x visit-pair comparisons; matched: median |z| 8.78, rms z 18.21, median |frac| 13.9%, max |frac| 46.4%;  plain best pair: median |z| 3.04, rms z 10.79, median |frac| 8.9%;  paired stack: median |z| 7.68, median |frac| 10.1%",
+      "constant Gaia 4472831551114789632 (barnard, G 12.91): 18 detector x visit-pair comparisons; matched: median |z| 0.52, rms z 0.93, median |frac| 0.6%, max |frac| 3.2%;  plain best pair: median |z| 0.46, rms z 0.86, median |frac| 1.2%;  paired stack: median |z| 0.84, median |frac| 0.8%",
+      "   detail per detector and visit pair (matched frac +/- err, z | plain frac, z | n_w0):",
+      "      variable D1 v0->v2: matched  +45.4% (z  +43.7) | plain  +38.5% (z  +15.9) | n_w0 2  nA/nB 17/18",
+      "      variable D1 v0->v4: matched   -6.2% (z   -6.5) | plain   -1.6% (z   -0.8) | n_w0 2  nA/nB 17/13",
+      "      variable D1 v2->v4: matched  -46.4% (z  -37.5) | plain  -62.2% (z  -25.4) | n_w0 2  nA/nB 18/13",
+      "      variable D2 v0->v2: matched  -15.5% (z  -15.5) | plain  -37.8% (z  -18.1) | n_w0 2  nA/nB 16/16",
+      "      variable D2 v0->v4: matched  -17.8% (z  -18.6) | plain  -34.3% (z  -17.0) | n_w0 2  nA/nB 16/21",
+      "      variable D2 v2->v4: matched   -1.6% (z   -1.8) | plain   -1.4% (z   -0.8) | n_w0 3  nA/nB 16/21",
+      "      variable D3 v0->v2: matched   -1.0% (z   -1.0) | plain   -0.0% (z   -0.0) | n_w0 3  nA/nB 15/16",
+      "      variable D3 v0->v4: matched  +11.6% (z  +11.8) | plain   +8.8% (z   +4.7) | n_w0 3  nA/nB 15/16",
+      "      variable D3 v2->v4: matched  +14.5% (z  +14.0) | plain   +9.1% (z   +4.8) | n_w0 3  nA/nB 16/16",
+      "      variable D4 v0->v2: matched  +31.9% (z  +20.1) | plain  +41.9% (z  +14.7) | n_w0 2  nA/nB 14/16",
+      "      variable D4 v0->v4: matched  -13.1% (z  -10.6) | plain   -7.7% (z   -3.1) | n_w0 2  nA/nB 14/15",
+      "      variable D4 v2->v4: matched  -43.5% (z  -32.4) | plain  -47.6% (z  -17.2) | n_w0 2  nA/nB 16/15",
+      "      variable D5 v0->v2: matched  -10.6% (z   -4.5) | plain   -2.2% (z   -0.5) | n_w0 2  nA/nB 15/16",
+      "      variable D5 v0->v4: matched  -13.2% (z   -6.9) | plain   +0.4% (z   +0.1) | n_w0 2  nA/nB 15/16",
+      "      variable D5 v2->v4: matched   -1.0% (z   -0.5) | plain   +0.5% (z   +0.1) | n_w0 2  nA/nB 16/16",
+      "      variable D6 v0->v2: matched   -1.3% (z   -0.4) | plain   -4.1% (z   -0.7) | n_w0 2  nA/nB 14/17",
+      "      variable D6 v0->v4: matched  +15.6% (z   +4.9) | plain  +14.0% (z   +2.4) | n_w0 2  nA/nB 14/11",
+      "      variable D6 v2->v4: matched  +18.2% (z   +5.4) | plain  +18.3% (z   +3.0) | n_w0 2  nA/nB 17/11",
+      "      constant D1 v0->v2: matched   +1.1% (z   +1.1) | plain   -0.7% (z   -0.4) | n_w0 3  nA/nB 14/16",
+      "      constant D1 v0->v4: matched   +0.6% (z   +0.6) | plain   -0.2% (z   -0.1) | n_w0 2  nA/nB 14/15",
+      "      constant D1 v2->v4: matched   -0.4% (z   -0.4) | plain   -0.2% (z   -0.1) | n_w0 2  nA/nB 16/15",
+      "      constant D2 v0->v2: matched   -0.4% (z   -0.5) | plain   -3.6% (z   -1.7) | n_w0 2  nA/nB 17/17",
+      "      constant D2 v0->v4: matched   -1.6% (z   -1.8) | plain   -2.9% (z   -1.4) | n_w0 2  nA/nB 17/23",
+      "      constant D2 v2->v4: matched   -0.2% (z   -0.2) | plain   +2.4% (z   +1.4) | n_w0 3  nA/nB 17/23",
+      "      constant D3 v0->v2: matched   -0.6% (z   -0.7) | plain   -0.1% (z   -0.0) | n_w0 2  nA/nB 17/17",
+      "      constant D3 v0->v4: matched   -0.8% (z   -0.8) | plain   +0.4% (z   +0.2) | n_w0 2  nA/nB 17/15",
+      "      constant D3 v2->v4: matched   -0.3% (z   -0.3) | plain   -4.0% (z   -1.9) | n_w0 2  nA/nB 17/15",
+      "      constant D4 v0->v2: matched   -0.1% (z   -0.1) | plain   +0.6% (z   +0.3) | n_w0 3  nA/nB 13/16",
+      "      constant D4 v0->v4: matched   -0.1% (z   -0.1) | plain   +0.7% (z   +0.4) | n_w0 3  nA/nB 13/16",
+      "      constant D4 v2->v4: matched   -0.4% (z   -0.4) | plain   +0.0% (z   +0.0) | n_w0 2  nA/nB 16/16",
+      "      constant D5 v0->v2: matched   +2.2% (z   +1.6) | plain   +1.7% (z   +0.5) | n_w0 2  nA/nB 17/18",
+      "      constant D5 v0->v4: matched   +2.1% (z   +1.6) | plain   +1.9% (z   +0.6) | n_w0 2  nA/nB 17/19",
+      "      constant D5 v2->v4: matched   +0.1% (z   +0.0) | plain   +0.1% (z   +0.0) | n_w0 2  nA/nB 18/19",
+      "      constant D6 v0->v2: matched   -2.7% (z   -1.2) | plain   -4.7% (z   -1.0) | n_w0 2  nA/nB 16/17",
+      "      constant D6 v0->v4: matched   -3.2% (z   -1.5) | plain   -2.2% (z   -0.5) | n_w0 2  nA/nB 16/14",
+      "      constant D6 v2->v4: matched   -0.6% (z   -0.2) | plain   -3.4% (z   -0.8) | n_w0 2  nA/nB 17/14",
+      "   matched flux per visit at up to 3 common wavelengths per detector, variable Gaia 4472819623984651392 (MJy/sr summed): w0 [um]; flux relative to the first visit",
+      "      D1 w0 0.873: v0 1.000+/-0.009  v2 0.754+/-0.008  v4 1.006+/-0.009",
+      "      D1 w0 1.030: v0 1.000+/-0.010  v2 0.399+/-0.005  v4 1.263+/-0.022",
+      "      D2 w0 1.296: v0 1.000+/-0.011  v2 1.320+/-0.013  v4 1.345+/-0.013",
+      "      D2 w0 1.480: v0 1.000+/-0.011  v2 1.141+/-0.011  v4 1.146+/-0.013",
+      "      D3 w0 1.904: v0 1.000+/-0.010  v2 1.012+/-0.011  v4 0.997+/-0.010",
+      "      D3 w0 2.185: v0 1.000+/-0.013  v2 1.025+/-0.012  v4 0.745+/-0.009",
+      "      D4 w0 2.900: v0 1.000+/-0.013  v2 0.864+/-0.011  v4 1.103+/-0.010",
+      "      D4 w0 3.410: v0 1.000+/-0.014  v2 0.503+/-0.015  v4 1.081+/-0.012",
+      "      D5 w0 4.030: v0 1.000+/-0.020  v2 1.128+/-0.021  v4 1.138+/-0.021",
+      "      D5 w0 4.244: v0 1.000+/-0.023  v2 1.226+/-0.028  v4 1.241+/-0.022",
+      "      D6 w0 4.638: v0 1.000+/-0.032  v2 1.005+/-0.031  v4 0.948+/-0.030",
+      "      D6 w0 4.843: v0 1.000+/-0.028  v2 1.001+/-0.030  v4 0.724+/-0.033",
+      "   same for the constant partner Gaia 4472831551114789632:",
+      "      D1 w0 0.869: v0 1.000+/-0.009  v2 0.994+/-0.011  v4 0.997+/-0.009",
+      "      D1 w0 1.001: v0 1.000+/-0.011  v2 0.991+/-0.011  v4 0.997+/-0.010",
+      "      D2 w0 1.272: v0 1.000+/-0.010  v2 0.993+/-0.009  v4 1.015+/-0.009",
+      "      D2 w0 1.465: v0 1.000+/-0.009  v2 1.009+/-0.010  v4 1.009+/-0.008",
+      "      D3 w0 1.858: v0 1.000+/-0.011  v2 0.995+/-0.008  v4 1.009+/-0.010",
+      "      D3 w0 2.132: v0 1.000+/-0.010  v2 1.016+/-0.010  v4 1.008+/-0.009",
+      "      D4 w0 2.964: v0 1.000+/-0.010  v2 0.992+/-0.011  v4 0.992+/-0.013",
+      "      D4 w0 3.482: v0 1.000+/-0.019  v2 1.007+/-0.013  v4 1.014+/-0.009",
+      "      D5 w0 3.826: v0 1.000+/-0.024  v2 0.998+/-0.025  v4 0.999+/-0.027",
+      "      D5 w0 4.030: v0 1.000+/-0.012  v2 0.977+/-0.013  v4 0.961+/-0.015",
+      "      D5 w0 4.244: v0 1.000+/-0.013  v2 1.000+/-0.015  v4 1.009+/-0.013",
+      "      D6 w0 4.631: v0 1.000+/-0.019  v2 1.055+/-0.019  v4 1.064+/-0.023",
+      "      D6 w0 4.836: v0 1.000+/-0.021  v2 0.999+/-0.046  v4 0.995+/-0.023",
+      "variable Gaia 4472841584158037248 (barnard, G 15.25): 18 detector x visit-pair comparisons; matched: median |z| 1.40, rms z 2.64, median |frac| 8.0%, max |frac| 47.6%;  plain best pair: median |z| 1.33, rms z 1.74, median |frac| 12.5%;  paired stack: median |z| 1.95, median |frac| 8.9%",
+      "constant Gaia 4472831825992700288 (barnard, G 15.02): 17 detector x visit-pair comparisons; matched: median |z| 0.60, rms z 1.25, median |frac| 2.5%, max |frac| 18.8%;  plain best pair: median |z| 0.75, rms z 1.05, median |frac| 5.3%;  paired stack: median |z| 0.74, median |frac| 2.3%",
+      "   detail per detector and visit pair (matched frac +/- err, z | plain frac, z | n_w0):",
+      "      variable D1 v0->v2: matched   +5.5% (z   +3.0) | plain   +4.1% (z   +1.1) | n_w0 3  nA/nB 16/16",
+      "      variable D1 v0->v4: matched   +8.9% (z   +4.8) | plain   +0.2% (z   +0.0) | n_w0 3  nA/nB 16/15",
+      "      variable D1 v2->v4: matched   +0.1% (z   +0.1) | plain   +3.7% (z   +0.8) | n_w0 2  nA/nB 16/15",
+      "      variable D2 v0->v2: matched  +11.8% (z   +4.8) | plain   +7.8% (z   +1.9) | n_w0 3  nA/nB 16/16",
+      "      variable D2 v0->v4: matched   -6.7% (z   -3.3) | plain  -10.2% (z   -2.6) | n_w0 3  nA/nB 16/17",
+      "      variable D2 v2->v4: matched  -15.7% (z   -6.0) | plain  -15.5% (z   -3.0) | n_w0 2  nA/nB 16/17",
+      "      variable D3 v0->v2: matched   -0.6% (z   -0.2) | plain  +14.1% (z   +2.1) | n_w0 2  nA/nB 15/16",
+      "      variable D3 v0->v4: matched   +4.0% (z   +1.4) | plain  +21.7% (z   +3.3) | n_w0 2  nA/nB 15/16",
+      "      variable D3 v2->v4: matched   +7.1% (z   +2.4) | plain   -9.5% (z   -1.5) | n_w0 2  nA/nB 16/16",
+      "      variable D4 v0->v2: matched   -7.0% (z   -1.6) | plain  -16.7% (z   -2.2) | n_w0 3  nA/nB 14/15",
+      "      variable D4 v0->v4: matched   +1.3% (z   +0.3) | plain  -10.8% (z   -1.4) | n_w0 3  nA/nB 14/16",
+      "      variable D4 v2->v4: matched  +12.9% (z   +2.5) | plain  +20.2% (z   +2.2) | n_w0 2  nA/nB 15/16",
+      "      variable D5 v0->v2: matched   +4.5% (z   +0.2) | plain  -23.9% (z   -0.7) | n_w0 2  nA/nB 17/15",
+      "      variable D5 v0->v4: matched  -14.1% (z   -1.1) | plain   -6.4% (z   -0.3) | n_w0 3  nA/nB 17/15",
+      "      variable D5 v2->v4: matched  -19.0% (z   -1.2) | plain  -30.7% (z   -1.2) | n_w0 3  nA/nB 15/15",
+      "      variable D6 v0->v2: matched  +34.2% (z   +0.9) | plain  +66.1% (z   +0.9) | n_w0 2  nA/nB 12/16",
+      "      variable D6 v0->v4: matched  -16.0% (z   -0.6) | plain   +4.2% (z   +0.1) | n_w0 2  nA/nB 12/14",
+      "      variable D6 v2->v4: matched  -47.6% (z   -1.4) | plain  -53.7% (z   -0.9) | n_w0 2  nA/nB 16/14",
+      "      constant D1 v0->v2: matched   +2.5% (z   +1.8) | plain   +5.3% (z   +1.7) | n_w0 2  nA/nB 16/17",
+      "      constant D1 v0->v4: matched   +2.7% (z   +1.9) | plain   +5.4% (z   +1.7) | n_w0 2  nA/nB 16/15",
+      "      constant D1 v2->v4: matched   +0.9% (z   +0.6) | plain   +5.3% (z   +1.6) | n_w0 2  nA/nB 17/15",
+      "      constant D2 v0->v2: matched   +1.1% (z   +0.7) | plain   -0.3% (z   -0.1) | n_w0 2  nA/nB 16/18",
+      "      constant D2 v0->v4: matched   +0.8% (z   +0.5) | plain   +0.5% (z   +0.1) | n_w0 2  nA/nB 16/20",
+      "      constant D2 v2->v4: matched   -0.3% (z   -0.3) | plain   -1.1% (z   -0.4) | n_w0 3  nA/nB 18/20",
+      "      constant D3 v0->v2: matched   +0.4% (z   +0.3) | plain   +5.0% (z   +1.4) | n_w0 2  nA/nB 18/17",
+      "      constant D3 v0->v4: matched   +1.8% (z   +1.1) | plain   +1.3% (z   +0.3) | n_w0 2  nA/nB 18/14",
+      "      constant D3 v2->v4: matched   +0.2% (z   +0.1) | plain   -0.1% (z   -0.0) | n_w0 2  nA/nB 17/14",
+      "      constant D4 v0->v2: matched   +1.2% (z   +0.5) | plain   -2.0% (z   -0.4) | n_w0 2  nA/nB 16/14",
+      "      constant D4 v0->v4: matched   -6.4% (z   -1.7) | plain  -13.6% (z   -1.7) | n_w0 1  nA/nB 16/9",
+      "      constant D5 v0->v2: matched  -14.9% (z   -2.2) | plain  -10.5% (z   -0.7) | n_w0 2  nA/nB 16/17",
+      "      constant D5 v0->v4: matched   +4.0% (z   +0.6) | plain   +7.1% (z   +0.5) | n_w0 2  nA/nB 16/20",
+      "      constant D5 v2->v4: matched  +18.8% (z   +2.7) | plain  +17.5% (z   +1.2) | n_w0 2  nA/nB 17/20",
+      "      constant D6 v0->v2: matched  +12.8% (z   +1.0) | plain   +4.6% (z   +0.2) | n_w0 2  nA/nB 15/18",
+      "      constant D6 v0->v4: matched   +5.5% (z   +0.4) | plain  -23.0% (z   -0.8) | n_w0 2  nA/nB 15/15",
+      "      constant D6 v2->v4: matched   -3.8% (z   -0.3) | plain  -45.0% (z   -1.4) | n_w0 2  nA/nB 18/15",
+      "   matched flux per visit at up to 3 common wavelengths per detector, variable Gaia 4472841584158037248 (MJy/sr summed): w0 [um]; flux relative to the first visit",
+      "      D1 w0 0.780: v0 1.000+/-0.036  v2 0.851+/-0.019  v4 0.846+/-0.018",
+      "      D1 w0 0.898: v0 1.000+/-0.017  v2 0.936+/-0.018  v4 0.958+/-0.018",
+      "      D1 w0 1.034: v0 1.000+/-0.021  v2 1.025+/-0.026  v4 0.880+/-0.027",
+      "      D2 w0 1.304: v0 1.000+/-0.027  v2 1.003+/-0.035  v4 1.113+/-0.030",
+      "      D2 w0 1.503: v0 1.000+/-0.023  v2 0.893+/-0.023  v4 1.069+/-0.023",
+      "      D3 w0 1.895: v0 1.000+/-0.030  v2 0.940+/-0.031  v4 0.907+/-0.024",
+      "      D3 w0 2.174: v0 1.000+/-0.029  v2 1.115+/-0.032  v4 1.008+/-0.030",
+      "      D4 w0 3.376: v0 1.000+/-0.051  v2 1.098+/-0.047  v4 0.956+/-0.042",
+      "      D5 w0 4.051: v0 1.000+/-0.211  v2 1.296+/-0.281  v4 1.599+/-0.174",
+      "      D5 w0 4.266: v0 1.000+/-0.126  v2 0.804+/-0.153  v4 0.906+/-0.134",
+      "      D6 w0 4.665: v0 1.000+/-0.287  v2 0.137+/-0.321  v4 1.106+/-0.258",
+      "      D6 w0 4.871: v0 1.000+/-0.368  v2 2.199+/-0.485  v4 1.674+/-0.489",
+      "   same for the constant partner Gaia 4472831825992700288:",
+      "      D1 w0 0.868: v0 1.000+/-0.013  v2 0.995+/-0.015  v4 0.988+/-0.016",
+      "      D1 w0 1.023: v0 1.000+/-0.016  v2 0.967+/-0.015  v4 0.956+/-0.014",
+      "      D2 w0 1.305: v0 1.000+/-0.017  v2 0.993+/-0.015  v4 0.999+/-0.017",
+      "      D2 w0 1.491: v0 1.000+/-0.014  v2 1.016+/-0.015  v4 1.023+/-0.012",
+      "      D3 w0 1.862: v0 1.000+/-0.016  v2 0.972+/-0.015  v4 0.981+/-0.016",
+      "      D3 w0 2.136: v0 1.000+/-0.017  v2 1.020+/-0.018  v4 0.982+/-0.017",
+      "      D4 w0 3.426: v0 1.000+/-0.024  v2 0.954+/-0.027  v4 1.066+/-0.030",
+      "      D5 w0 4.033: v0 1.000+/-0.059  v2 1.347+/-0.088  v4 1.026+/-0.075",
+      "      D5 w0 4.247: v0 1.000+/-0.077  v2 1.009+/-0.082  v4 0.893+/-0.055",
+      "      D6 w0 4.628: v0 1.000+/-0.102  v2 0.621+/-0.098  v4 0.705+/-0.102",
+      "      D6 w0 4.833: v0 1.000+/-0.145  v2 1.252+/-0.185  v4 1.182+/-0.152"
+    ],
+    "_citations": [
+      "Gaia Collaboration 2023, A&A 674, A1 (Gaia DR3 gaia_source, vari_summary)",
+      "Eyer et al. 2023, A&A 674, A13 (Gaia DR3 variability)"
+    ]
+  },
+  "phaseb_error_floor_barnard": {
+    "P1native_floor0.0": {
+      "value": 1.516480897470453,
+      "unit": "z width",
+      "n": 17121,
+      "script": "07c_error_floor.py",
+      "note": "bootstrap err 0.048"
+    },
+    "M2one_floor0.0": {
+      "value": 1.42109428019092,
+      "unit": "z width",
+      "n": 13101,
+      "script": "07c_error_floor.py",
+      "note": "bootstrap err 0.049"
+    },
+    "PS_floor0.0": {
+      "value": 1.741026650948506,
+      "unit": "z width",
+      "n": 1237,
+      "script": "07c_error_floor.py",
+      "note": "bootstrap err 0.103"
+    },
+    "P1native_floor0.02": {
+      "value": 1.0406863561485657,
+      "unit": "z width",
+      "n": 17121,
+      "script": "07c_error_floor.py",
+      "note": "bootstrap err 0.011"
+    },
+    "M2one_floor0.02": {
+      "value": 0.9816815811670562,
+      "unit": "z width",
+      "n": 13220,
+      "script": "07c_error_floor.py",
+      "note": "bootstrap err 0.015"
+    },
+    "PS_floor0.02": {
+      "value": 1.2405142574223662,
+      "unit": "z width",
+      "n": 1237,
+      "script": "07c_error_floor.py",
+      "note": "bootstrap err 0.041"
+    },
+    "P2_floor0.0": {
+      "value": 4.76387488905106,
+      "unit": "z width",
+      "n": 1258,
+      "script": "07c_error_floor.py",
+      "note": "bootstrap err 0.341; floor divided by exposures per stack"
+    },
+    "P2_floor0.02": {
+      "value": 3.410696972002999,
+      "unit": "z width",
+      "n": 1258,
+      "script": "07c_error_floor.py",
+      "note": "bootstrap err 0.155; floor divided by exposures per stack"
     }
   }
 }

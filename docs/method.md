@@ -186,8 +186,8 @@ number of exposures in each stack), Barnard z widths become: plain pair (nearest
 star) 1.52 +/- 0.05 -> 1.04 +/- 0.01; M2 one detector 1.42 +/- 0.05 -> 0.98 +/- 0.02; paired stack
 1.74 +/- 0.10 -> 1.24 +/- 0.04; P2 4.76 +/- 0.34 -> 3.41 +/- 0.16. The floor makes single-pair
 and M2 errors honest; averaged products (PS, P2) stay above 1, which suggests part of the 2 percent
-term is shared by exposures of the same visit and does not average down. Computed by a short
-check on the forced photometry (paired stack per star, detector and visit pair at one channel).
+term is shared by exposures of the same visit and does not average down. Script 07c_error_floor.py
+(paired stack per star, detector and visit pair at one channel).
 
 ### What the gain is made of (controls on identical comparisons, one detector, prereg)
 

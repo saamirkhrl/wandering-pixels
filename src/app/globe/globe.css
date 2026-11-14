@@ -1,0 +1,187 @@
+.globe-view {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--sky);
+}
+
+.globe-view canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+.globe-view canvas:active {
+  cursor: grabbing;
+}
+
+.globe-view canvas:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: -2px;
+}
+
+.globe-intro {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  max-width: 36ch;
+  margin: 0;
+  color: var(--paper-dim);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  pointer-events: none;
+}
+
+.globe-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.globe-marker[hidden] {
+  display: none;
+}
+
+.globe-marker::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--signal);
+  border-radius: 50%;
+}
+
+.globe-marker::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: var(--signal);
+  border-radius: 50%;
+}
+
+.globe-panel {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  width: min(22rem, calc(100% - 32px));
+  padding: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+}
+
+.globe-panel[hidden] {
+  display: none;
+}
+
+.globe-panel p {
+  margin: 0;
+}
+
+.globe-near {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-stretch: 85%;
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+.globe-sub {
+  margin-top: 2px;
+  font-size: 0.9375rem;
+}
+
+.globe-coords {
+  margin-top: 8px;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.globe-msg {
+  font-size: 0.9375rem;
+}
+
+.globe-msg:not(:first-child) {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.globe-msg[hidden] {
+  display: none;
+}
+
+.globe-btn {
+  min-height: var(--control-height);
+  min-width: var(--control-height);
+  padding: 0 16px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.globe-btn-primary {
+  margin-top: 12px;
+  width: 100%;
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.globe-panel .globe-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.globe-btn-locate {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.globe-btn-locate:disabled {
+  cursor: progress;
+}
+
+.globe-view.is-flying .globe-intro,
+.globe-view.is-flying .globe-btn-locate {
+  visibility: hidden;
+}
+
+.globe-veil {
+  position: absolute;
+  inset: 0;
+  background: var(--sky);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 699px) {
+  .globe-panel {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    bottom: 72px;
+  }
+
+  .globe-btn-locate {
+    top: auto;
+    right: 16px;
+    left: 16px;
+    bottom: 16px;
+  }
+}

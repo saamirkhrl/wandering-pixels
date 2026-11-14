@@ -1,0 +1,12 @@
+Bright stars: NASA HEASARC, table bsc5p (Yale Bright Star Catalogue, 5th rev., Hoffleit and Warren 1991), V <= 4.5, J2000. Public domain US government service. Fetched from https://heasarc.gsfc.nasa.gov/xamin/vo/tap/sync?REQUEST=doQuery&LANG=ADQL&FORMAT=votable&QUERY=SELECT+hr%2C+ra%2C+dec%2C+vmag+FROM+bsc5p+WHERE+vmag+%3C%3D+4.5+ORDER+BY+vmag
+astronomy-engine: MIT licence, Don Cross, https://github.com/cosinekitty/astronomy
+
+Earth globe textures (public/textures)
+earth-4k.jpg, earth-2k.jpg: resized from NASA Blue Marble Next Generation, January 2004 base map (5400x2700).
+  Source: https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/january/world.200401.3x5400x2700.jpg
+  Credit: NASA Earth Observatory (Reto Stockli, NASA Earth Observatory). License: public domain (NASA).
+earth-night-2k.jpg: resized from NASA Black Marble 2012 map, 0.1 degree (3600x1800).
+  Source: https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144875/BlackMarble_2012_01deg.jpg
+  Credit: NASA Earth Observatory image by Joshua Stevens using Suomi NPP VIIRS data from Miguel Roman, NASA's Goddard Space Flight Center. License: public domain (NASA).
+SPHEREx all-sky HiPS cube (SPHEREx DR1, 102 spectral frames, 0.753-4.988 um): https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube . NASA/SPHEREx; HiPS built by Caltech/IPAC (IRSA). hips_copyright: Caltech/IPAC; obs_copyright: NASA/SPHEREx.
+HEALPix (Gorski et al. 2005, ApJ 622, 759) and HiPS (IVOA Recommendation HiPS 1.0, Fernique et al. 2017): HEALPix maths in src/app/sky/healpix.ts written for this project from the published algorithms; no HEALPix library is bundled.

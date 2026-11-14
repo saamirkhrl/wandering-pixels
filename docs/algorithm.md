@@ -68,7 +68,7 @@ needed for a ratio or a significance.
 | Minimum samples | 3, with at least one on each side of w0 | step 3 |
 | Outlier clip | the single worst sample, dropped if its normalised residual exceeds 4 | step 3 |
 | w0 separation | each selected w0 more than 5 b0 above the previous | step 4 |
-| Verdict threshold | |z| >= 3 'changed' (display choice, not calibrated) | step 5 |
+| Verdict threshold | |z| >= 3 'changed' (about 1 percent false alarms on steady stars, see below) | step 5 |
 | Pairing tolerance (PS) | |lam gap| <= 1.0 mean bandwidth of the two exposures | step 6 |
 | Partial visit | fewer than 8 accepted exposures in a visit | step 7 |
 | Visit membership | at least 12 exposures (library `inStack` rule) | inputs |
@@ -147,8 +147,12 @@ Over the selected w0 that were not skipped:
 - Fractional change = D_comb / Fbar, where Fbar = sum(0.5 (F_A + F_B) / var) / sum(1 / var) (same
   weights as D).
 - Verdict text: |z_comb| < 3 gives "no significant change", |z_comb| >= 3 gives "changed". The
-  threshold 3 is a display choice. It is not calibrated here; phase C (injection and recovery) will
-  calibrate the false-positive rate. The word "changed" is a statement about the measured fluxes, not
+  threshold 3 was calibrated on steady stars (results.json thresholds_barnard and
+  thresholds_epsindi; one value per star, detector and visit pair): for this matched readout,
+  |z| >= 3 occurs for 0.87 percent of Barnard comparisons (68 percent interval 0.62 to 1.22,
+  N = 1258) and 0.81 percent of Eps Indi (N = 1112); |z| >= 5 for 0.16 and 0.00 percent. Use
+  |z| >= 5 for about 0.1 percent false alarms. The plain pair and the paired stack have heavier
+  tails (|z| >= 3: 1.3 to 3.6 percent) and need about 4 for 1 percent. The word "changed" is a statement about the measured fluxes, not
   a classification of the cause.
 - If no w0 survives the result is "no result" (flags explain why).
 

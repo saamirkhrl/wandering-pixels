@@ -312,7 +312,59 @@ chosen after seeing which makes the matched method look best.
 
 ## Injection and recovery
 
-Results: to be written (phase C).
+In plain words: we planted fake moving stars into the real Barnard's Star field images, using the
+archive's own model of how a star looks on the detector, and asked each method whether it can
+find them by comparing two visits six months apart. A fake that moves by 2 pixels or more between
+the visits is found half the time at AB magnitude 18.3 to 19.1, depending on the method. One
+that moves by only about a pixel overlaps itself and is found only when much brighter (AB 16.3).
+The plain single pair is the least sensitive, by about 0.4 magnitude.
+
+What ran (cut for time from the pre-registered plan below): Barnard field, visits 0 and 2, flat
+spectrum only, motions 0, 1, 2 and 4 px per 6 months, AB 14.0 to 19.5 in 0.5 mag steps, 30 trials
+per cell, 360 un-injected trials per motion to set the 1 percent false-positive threshold. Not run:
+the brown-dwarf spectrum (the Sonora Bobcat 650 K template is prepared), motions 0.25 and 0.5 px,
+the Eps Indi field, 50 trials per cell.
+
+Checks: the archive ePSF is identical for every exposure of a detector (one calibration file per
+detector); injected sources recover their aperture flux to 1.00000 without noise and 0.998 (range
+0.976 to 1.013) with noise; their width matches real stars of similar brightness to a median
+ratio of 1.04; one injected position was hand-checked (centroid offset 0.13 px at S/N 26, 0.03 px
+without noise).
+
+50 percent completeness magnitude (AB, flat spectrum, six detectors pooled; +/- from the binomial
+counts only; the 1 percent thresholds themselves rest on the top 3 or 4 null trials and are
+uncertain by roughly +/- 1 to 3 in S):
+
+| motion per 6 months | P1 best pair | PS paired stack | M2 matched |
+|---|---|---|---|
+| 0 px | never (no signal by construction) | never | never |
+| 1 px | 16.00 +/- 0.09 | 16.28 +/- 0.02 | 16.28 +/- 0.03 |
+| 2 px | 18.33 +/- 0.09 | 19.09 +/- 0.08 | 18.77 +/- 0.04 |
+| 4 px | 18.83 +/- 0.06 | 19.16 +/- 0.06 | 19.12 +/- 0.07 |
+
+Detector 2 alone (the website's default) gives 18.50, 18.93 and 18.81 at 2 px for P1, PS and M2.
+The headline number (M2, six detectors, 2 px) was recomputed independently from the saved trial
+table: 18.775 both ways. The matched and paired-stack comparisons are about 0.3 to 0.8 mag deeper
+than a single pair for movers of 2 px or more; between M2 and PS the differences are within the
+threshold uncertainty. A flat-spectrum fake is the easy case for a plain pair; a sloped spectrum
+was not tested.
+
+False alarms of the readout on steady stars (var' = var + (0.02 F)^2; one value per star,
+detector and visit pair; 68 percent intervals):
+
+| field, method | N | |z| >= 3 | |z| >= 4 | |z| >= 5 |
+|---|---|---|---|---|
+| Barnard, P1 | 1258 | 2.1 % [1.7, 2.6] | 0.9 % [0.6, 1.2] | 0.8 % [0.6, 1.1] |
+| Barnard, PS | 1238 | 3.2 % [2.7, 3.7] | 1.2 % [0.9, 1.6] | 0.7 % [0.5, 1.1] |
+| Barnard, M2 | 1258 | 0.9 % [0.6, 1.2] | 0.2 % [0.1, 0.4] | 0.2 % [0.1, 0.4] |
+| Eps Indi, P1 | 1111 | 1.3 % | 0.5 % | 0.4 % |
+| Eps Indi, PS | 1451 | 3.6 % | 1.5 % | 1.0 % |
+| Eps Indi, M2 | 1112 | 0.8 % | 0.3 % | 0.0 % [0, 0.2] |
+
+A unit normal would give 0.27, 0.006 and 0.00006 percent: the tails are heavier than Gaussian,
+mostly from stars flagged as near saturation. Recommendation: |z| >= 3 for about 1 percent false
+alarms and |z| >= 5 for about 0.1 percent with the matched readout; the plain pair and the
+paired stack need |z| of about 4 for 1 percent.
 
 ### Choices fixed before any phase C result was computed (2026-11-14, 10:38 CST; see git history)
 

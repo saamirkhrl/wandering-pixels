@@ -1,0 +1,521 @@
+.viewer {
+  --ink-soft: #3b4466;
+  --stage-dim: #a9b3c9;
+  --ramp-pos: #f0a040;
+  --ramp-neg: #3d8ee0;
+  --panel-w: clamp(360px, 30vw, 420px);
+  --gutter: 16px;
+
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--panel-w);
+  background: var(--sky);
+  color: var(--paper);
+}
+
+.viewer button,
+.viewer select,
+.viewer input {
+  font: inherit;
+}
+
+/* stage */
+.v-stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--gutter);
+  gap: 10px;
+}
+
+.v-plate {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.v-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.v-overlay {
+  cursor: crosshair;
+}
+
+.v-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0 24px;
+  text-align: center;
+  color: var(--stage-dim);
+  pointer-events: none;
+}
+
+.v-note[hidden] {
+  display: none;
+}
+
+.v-readout {
+  min-height: 48px;
+  font-size: 0.875rem;
+  color: var(--stage-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.v-readout p {
+  margin: 0;
+}
+
+/* paper column */
+.v-panel {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 20px 32px;
+  background: var(--paper);
+  color: var(--ink);
+  border-left: 1px solid var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.v-panel :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.v-head {
+  padding: 18px 0 14px;
+}
+
+.v-title {
+  font-size: 1.5rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.v-meta {
+  margin: 6px 0 0;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.v-sec {
+  padding: 16px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.v-sec p {
+  margin: 0 0 8px;
+}
+
+.v-h {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.v-caption {
+  font-weight: 700;
+}
+
+.v-detail {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.v-hint {
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
+.v-lab {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.v-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.v-btn,
+.v-seg-btn {
+  min-height: var(--control-height);
+  min-width: var(--control-height);
+  padding: 0 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.v-btn:hover:not(:disabled),
+.v-seg-btn:hover:not(:disabled),
+.v-target:hover {
+  background: var(--paper-dim);
+}
+
+.v-btn:disabled,
+.v-seg-btn:disabled {
+  color: var(--ink-soft);
+  border-color: var(--rule);
+  cursor: default;
+  opacity: 0.7;
+}
+
+.v-primary {
+  background: var(--signal);
+  font-weight: 700;
+}
+
+.v-primary:hover:not(:disabled) {
+  background: var(--signal);
+  filter: brightness(0.95);
+}
+
+.v-toggle[aria-pressed='true'],
+.v-seg-btn[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.v-toggle[aria-pressed='true']:hover:not(:disabled),
+.v-seg-btn[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--ink);
+}
+
+.v-seg {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.v-seg-btn {
+  border-radius: 0;
+  margin-left: -1px;
+}
+
+.v-seg-btn:first-child {
+  margin-left: 0;
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.v-seg-btn:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.v-main > .v-primary {
+  flex: 1 0 100%;
+}
+
+.v-main > .v-btn:not(.v-primary) {
+  flex: 1 1 0;
+  padding: 0 8px;
+}
+
+.v-speedrow {
+  margin-top: 12px;
+}
+
+.v-field {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.v-field[hidden] {
+  display: none;
+}
+
+.v-select {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 8px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+}
+
+.v-scrub {
+  display: block;
+  width: 100%;
+  min-height: var(--control-height);
+  margin: 0 0 4px;
+  accent-color: var(--ink);
+}
+
+.v-scrub[hidden] {
+  display: none;
+}
+
+/* timeline */
+.v-tl {
+  position: relative;
+  height: 84px;
+  margin: 34px 0 4px;
+}
+
+.v-tl-axis {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 22px;
+  height: 1px;
+  background: var(--ink);
+}
+
+.v-tl-f {
+  color: var(--ink);
+  position: absolute;
+  top: 0;
+  height: 44px;
+  min-width: 10px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.v-tl-mark {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  bottom: 16px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+
+.v-tl-f.is-active .v-tl-mark {
+  top: 3px;
+  bottom: 14px;
+  width: 8px;
+  margin-left: -4px;
+  background: var(--signal);
+  border: 1px solid var(--ink);
+}
+
+.v-tl-ab {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  font-size: 0.6875rem;
+  line-height: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.v-tl-month {
+  position: absolute;
+  top: 52px;
+  width: 1px;
+  height: 6px;
+  background: var(--rule);
+}
+
+.v-tl-mlabel {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+.v-tl-quiet .v-tl-mlabel {
+  display: none;
+}
+
+.v-tl-tip {
+  position: absolute;
+  top: -32px;
+  padding: 4px 8px;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  color: var(--paper);
+  background: var(--ink);
+  border-radius: var(--radius);
+  pointer-events: none;
+}
+
+.v-tl-tip[hidden] {
+  display: none;
+}
+
+/* difference */
+.v-legend {
+  margin: 12px 0 0;
+}
+
+.v-legend[hidden] {
+  display: none;
+}
+
+.v-ramp {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border: 1px solid var(--ink);
+}
+
+.v-leg-labels {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0;
+  font-size: 0.8125rem;
+}
+
+.v-warn {
+  margin: 12px 0 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--ink);
+  font-weight: 400;
+}
+
+.v-warn[hidden] {
+  display: none;
+}
+
+/* status */
+.v-status:empty {
+  display: none;
+}
+
+.v-progress,
+.v-msgbox {
+  padding: 14px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.v-progress p,
+.v-msgbox p {
+  margin: 0 0 8px;
+}
+
+.v-stage-word,
+.v-msg-title {
+  font-weight: 700;
+}
+
+.v-bar {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 0 0 8px;
+  appearance: none;
+  border: 0;
+  background: var(--paper-dim);
+  accent-color: var(--ink);
+}
+
+.v-bar::-webkit-progress-bar {
+  background: var(--paper-dim);
+}
+
+.v-bar::-webkit-progress-value {
+  background: var(--ink);
+}
+
+.v-bar::-moz-progress-bar {
+  background: var(--ink);
+}
+
+.v-retry,
+.v-notice {
+  font-weight: 700;
+}
+
+.v-notice {
+  margin: 0;
+  padding: 12px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.v-targets {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v-target {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 8px 12px;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.v-target-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-stretch: 85%;
+}
+
+.v-empty {
+  border-top: 0;
+  padding-top: 20px;
+}
+
+.v-empty .v-title {
+  margin-bottom: 12px;
+}
+
+.viewer [hidden] {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .viewer {
+    display: block;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--paper);
+  }
+
+  .v-stage {
+    background: var(--sky);
+    padding: 12px var(--gutter) 8px;
+  }
+
+  .v-plate {
+    flex: none;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .v-panel {
+    overflow: visible;
+    padding: 0 var(--gutter) 40px;
+    border-left: 0;
+    border-top: 1px solid var(--ink);
+  }
+
+  .viewer[data-state='empty'] .v-stage,
+  .viewer[data-state='error'] .v-stage {
+    display: none;
+  }
+}

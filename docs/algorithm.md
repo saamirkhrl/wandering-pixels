@@ -190,6 +190,80 @@ Flags:
   available). `m2ref.is_blended` is the reference.
 - `partial_visit`: fewer than 8 accepted exposures in either visit.
 
+## Details the steps leave implicit (fixed by the reference implementation)
+
+A port must copy these; `validation/wp/m2ref.py` is the authority.
+
+Exposure rejection (step 2), checked in this order; the first that applies is the reason:
+
+| reason | applies when |
+|---|---|
+| `outside_cutout` | the star centre is outside [-0.5, nx - 0.5] x [-0.5, ny - 0.5] (or non-finite) |
+| `edge` | the aperture is not fully inside the cutout: x - r < -0.5, x + r > nx - 0.5, same for y, or the aperture mask's pixel box leaves the array |
+| `masked_aperture` | any pixel with weight w_k > 0 is excluded by step 1 |
+| `annulus_few` | fewer than 10 unmasked finite pixels in the annulus, or fewer than 10 kept after the clip |
+| `ok` | accepted |
+
+The `saturated` quality flag is computed as soon as the star centre is inside the cutout, before the
+other checks (the 5 x 5 window is cut at the array edge, centre = nearest pixel with ties to even),
+so a rejected exposure can still carry it. Exposures whose lam or bw is not finite are not accepted
+(not tested by the reference; the library supplies finite values).
+
+Spectral model skips (step 3 and 4):
+- The two tests are `too_few_samples` (fewer than 3 samples) then `no_bracket` (no sample with
+  lam <= w0 or none with lam >= w0, both inclusive). They are applied twice: on the window samples,
+  and again after the single outlier drop. `too_few_samples` is tested first each time.
+- Window membership is |lam - w0| <= 2.5 b0 (inclusive) with finite F and var' > 0.
+- The outlier test uses each sample's own var' in the normalised residual; the single worst sample
+  (first one on a tie) is dropped only if its residual is strictly greater than 4.
+- A w0 is skipped when the model of visit A or of visit B has no value. The recorded reason is visit A's
+  reason if A failed, otherwise B's. The visit-A exposure that defines w0 is itself in the window with
+  x = 0, so visit A always brackets itself; a `no_bracket` skip therefore means visit B lacks samples on
+  one side, and `too_few_samples` can come from either visit.
+- A skipped w0 is excluded from D_comb, var_comb, the fractional-change denominator, the plain-pair
+  means and `n_w0`, but it still counts for selection (it consumed its place in the 5 b0 spacing).
+  Flag `too_few_samples` / `no_bracket` is set if at least one skipped w0 has that recorded reason.
+
+w0 selection (step 4):
+- Candidates are visit A's accepted exposures, sorted ascending by (lam, obs_id as a string).
+- The first candidate is always selected. A later candidate is selected if
+  lam > lam_last_selected + 5 x bw_candidate (strictly greater; the bandwidth is the candidate's own,
+  not the last selected one's). The comparison is made against the last selected, not the last
+  considered, candidate.
+- b0 for the model window is the selected exposure's own bw, used for both visits.
+
+Weights and fractional change (steps 5 and 6):
+- All inverse-variance weights use the inflated variances (var' of step 2). For matched values the
+  weight of each w0 is 1 / var with var = var_A + var_B (the model variances from step 3, which in turn
+  come from var').
+- Fractional change = D_comb / Fbar with Fbar = sum(m_i / var_i) / sum(1 / var_i), m_i = 0.5 (F_A + F_B)
+  at w0_i (the matched fluxes), and var_i the same weights as for D_comb.
+- Plain pair per w0: var_plain = var'(A exposure) + var'(B exposure); the combined plain D is the
+  inverse-variance mean of D_plain with weights 1 / var_plain; the plain fractional change divides it
+  by sum(m_i / var_plain_i) / sum(1 / var_plain_i) with the same matched m_i. The plain list uses the
+  same non-skipped w0 as the matched result, and the same visit-B exposure may be chosen for two w0.
+- Plain partner choice: the accepted visit-B exposure minimising |lam_B - w0|; ties go to the smaller
+  obs_id (string comparison).
+- Paired stack: candidate pairs satisfy |lam_A - lam_B| <= 1.0 x 0.5 (bw_A + bw_B) (inclusive). They are
+  sorted lexicographically by (|lam gap|, |mjd_A - mjd_B|, obs_id_A, obs_id_B) and accepted in that
+  order if neither exposure is already used. The PS fractional change divides the pair-weighted mean
+  difference by the pair-weighted mean of 0.5 (F_A + F_B) of the measured (not modelled) fluxes, with
+  weights 1 / (var'_A + var'_B). It uses all accepted exposures, not only the selected w0.
+- z = D / sqrt(var) everywhere; the verdict uses z_comb only (|z_comb| >= 3 is "changed"). PS has no verdict.
+
+Flags (step 7):
+- `saturated` is set if any measured exposure of either visit (accepted or rejected) carries the step 2
+  quality flag. `partial_visit` is set if either visit has fewer than 8 accepted exposures (not the
+  number in the window). `blended` uses small-angle separations, any other Gaia source (the star itself
+  excluded) within 20 arcsec (inclusive) with G strictly below G_star + 3. When flags are listed they are
+  ordered saturated, partial_visit, blended, too_few_samples, no_bracket (an ordering convention only).
+- With no surviving w0 the combined fields are empty and the verdict is "no result"; PS can still be
+  present.
+- Positions: x, y of the star are evaluated per exposure from the WCS at that exposure's epoch; no
+  shift or recentring is done. The background is a median (not a mean) with s_b the standard deviation
+  (ddof 0) of the kept pixels; astropy `sigma_clip` with `cenfunc="median"`, `stdfunc="std"`, sigma 3,
+  at most 5 iterations.
+
 ## Failure cases
 
 | Case | Behaviour |
@@ -242,7 +316,7 @@ means the model uses only the same detector as here.
   as that floor, and the 3-sigma display threshold is not a calibrated false-positive rate.
 - Saturated and bloomed stars are not handled. Their cores are masked (bits 15, 26) or carry bit 1,
   the aperture then rejects or the flux is biased; the flag is shown but the numbers are not
-  validated (test star 1 below is one: G 12.47, the saturation flag is set in 14 of 18 exposures per
+  validated (test star 4 below is one: G 12.47, the saturation flag is set in 14 of 18 exposures per
   visit).
 - Crowded stars: the 12.3 arcsec aperture and 4 to 7 pixel annulus include neighbours; only the
   `blended` flag warns.
@@ -250,7 +324,7 @@ means the model uses only the same detector as here.
   at wavelengths bracketed by that detector's samples in both visits, so band edges give no value.
 - The combined number is an inverse-variance mean over only a few independent wavelengths per
   detector (two or three in the test vectors). Differences of opposite sign at different wavelengths
-  can cancel in D_comb (test star 1: z of -2.30 and +3.77 at its two wavelengths, combined -0.10). Show
+  can cancel in D_comb (test star 4: z of -2.30 and +3.77 at its two wavelengths, combined -0.10). Show
   the per-wavelength values.
 - Validated on stars of G 12 to 16.5 in two fields, with visit pairs of about 6, 12 and 18 months. Not
   validated for variable stars, faint stars, or a pair of visits less than a month apart.
@@ -282,52 +356,64 @@ Found while reading roundtable files 05, 07, 08, 09 and `src/lib/spherex` (read 
 
 ## Test vectors
 
-`docs/algorithm_test_vectors.json` holds three real stars of the Barnard's Star field, detector 2,
-visit 0 (earlier) against visit 2 (about 6 months later). The stars were chosen before any output was
-inspected: among the 70 phaseb sample stars with at least 8 browser-mask measurements on detector 2 in
-each of the two visits (all 70 qualified), the stars with Gaia G closest to 12.5, 14.0 and 15.5.
+`docs/algorithm_test_vectors.json` holds four real stars of the Barnard's Star field, detector 2, visit 0
+(earlier) against visit 2 (about 6 months later). Nothing in the file is rounded: every number is a
+float64 written with its round-trip representation, and the expected outputs are exactly what
+`m2ref.compare_visits` returns for the inputs in the file, so a port should match to 1e-6 relative.
+`scripts/09_algorithm_vectors.py` ends with a self-check that reloads the JSON and recomputes every
+expected output (per w0, combined, plain, paired stack, flags, and the stamp photometry) from the JSON
+inputs alone.
+
+The stars were chosen by rules fixed before any output was inspected. Eligible: the 70 phaseb sample
+stars with at least 8 browser-mask measurements on detector 2 in each of the two visits (all 70
+qualified). Star 4 (the saturated one): G closest to 12.5. Stars 2 and 3: G closest to 14.0 and 15.5.
+Star 1: the star with G closest to 12.5 that has no saturation flag in any detector-2 exposure of the
+two visits and at least 12 accepted exposures per visit (star 4 fails this).
+
 For each star the file gives the Gaia input (position at 2016.0, proper motion, parallax, G), for each
-exposure the star pixel position (x, y) in the cutout, lam, bw, whether it was accepted (reason if
-not), F, raw and inflated variance, background and annulus count, a 17 x 17 pixel stamp (P, VAR, raw
-FLAGS) of one accepted exposure with its expected photometry (a pixel-level test of steps 1 and 2),
-and the expected outputs of steps 3 to 7. Computed numbers are rounded to 4 significant figures;
-compare with a relative tolerance of 1e-3 (the stamp values are exact inputs, rounded to 6 figures).
-F is in MJy/sr summed over native pixels.
+exposure the star pixel position (x, y) in the cutout, lam, bw, whether it was accepted (reason if not),
+`saturated`, F, raw and inflated variance, background and annulus count, a 17 x 17 pixel stamp (P, VAR,
+raw FLAGS; P and VAR carried to 9 significant figures, and the expected photometry is computed from
+those) of one accepted exposure (a pixel-level test of steps 1 and 2), and the expected outputs of
+steps 3 to 7. The matched comparison takes as input exactly the exposures with `accepted = true`
+(id = obs_id, lam, bw, mjd, F, var, saturated); the `saturated` output flag is set when any listed
+exposure has `saturated = true`. F is in MJy/sr summed over native pixels. The values below are rounded
+to 4 significant figures for reading only.
 
-| | Star 1 | Star 2 | Star 3 |
-|---|---|---|---|
-| Gaia DR3 source_id | 4472838762358909184 | 4472838526141369856 | 4472819765724518016 |
-| G | 12.466 | 13.994 | 15.493 |
-| proper motion (mas/yr) | -0.085, -8.237 | 3.016, -3.097 | -1.560, -13.832 |
-| accepted exposures, visit 0 / 2 | 12 of 18 / 17 of 18 | 17 of 18 / 18 of 18 | 15 of 18 / 17 of 18 |
-| selected w0 used (um) | 1.281, 1.475 (1.112 skipped: too_few_samples) | 1.116, 1.285, 1.481 | 1.255, 1.480 (1.090 skipped: too_few_samples) |
-| D per w0 (MJy/sr) | -7.992, 22.55 | -0.1711, -0.1242, -1.142 | 0.03628, -0.1107 |
-| z per w0 | -2.303, 3.771 | -0.3444, -0.4125, -3.397 | 0.2665, -0.6872 |
-| combined D (MJy/sr), z | -0.2974, -0.0991 | -0.5087, -2.488 | -0.02495, -0.2400 |
-| combined fractional change | -0.001265 | -0.02213 | -0.004919 |
-| plain best pair: D, z, frac | 9.206, 1.853, 0.03774 | -0.7552, -1.885, -0.03384 | -0.09303, -0.4349, -0.01827 |
-| paired stack: pairs, D, z, frac | 10, 4.291, 2.061, 0.0189 | 16, -0.4654, -2.633, -0.0201 | 14, 0.02932, 0.3762, 0.005859 |
-| flags | saturated, too_few_samples | none | too_few_samples |
-| verdict | no significant change | no significant change | no significant change |
+| | Star 1 | Star 2 | Star 3 | Star 4 (saturated) |
+|---|---|---|---|---|
+| Gaia DR3 source_id | 4472884220292770688 | 4472838526141369856 | 4472819765724518016 | 4472838762358909184 |
+| G | 12.748 | 13.994 | 15.493 | 12.466 |
+| proper motion (mas/yr) | 1.318, -5.115 | 3.016, -3.097 | -1.560, -13.832 | -0.085, -8.237 |
+| accepted exposures, visit 0 / 2 | 17 / 16 of 18 | 17 / 18 of 18 | 15 / 17 of 18 | 12 / 17 of 18 |
+| selected w0 used (um) | 1.277, 1.471 (1.108 skipped: no_bracket) | 1.116, 1.285, 1.481 | 1.255, 1.480 (1.090 skipped: too_few_samples) | 1.281, 1.475 (1.112 skipped: too_few_samples) |
+| D per w0 (MJy/sr) | 1.772, -0.689 | -0.1711, -0.1242, -1.142 | 0.03628, -0.1107 | -7.992, 22.55 |
+| z per w0 | 1.995, -0.5742 | -0.3444, -0.4125, -3.397 | 0.2665, -0.6872 | -2.303, 3.771 |
+| combined D (MJy/sr), z | 0.9011, 1.262 | -0.5087, -2.488 | -0.02495, -0.2400 | -0.2974, -0.0991 |
+| combined fractional change | 0.0128 | -0.02213 | -0.004919 | -0.001265 |
+| plain best pair: D, z, frac | 0.07874, 0.05402, 0.001108 | -0.7552, -1.885, -0.03384 | -0.09303, -0.4349, -0.01827 | 9.206, 1.853, 0.03774 |
+| paired stack: pairs, D, z, frac | 15, 0.9643, 1.875, 0.01404 | 16, -0.4654, -2.633, -0.0201 | 14, 0.02932, 0.3762, 0.005859 | 10, 4.291, 2.061, 0.0189 |
+| flags | no_bracket | none | too_few_samples | saturated, too_few_samples |
+| verdict | no significant change | no significant change | no significant change | no significant change |
 
-Notes: star 1 is saturation-flagged (G 12.47) and its two wavelengths disagree in sign. Star 2's
-longest wavelength alone is a 3.4 sigma step, but the combined statistic is 2.49. These are real
-measurements of presumably constant stars; they illustrate that single-wavelength z values reach 3 at
-the rate the validation widths (above 1) imply, which is why the combined statistic and the floor
-matter.
+Notes: star 4 has the saturation flag in 14 of 18 exposures per visit and its two wavelengths disagree
+in sign. Star 2's longest wavelength alone is a 3.4 sigma step, but its combined statistic is 2.49.
+These are real measurements of presumably constant stars; they illustrate that single-wavelength z
+values reach 3 at the rate the validation widths (above 1) imply, which is why the combined statistic
+and the floor matter. Star 1 covers the `no_bracket` skip, stars 3 and 4 the `too_few_samples` skip.
 
 Cross-check against the validation photometry (`validation/data/phaseb/barnard/forced_phot.ecsv`,
 produced by `wp/forced.py`), same exposures and stars, browser-mask rows only:
 
 | Set | Compared | Accept/reject differs | Flux rel. difference |
 |---|---|---|---|
-| the three test stars, detector 2, visits 0 and 2 | 96 | 0 | median 0, 90th percentile 2.2e-4, max 1.5e-2 |
+| the four test stars, detector 2, visits 0 and 2 | 129 | 0 | median 0, 90th percentile 1.9e-4, max 1.5e-2 |
 | all 70 sample stars, same exposures | 2275 | 29 of 2304 | median 0, 90th percentile 7.2e-4, max 7.9e-2 |
 
-The raw variance (before the 2 percent term) agrees as well: ratio median 1.000 over the three stars,
-10th to 90th percentile 0.998 to 1.002 over all 70. The differences come from the different flag set
-(validation background excludes prereg-flagged and SOURCE-flagged pixels unless fewer than 10
+The raw variance (before the 2 percent term) agrees as well: ratio 10th to 90th percentile 0.9995 to
+1.0002 over the four stars and 0.998 to 1.002 over all 70. The differences come from the different
+flag set (validation background excludes prereg-flagged and SOURCE-flagged pixels unless fewer than 10
 remain; here only BAD_DATA pixels are excluded), annulus edge (r <= 7 against r < 7) and the 5 x 5
 star-centre rule of the validation, which here is an aperture rule. The 2 percent term inflates the
 variance of a bright star a lot and of a faint star hardly at all: for the stamp exposures var'/var_raw
-is about 43 (star 1), 6.3 (star 2) and 1.2 (star 3).
+is about 20 (star 1), 6.3 (star 2), 1.2 (star 3) and 43 (star 4).

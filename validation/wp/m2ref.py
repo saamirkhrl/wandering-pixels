@@ -263,18 +263,19 @@ def paired_stack(samples_A, samples_B):
                 pairs=[(str(a["id"]), str(b["id"]), g) for a, b, g in pairs])
 
 
-def compare_visits(samples_A, samples_B, *, blended=False):
+def compare_visits(samples_A, samples_B, *, blended=False, saturated=False):
     """Steps 4-7 for one star and one visit pair (A earlier, B later), one detector.
 
     samples_X: list of dicts with keys id, lam, bw, mjd, flux, var (var inflated), saturated;
-    one per ACCEPTED exposure of that visit (inStack visits only). Returns a plain dict:
+    one per ACCEPTED exposure of that visit (inStack visits only). saturated=True forces the
+    'saturated' flag (use it when a REJECTED exposure carried the saturation quality flag). Returns a plain dict:
       per_w0: list of dict(w0, b0, F_A, err_A, F_B, err_B, D, var, z, n_A, n_B, id_A,
                            plain_id_B, plain_D, plain_var, plain_z)
       skipped: list of dict(w0, reason)
       n_exposures_A/B, n_w0, D, z, frac, var (combined), plain (combined), ps, verdict, flags.
     """
     flags = []
-    if any(s.get("saturated") for s in list(samples_A) + list(samples_B)):
+    if saturated or any(s.get("saturated") for s in list(samples_A) + list(samples_B)):
         flags.append("saturated")
     if len(samples_A) < MIN_EXPOSURES or len(samples_B) < MIN_EXPOSURES:
         flags.append("partial_visit")

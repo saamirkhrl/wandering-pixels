@@ -167,10 +167,27 @@ that it does not need such a pair. (Script 07b, figure phaseb_gap_full_*.png.)
 Eps Indi: M2 1.26 / 4.9 %, P1native 1.29 / 11.4 % (fainter stars; full table in results.json).
 None of the plain or grid products meets the pre-registered "clean" test (width < 1.5); M2 meets it
 in both fields, with colour slopes consistent with zero (+0.2 +/- 0.3 and +0.05 +/- 0.3 percent per
-mag BP-RP, Barnard and Eps Indi). P2 is the worst in z because a visit stack mixes about 20
-wavelengths whose mix differs between visits. M1 is worse than the plain pair: resampling each
-undersampled exposure to a grid and fitting across exposures with different pixel phases adds
-more error than matching removes.
+mag BP-RP, Barnard and Eps Indi).
+
+P2, precisely: every exposure of a detector in a visit is resampled bilinearly to the 6.15 arcsec
+grid, the visit's exposures are combined by inverse-variance mean per grid pixel, visit A's stack
+minus visit B's stack is the difference image, and the star's aperture photometry is done on the
+two stacks. In plain units the stack difference is less noisy than a single pair (scatter 4.4
+against 5.7 percent), but its propagated uncertainty is far too small (z width 4.76): the two
+stacks mix about 20 wavelengths in proportions that differ between visits, and the covariance
+introduced by bilinear resampling is only approximately propagated. No significance should be
+read from a P2 difference. M1 is worse than the plain pair: resampling each undersampled exposure
+to a grid and fitting across exposures with different pixel phases adds more error than matching
+removes.
+
+All z widths in this section use the pipeline variance WITHOUT the 2 percent floor of the "Error
+bars" subsection. With the floor (var' = var + (0.02 F)^2 per exposure; for P2 divided by the
+number of exposures in each stack), Barnard z widths become: plain pair (nearest wavelength at the
+star) 1.52 +/- 0.05 -> 1.04 +/- 0.01; M2 one detector 1.42 +/- 0.05 -> 0.98 +/- 0.02; paired stack
+1.74 +/- 0.10 -> 1.24 +/- 0.04; P2 4.76 +/- 0.34 -> 3.41 +/- 0.16. The floor makes single-pair
+and M2 errors honest; averaged products (PS, P2) stay above 1, which suggests part of the 2 percent
+term is shared by exposures of the same visit and does not average down. Computed by a short
+check on the forced photometry (paired stack per star, detector and visit pair at one channel).
 
 ### What the gain is made of (controls on identical comparisons, one detector, prereg)
 

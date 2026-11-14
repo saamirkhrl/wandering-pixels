@@ -2,10 +2,14 @@
 //
 //   npx -y vite-node scripts/build-cache.ts <slug|all>
 //
-// Output per target: public/cache/<slug>/manifest.json and frames.bin only. The manifest carries
-// an extra top-level `build` object (decodeCache and loadCached ignore unknown keys). Raw FITS
-// data is only held in memory, never written to disk.
-import { mkdirSync, writeFileSync, renameSync, statSync, readdirSync, existsSync } from 'node:fs';
+//   npx -y vite-node scripts/build-cache.ts --convert <slug|all> [--delete-v1]
+//     converts an existing format 1 cache to format 2 without downloading (see convert-cache.ts)
+//
+// Output per target (format 'wp-cache-2', documented at the top of src/lib/spherex/cache.ts):
+// public/cache/<slug>/index.json plus content-hashed preview, stars, exposures and frames files.
+// A rebuild removes stale hashed files and the old format 1 manifest.json and frames.bin. The
+// index carries a `build` object. Raw FITS data is only held in memory, never written to disk.
+import { statSync, readdirSync, existsSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,7 +18,8 @@ import { rowsToExposures as rowsToExposureObjects } from '../src/lib/spherex/sea
 import type { ExposureRow } from '../src/lib/spherex/search';
 import { loadFrames } from '../src/lib/spherex/frame';
 import { makeGrid, positionAt } from '../src/lib/spherex/wcs';
-import { encodeCache } from '../src/lib/spherex/cache';
+import { encodeCacheV2 } from '../src/lib/spherex/cache-encode';
+import { writeCacheDir, convertOne } from './cache-io';
 import { bytesTransferred } from '../src/lib/spherex/fits';
 import type { CachedSlug, Exposure, Frame, GaiaStar, Target } from '../src/lib/spherex/types';
 import type { WiseSource } from '../src/lib/spherex/wise';
@@ -368,24 +373,18 @@ async function buildOne(slug: CachedSlug): Promise<Summary> {
   const [gaia, wise] = await Promise.all([getGaia(target), getWise(target)]);
 
   const builtAt = new Date().toISOString();
-  const { manifest, bin } = encodeCache({
-    slug, target, grid, exposures: kept.map((f) => f.exposure), frames: kept, gaia, wise, builtAt,
-  });
   const build = {
     found: exposures.length, selected: picked.length, loaded, failed: failedAll.length,
     droppedCoverage, toppedUp, bytesDownloaded: downloaded, selection: mode,
   };
-  const manifestJson = JSON.stringify({ ...manifest, build });
-
+  const { files } = encodeCacheV2({
+    slug, target, grid, exposures: kept.map((f) => f.exposure), frames: kept, gaia, wise, builtAt, build,
+  });
   const dir = join(OUT, slug);
-  mkdirSync(dir, { recursive: true });
-  const mTmp = join(dir, 'manifest.json.tmp');
-  const bTmp = join(dir, 'frames.bin.tmp');
-  writeFileSync(mTmp, manifestJson);
-  writeFileSync(bTmp, bin);
-  renameSync(mTmp, join(dir, 'manifest.json'));
-  renameSync(bTmp, join(dir, 'frames.bin'));
-  const outBytes = Buffer.byteLength(manifestJson) + bin.length;
+  writeCacheDir(dir, files);
+  for (const old of ['manifest.json', 'frames.bin']) if (existsSync(join(dir, old))) unlinkSync(join(dir, old));
+  let outBytes = 0;
+  for (const d of Object.values(files)) outBytes += typeof d === 'string' ? new TextEncoder().encode(d).length : d.length;
 
   const visits = new Set(kept.map((f) => f.exposure.visitIndex)).size;
   const dets = [...new Set(kept.map((f) => f.exposure.detector))].sort().join(',');
@@ -412,10 +411,24 @@ function dirSize(p: string): number {
 }
 
 async function main(): Promise<void> {
-  const arg = process.argv[2];
+  const args = process.argv.slice(2);
+  const arg = args.find((a) => !a.startsWith('--'));
   if (!arg) {
-    console.error('usage: vite-node scripts/build-cache.ts <slug|all>');
+    console.error('usage: vite-node scripts/build-cache.ts [--convert] <slug|all> [--delete-v1]');
     process.exit(2);
+  }
+  if (args.includes('--convert')) {
+    const list = arg === 'all' ? SLUGS : SLUGS.filter((x) => x === arg);
+    let code = 0;
+    for (const slug of list) {
+      try {
+        console.log(await convertOne(slug, args.includes('--delete-v1')));
+      } catch (e) {
+        code = 1;
+        console.error(`ERROR ${slug}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    process.exit(list.length === 0 ? 2 : code);
   }
   const todo = arg === 'all' ? SLUGS : SLUGS.filter((s) => s === arg);
   if (todo.length === 0) {

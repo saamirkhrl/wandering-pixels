@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 // @ts-ignore
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { decodeCache, encodeCache, listCached, loadCached } from './cache';
+import { decodeCache, encodeCache, listCached, loadCached, loadCachedDetector, loadCachedPreview } from './cache';
+import { encodeCacheV2, fnv1a32, defaultDetectorFor } from './cache-encode';
 import type { CacheInput } from './cache';
 import type { Exposure, Frame, Grid } from './types';
 import { FLAG_BITS, SpherexError } from './types';
@@ -192,7 +193,7 @@ describe('loadCached', () => {
       fetchFn: (async (u: string | URL | Request, i?: RequestInit) => { urls.push(String(u)); return f(u); }) as typeof fetch,
       onProgress: (p) => stages.push(p.stage),
     });
-    expect(urls).toEqual(['http://site.test/cache/barnards-star/manifest.json', 'http://site.test/cache/barnards-star/frames.bin']);
+    expect(urls).toEqual(['http://site.test/cache/barnards-star/index.json', 'http://site.test/cache/barnards-star/manifest.json', 'http://site.test/cache/barnards-star/frames.bin']);
     expect(c.frames.length).toBe(N);
     expect(new Set(stages)).toEqual(new Set(['pixels']));
     expect(c.target.name).toBe("Barnard's Star");
@@ -219,6 +220,114 @@ describe('loadCached', () => {
     };
     await expect(loadCached('r-dra', { fetchFn: f, signal: ac.signal }))
       .rejects.toMatchObject({ code: 'ABORTED' });
+  });
+});
+
+describe('format 2', () => {
+  let dir: string;
+  let input: CacheInput;
+  let v1: ReturnType<typeof decodeCache>;
+  let encoded: ReturnType<typeof encodeCacheV2>;
+  const f = (root: string) => (async (url: string | URL | Request) => {
+    const path = join(root, String(url).replace(/^https?:\/\/[^/]+\/cache\//, ''));
+    if (!existsSync(path)) return new Response('nope', { status: 404 });
+    return new Response(readFileSync(path), { status: 200 });
+  }) as typeof fetch;
+  const opts = () => ({ baseUrl: 'http://site.test/cache/', fetchFn: f(dir) });
+
+  beforeAll(() => {
+    input = makeInput();
+    const e1 = encodeCache(input);
+    v1 = decodeCache(JSON.parse(e1.manifestJson), e1.bin);
+    encoded = encodeCacheV2(input);
+    dir = mkdtempSync(join(tmpdir(), 'wp-cache2-test-'));
+    mkdirSync(join(dir, 'barnards-star'));
+    for (const [name, data] of Object.entries(encoded.files)) writeFileSync(join(dir, 'barnards-star', name), data);
+  }, 60000);
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('hashes file names with FNV-1a 32 and lists them in index.json', () => {
+    expect(fnv1a32(new TextEncoder().encode('a'))).toBe('e40c292c');
+    expect(fnv1a32(new Uint8Array(0))).toBe('811c9dc5');
+    const idx = encoded.index;
+    const names = [idx.preview.file, idx.stars.file, ...idx.detectorFiles.flatMap((d) => [d.exposures.file, d.frames.file])];
+    for (const n of names) {
+      expect(n).toMatch(/^[a-z]+(\.d[1-6])?\.[0-9a-f]{8}\.(bin|json)$/);
+      expect(n in encoded.files).toBe(true);
+    }
+    expect(Object.keys(encoded.files).sort()).toEqual([...names, 'index.json'].sort());
+    expect(idx.defaultDetector).toBe(2);
+    expect(idx.format).toBe('wp-cache-2');
+    expect(defaultDetectorFor('wise-0855', input.exposures)).toBe(6);
+    expect(defaultDetectorFor('r-dra', input.exposures)).toBe(2);
+    // no detector 2 data: the detector with the most visits (ties: most exposures, then lowest number)
+    expect(defaultDetectorFor('r-dra', input.exposures.filter((e) => e.detector !== 2 && e.detector < 5))).toBe(1);
+  });
+
+  it('loadCached returns every frame, ordered by detector then mjd, equal to format 1', async () => {
+    const c = await loadCached('barnards-star', opts());
+    expect(c.frames.length).toBe(N);
+    expect(c.exposures.length).toBe(N);
+    for (let i = 1; i < c.frames.length; i++) {
+      const a = c.frames[i - 1].exposure;
+      const b = c.frames[i].exposure;
+      expect(a.detector < b.detector || (a.detector === b.detector && a.mjd <= b.mjd)).toBe(true);
+    }
+    const byId = new Map(v1.frames.map((x) => [x.exposure.id, x]));
+    let bad = 0;
+    for (const fr of c.frames) {
+      const o = byId.get(fr.exposure.id)!;
+      for (let j = 0; j < PER; j++) {
+        const a = fr.pixels[j];
+        const b = o.pixels[j];
+        if (!(a === b || (a !== a && b !== b))) bad++;
+        const va = fr.variance[j];
+        const vb = o.variance[j];
+        if (!(va === vb || (va !== va && vb !== vb))) bad++;
+        if (fr.flags[j] !== o.flags[j]) bad++;
+      }
+      expect(fr.coverage).toBe(o.coverage);
+    }
+    expect(bad).toBe(0);
+    expect(c.gaia.length).toBe(1);
+    expect(c.wise).toEqual(input.wise);
+  });
+
+  it('loadCachedPreview gives a movie, pairs, differences and counts', async () => {
+    const seen: number[] = [];
+    let total = 0;
+    const p = await loadCachedPreview('barnards-star', { ...opts(), onProgress: (e) => { seen.push(e.bytes ?? 0); total = e.total; } });
+    expect(p.defaultDetector).toBe(2);
+    expect(p.movie.frames.length).toBeGreaterThanOrEqual(2);
+    expect(p.movie.frames[0].exposureIds.length).toBe(p.movie.frames[0].nExposures);
+    expect(p.movie.stretch.hi).toBeGreaterThan(p.movie.stretch.lo);
+    expect(p.pairs.halfYear).not.toBeNull();
+    const pr = p.pairs.halfYear!;
+    const full = await loadCachedDetector('barnards-star', 2, opts());
+    expect(full.frames.length).toBe(p.detectors.find((d) => d.detector === 2)!.count);
+    for (const fr of pr.frames) {
+      const o = (await loadCachedDetector('barnards-star', fr.exposure.detector, opts())).frames.find((x) => x.exposure.id === fr.exposure.id)!;
+      expect(Array.from(fr.pixels)).toEqual(Array.from(o.pixels).map((x) => x));
+      expect(Array.from(fr.flags)).toEqual(Array.from(o.flags));
+      expect(Array.from(fr.variance)).toEqual(Array.from(o.variance));
+    }
+    expect(seen.length).toBeGreaterThan(2);
+    for (let i = 1; i < seen.length; i++) expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1]);
+    expect(seen[seen.length - 1]).toBe(p.totalBytes.preview);
+    expect(total).toBe(p.totalBytes.preview);
+    expect(p.totalBytes.perDetector[2]).toBeGreaterThan(0);
+    expect(p.visits.length).toBeGreaterThan(0);
+    for (const d of p.differences) {
+      expect(d.image.snr.length).toBe(PER);
+      expect(d.image.pairs.length).toBe(d.image.nPairs);
+    }
+  }, 60000);
+
+  it('falls back to format 1 when index.json is absent, and reports missing targets', async () => {
+    await expect(loadCachedPreview('r-dra', opts())).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(loadCached('r-dra', opts())).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    const html = (async () => new Response('<!doctype html>', { status: 200 })) as unknown as typeof fetch;
+    await expect(loadCachedPreview('r-dra', { fetchFn: html })).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });
 

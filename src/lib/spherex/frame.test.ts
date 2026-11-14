@@ -229,7 +229,8 @@ describe.skipIf(!have)('frame.bytes and progress bytes', () => {
     const f = await loadFrame(exposure, { ...grid, ra0: 100, dec0: -30 });
     expect(f.coverage).toBe(0);
     expect(f.bytes).toBeGreaterThan(0);
-    expect(f.bytes).toBeLessThan(40 * 1024);
+    // 32 KB header read plus the 11.5 KB wave-table suffix, which starts together with the header.
+    expect(f.bytes).toBeLessThan(48 * 1024);
   }, 60000);
 
   it('loadFrames progress carries the cumulative sum, failures included', async () => {

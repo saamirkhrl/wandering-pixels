@@ -96,6 +96,10 @@ async function loadFrameCounted(
     abortIf(signal);
     const url = exposure.url;
     onProgress?.({ stage: 'pixels', done: 0, total: 1, message: 'Reading header', bytes });
+    // The wavelength table (suffix read of the file) does not depend on the header or the footprint:
+    // start it together with the header read so it costs no extra round trip. Failures here never
+    // fail the frame (handled below); an unobserved rejection is absorbed by the wrapper.
+    const tableP = readWaveTable(url, ro).then((t) => ({ t, e: null as unknown }), (e: unknown) => ({ t: null, e }));
     const imgHdu = await hduOf(url, 'IMAGE', ro);
     const wcs = parseWcs(imgHdu.header);
     const nx = Number(imgHdu.header['NAXIS1']);
@@ -134,8 +138,6 @@ async function loadFrameCounted(
     const bw = x1 - x0;
     abortIf(signal);
 
-    // The wavelength table is independent of the pixel reads: start it now (2 small requests).
-    const tableP = readWaveTable(url, ro).then((t) => ({ t, e: null as unknown }), (e: unknown) => ({ t: null, e }));
     const useZodi = opts.background !== 'none';
     let flagsFailed = false;
     const [img, vari, zodi, rawFlags] = await Promise.all([

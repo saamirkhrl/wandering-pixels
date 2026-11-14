@@ -151,6 +151,18 @@ chosen after seeing which makes the matched method look best.
    3 pixels from any Gaia source with G < 18, divided by the propagated sigma.
 9. Resampling kernels compared for P1: bilinear, Lanczos-3, and flux-conserving (reproject
    adaptive and exact).
+10. Amendment (coordinator request, before any phase B result). FLAGS masks, stated exactly:
+   "prereg" = phase A rejection bits 0 TRANSIENT, 1 OVERFLOW, 2 SUR_ERROR, 6 NONFUNC,
+   9 MISSING_DATA, 10 HOT, 11 COLD, 15 NONLINEAR, 17 PERSIST, 25 STREAK, 26 BLOOM, 27 SNOWBALL,
+   28 HALO, 29 SATELLITE_HALO, plus NaN. "browser" = the website's bad-data mask: bits 0, 2, 6,
+   7 DICHROIC, 9, 10, 11, 14 PHANMISS, 15, 26, 27, plus NaN (OVERFLOW, PERSIST, STREAK, HALO,
+   SATELLITE_HALO not masked). P1 is reported with both masks (browser is its headline, as it
+   mimics the website); P2, M1 and M2 use prereg; M1 six is also run with browser for a like-for-
+   like comparison. Grid products subtract ZODI and then a per-frame sigma-clipped median of
+   pixels that are unflagged, not SOURCE-flagged and more than 3 native pixels from any Gaia
+   source with G < 18, before resampling; aperture photometry keeps its local annulus.
+   Exposure clusters with fewer than 12 exposures are not visits and are used nowhere
+   (Barnard's Star index visits 1, 3, 5).
 
 ## Injection and recovery
 

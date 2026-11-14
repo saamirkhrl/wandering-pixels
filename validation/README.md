@@ -33,6 +33,7 @@ plus about 200 MB of calibration files) and keeps about 1.8 GB on disk.
 | 9. Controls, paired stack, error study | `uv run python scripts/07b_phaseb_controls.py --field all` | results `phaseb_controls_<field>`; figures `phaseb_gap_full_*`, `phaseb_controls_*`, `phaseb_errors_*` |
 | 9b. Error floor effect | `uv run python scripts/07c_error_floor.py` | results `phaseb_error_floor_barnard` |
 | 9c. Injection flux check | `uv run python scripts/10c_injection_flux_check.py` | prints recovered AB of injected AB 16 and 18 sources |
+| 13. Browser readout cross-check | `uv run python scripts/13_crosscheck_readouts.py <readouts.json>` | `docs/results.json` section `browser_crosscheck_barnard` |
 | 10. Port test vectors | `uv run python scripts/09_algorithm_vectors.py` | `docs/algorithm_test_vectors.json` (spec: `docs/algorithm.md`) |
 
 Steps 3 onward only need the cache from steps 1 and 2 (step 10 needs step 7). Re-running any step with a warm cache

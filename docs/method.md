@@ -494,6 +494,26 @@ Eps Indi, Barnard and R Dra): always under 0.95 channel (worst 0.47, Eps Indi de
 visit 2 has only 7 exposures). Partial visits break pairing by absence, not by gap: Eps Indi's
 QR3 visit has no detector 1 or 4 exposures at all.
 
+## Browser port cross-check (Barnard, detector 2)
+
+Script 13_crosscheck_readouts.py compares the browser's cached readouts (41 Gaia stars, 117 visit
+pairs, three visits) with validation/wp/m2ref.py.
+
+- Algorithm: m2ref fed with the browser's own per-exposure flux, variance and wavelength reproduces
+  every one of the 117 readouts (abs(dz) at most 4e-14, identical flags, wavelength sets and counts).
+  The TypeScript readout is a faithful port.
+- Photometry: 2110 star-exposures measured by both. Flux relative difference median 1.4e-6, 90th
+  percentile 1.3e-4, max 6.4e-3. Variance ratio 0.96 to 1.06. Accept/reject differs in 2 of 2406.
+- Wavelength: the browser and our WCS-WAVE interpolation agree within 0.01 nm. The calibration-file
+  wavelengths (CWAVE) sit 0.30 nm lower in the median; using WCS-WAVE removes that difference.
+- End to end, 111 of 117 pairs get the same verdict band (abs(z) below 3, 3 to 5, 5 and up). The six
+  that differ come from the exposure sets: the browser has one exposure (2026W12_2A_0371_1) that
+  our index lists only on detector 5, and we have one (2026W34_2A_0178_2, star at the detector edge)
+  that the browser lacks. Restricted to the browser's exposures, 116 of 117 agree; the remaining one
+  needs the exposure we do not have.
+- Two single-exposure differences are an aperture edge case: a flagged pixel with overlap weight
+  2.4e-6 masks the star in our code but not in the browser's.
+
 ## Negative results
 
 - Per-pixel matched images (M1) failed. Fitting each grid pixel's spectrum across resampled

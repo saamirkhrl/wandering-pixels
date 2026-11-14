@@ -67,7 +67,8 @@ export interface MovieFrame {
   targetXY: [number, number] | null;
   backgroundFallback?: boolean;     // true if the masked background estimator had < 100 pixels and the
                                     // plain clipped median was used for at least one member
-  backgroundLevel: number;          // MJy/sr subtracted per member before stacking (mean); 0 for background 'none'
+  backgroundLevel: number;
+  saturated?: { x: number; y: number; npix: number }[]; // union of members' saturatedSources, merged within 2 px          // MJy/sr subtracted per member before stacking (mean); 0 for background 'none'
 }
 
 export interface Movie {
@@ -89,6 +90,20 @@ export interface DifferenceImage {
   wavelengthA: number; wavelengthB: number;
   wavelengthMatched: boolean;
   stretch: { lo: number; hi: number };
+  // 'single': two single exposures; 'naive-stack': two visit stacks; 'paired-stack': see PairedDifference
+  method: 'single' | 'naive-stack' | 'paired-stack';
+}
+
+// Visit difference built from wavelength-matched exposure pairs (docs/algorithm.md step 6):
+// each visit-A exposure is paired with a visit-B exposure within toleranceChannels mean bandwidths,
+// greedily by increasing gap, each exposure used once; pair differences are combined per pixel by
+// inverse-variance mean with an error floor.
+export interface PairedDifference extends DifferenceImage {
+  method: 'paired-stack';
+  nPairs: number;
+  nUnpairedA: number;
+  nUnpairedB: number;
+  pairs: { a: string; b: string; wavelengthGapUm: number; gapChannels: number }[];
 }
 
 export interface SpectrumPoint {

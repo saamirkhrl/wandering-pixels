@@ -8,6 +8,7 @@ export type { WiseSource } from './wise';
 export { positionAt, makeGrid, worldToGrid, gridToWorld } from './wcs';
 export { loadFrame, loadFrames } from './frame';
 export { annotateWavelengths } from './wavelength';
+export { pairedDifference, visitDifference } from './movie';
 export { buildMovie, difference, summarize, pickBlinkPair, listPairs, YEAR_PAIR_DAYS, HALF_YEAR_PAIR_DAYS } from './movie';
 export type { PairOptions, ListedPair } from './movie';
 export { spectrumAt } from './spectrum';

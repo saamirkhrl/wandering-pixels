@@ -1,4 +1,4 @@
-import type { Frame, MovieMode, Detector, Target, Movie, MovieFrame, DifferenceImage, Exposure } from './types';
+import type { Frame, Grid, MovieMode, Detector, Target, Movie, MovieFrame, DifferenceImage, Exposure, PairedDifference } from './types';
 import { SpherexError, BAD_DATA_MASK } from './types';
 import { positionAt, worldToGrid } from './wcs';
 import { robustPercentiles, sigmaClippedStats } from './stats';
@@ -231,6 +231,7 @@ function stackFrames(
           return worldToGrid(grid, p.ra, p.dec);
         })()
     : null;
+  const saturated = mergeSaturated(members);
   return {
     grid,
     pixels,
@@ -248,8 +249,39 @@ function stackFrames(
     exposureIds: members.map((f) => f.exposure.id),
     targetXY,
     backgroundLevel: background === 'median' ? meanOf(levels) : 0,
+    // Omitted (not []) when no member has a saturated pixel.
+    ...(saturated.length ? { saturated } : {}),
     ...(background === 'median' ? { backgroundFallback: bgs.some((b) => b !== null && b.fallback) } : {}),
   };
+}
+
+/**
+ * Union of the members' saturatedSources, merged when centroids are closer than 2 px (to the running
+ * npix-weighted centroid of a group). Merged x, y = npix-weighted mean; merged npix = the largest
+ * member count, so a source seen in N exposures is not counted N times. Largest first.
+ */
+function mergeSaturated(members: Frame[]): { x: number; y: number; npix: number }[] {
+  const groups: { sw: number; sx: number; sy: number; max: number }[] = [];
+  for (const f of members) {
+    for (const s of saturatedSources(f)) {
+      let g: (typeof groups)[number] | undefined;
+      let best = 2;
+      for (const c of groups) {
+        const d = Math.hypot(c.sx / c.sw - s.x, c.sy / c.sw - s.y);
+        if (d < best) {
+          best = d;
+          g = c;
+        }
+      }
+      if (g) {
+        g.sw += s.npix;
+        g.sx += s.npix * s.x;
+        g.sy += s.npix * s.y;
+        g.max = Math.max(g.max, s.npix);
+      } else groups.push({ sw: s.npix, sx: s.npix * s.x, sy: s.npix * s.y, max: s.npix });
+    }
+  }
+  return groups.map((g) => ({ x: g.sx / g.sw, y: g.sy / g.sw, npix: g.max })).sort((a, b) => b.npix - a.npix);
 }
 
 function widen(lo: number, hi: number): { lo: number; hi: number } {
@@ -346,6 +378,7 @@ export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
     wavelengthB: b.wavelength,
     wavelengthMatched: Math.abs(a.wavelength - b.wavelength) < bw,
     stretch: { lo: -sym, hi: sym },
+    method: a.nExposures === 1 && b.nExposures === 1 ? 'single' : 'naive-stack',
   };
 }
 
@@ -485,4 +518,172 @@ export function listPairs(
     }
   }
   return top;
+}
+
+export interface PairedDifferenceOptions {
+  /** Pairing tolerance in mean bandwidths of the two exposures. Default 1.0 (docs/algorithm.md step 6). */
+  toleranceChannels?: number;
+  /**
+   * Fractional flux error floor, default 0.02. docs/algorithm.md specifies a flux floor of 0.02 (fraction
+   * of F, added in quadrature) for aperture photometry. Here it is applied per pixel,
+   * var = varA + varB + (f*|pA|)^2 + (f*|pB|)^2, on background-subtracted values of the resampled
+   * grid. That per-pixel variant is not validated.
+   */
+  errorFloor?: number;
+  /** 'median' (default): subtract each frame's own frameBackground level first. 'none': use pixels as is. */
+  background?: 'median' | 'none';
+}
+
+function bandwidthOf(f: Frame): number {
+  const b = f.exposure.bandwidthAtTarget;
+  if (b !== null && Number.isFinite(b) && b > 0) return b;
+  return channelBandwidth(f.exposure.detector, f.exposure.wavelengthAtTarget as number);
+}
+
+function eligible(f: Frame): boolean {
+  const l = f.exposure.wavelengthAtTarget;
+  return f.exposure.inStack !== false && l !== null && Number.isFinite(l);
+}
+
+/**
+ * Visit difference built from wavelength-matched exposure pairs (docs/algorithm.md step 6, PS).
+ * All frames need one detector and one w x h (else BAD_INPUT); the grid centre may differ (tracked
+ * frames). Frames with inStack === false or a non-finite wavelengthAtTarget are ignored.
+ * Candidate pairs have |lamA - lamB| <= tol * 0.5 * (bwA + bwB); they are sorted by |lam gap|, then
+ * |mjd gap|, then ids (A id, then B id) and accepted greedily, each exposure once. Per pair the
+ * difference is B - A of background-subtracted pixels with variance
+ * varA + varB + (f*|pA|)^2 + (f*|pB|)^2; pairs are combined per pixel by inverse-variance mean
+ * (variance 1/sum(w), NaN where no pair has both pixels usable). Result grid = B frame of the first pair.
+ * pairs[].wavelengthGapUm is lamB - lamA (signed) and gapChannels that over the mean bandwidth.
+ * No qualifying pair: all-NaN image, nPairs 0, wavelengthMatched false (no throw).
+ */
+export function pairedDifference(
+  framesA: Frame[],
+  framesB: Frame[],
+  opts: PairedDifferenceOptions = {},
+): PairedDifference {
+  const tol = opts.toleranceChannels ?? 1.0;
+  const floor = opts.errorFloor ?? 0.02;
+  const background = opts.background ?? 'median';
+  const all = [...framesA, ...framesB];
+  for (const f of all) {
+    if (f.exposure.detector !== all[0].exposure.detector || f.w !== all[0].w || f.h !== all[0].h) {
+      throw new SpherexError(
+        'BAD_INPUT',
+        `pairedDifference: frames differ in detector or shape (${f.exposure.id} vs ${all[0].exposure.id})`,
+      );
+    }
+  }
+  const A = framesA.filter(eligible);
+  const B = framesB.filter(eligible);
+  const w = all.length ? all[0].w : 0;
+  const h = all.length ? all[0].h : 0;
+  const n = w * h;
+  const lam = (f: Frame): number => f.exposure.wavelengthAtTarget as number;
+
+  const cands: { a: Frame; b: Frame; gap: number; dt: number }[] = [];
+  for (const a of A)
+    for (const b of B) {
+      const gap = lam(b) - lam(a);
+      if (Math.abs(gap) <= tol * 0.5 * (bandwidthOf(a) + bandwidthOf(b)))
+        cands.push({ a, b, gap, dt: Math.abs(b.exposure.mjd - a.exposure.mjd) });
+    }
+  cands.sort((p, q) => {
+    const d = Math.abs(p.gap) - Math.abs(q.gap);
+    if (d !== 0) return d;
+    const t = p.dt - q.dt;
+    if (t !== 0) return t;
+    if (p.a.exposure.id !== q.a.exposure.id) return p.a.exposure.id < q.a.exposure.id ? -1 : 1;
+    return p.b.exposure.id < q.b.exposure.id ? -1 : p.b.exposure.id > q.b.exposure.id ? 1 : 0;
+  });
+  const usedA = new Set<Frame>();
+  const usedB = new Set<Frame>();
+  const accepted: typeof cands = [];
+  for (const c of cands) {
+    if (usedA.has(c.a) || usedB.has(c.b)) continue;
+    usedA.add(c.a);
+    usedB.add(c.b);
+    accepted.push(c);
+  }
+
+  const levelOf = (f: Frame): number => (background === 'median' ? frameBackground(f).level : 0);
+  const sw = new Float64Array(n);
+  const swd = new Float64Array(n);
+  for (const { a, b } of accepted) {
+    const la = levelOf(a);
+    const lb = levelOf(b);
+    for (let i = 0; i < n; i++) {
+      if (((a.flags[i] | b.flags[i]) & BAD_DATA_MASK) !== 0) continue;
+      const pa = a.pixels[i] - la;
+      const pb = b.pixels[i] - lb;
+      const v = a.variance[i] + b.variance[i] + (floor * pa) ** 2 + (floor * pb) ** 2;
+      if (!Number.isFinite(pa) || !Number.isFinite(pb) || !(v > 0) || !Number.isFinite(v)) continue;
+      const wt = 1 / v;
+      sw[i] += wt;
+      swd[i] += wt * (pb - pa);
+    }
+  }
+  const pixels = new Float32Array(n);
+  const variance = new Float32Array(n);
+  const snr = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    if (sw[i] > 0) {
+      const d = swd[i] / sw[i];
+      const v = 1 / sw[i];
+      pixels[i] = d;
+      variance[i] = v;
+      snr[i] = d / Math.sqrt(v);
+    } else {
+      pixels[i] = NaN;
+      variance[i] = NaN;
+      snr[i] = NaN;
+    }
+  }
+  const [s] = robustPercentiles([pixels], [99.5], Math.abs);
+  const sym = Number.isFinite(s) && s > 0 ? s : 1;
+  const memA = accepted.length ? accepted.map((c) => c.a) : A;
+  const memB = accepted.length ? accepted.map((c) => c.b) : B;
+  const grid: Grid = accepted.length
+    ? accepted[0].b.grid
+    : all.length
+      ? (framesB[0] ?? framesA[0]).grid
+      : { ra0: 0, dec0: 0, w: 0, h: 0, scaleArcsec: 6.15, epochMjd: 0 };
+  return {
+    grid,
+    pixels,
+    variance,
+    snr,
+    w,
+    h,
+    wavelengthA: meanOf(memA.map(lam)),
+    wavelengthB: meanOf(memB.map(lam)),
+    wavelengthMatched: accepted.length > 0,
+    stretch: { lo: -sym, hi: sym },
+    method: 'paired-stack',
+    nPairs: accepted.length,
+    nUnpairedA: A.length - accepted.length,
+    nUnpairedB: B.length - accepted.length,
+    pairs: accepted.map((c) => ({
+      a: c.a.exposure.id,
+      b: c.b.exposure.id,
+      wavelengthGapUm: c.gap,
+      gapChannels: c.gap / (0.5 * (bandwidthOf(c.a) + bandwidthOf(c.b))),
+    })),
+  };
+}
+
+/** pairedDifference of the frames of `detector` in visit visitA (as A) and visitB (as B). */
+export function visitDifference(
+  frames: Frame[],
+  detector: Detector,
+  visitA: number,
+  visitB: number,
+  opts?: PairedDifferenceOptions,
+): PairedDifference {
+  const sel = frames.filter((f) => f.exposure.detector === detector);
+  return pairedDifference(
+    sel.filter((f) => f.exposure.visitIndex === visitA),
+    sel.filter((f) => f.exposure.visitIndex === visitB),
+    opts,
+  );
 }

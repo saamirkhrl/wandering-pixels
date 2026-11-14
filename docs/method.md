@@ -137,8 +137,10 @@ chosen after seeing which makes the matched method look best.
 7. Spectral model (identical for M1 and M2). For an evaluation wavelength w0 with local
    bandwidth b0, take that visit's samples with wavelength within w0 +/- 2.5 b0; require at least
    3 samples, with at least one on each side of w0 (otherwise no value: no extrapolation);
-   variance-weighted straight-line fit in wavelength, one 4-sigma clipping pass, evaluate at w0
-   with its propagated variance. Two modes: "six" (samples from all detectors) and "one"
+   variance-weighted straight-line fit in wavelength, drop the single worst sample if it lies
+   beyond 4 sigma and refit (amended 10:20 CST before any result: a full clipping pass from a fit
+   pulled by one outlier rejected every sample in a unit test), evaluate at w0 with its
+   propagated variance. Two modes: "six" (samples from all detectors) and "one"
    (only detector d).
 8. Metrics. z = (F_A - F_B) / sqrt(var_A + var_B) per star and comparison; report the robust
    width of z (1.4826 x MAD), the robust scatter of the fractional difference

@@ -335,7 +335,9 @@ Checks: the archive ePSF is identical for every exposure of a detector (one cali
 detector); injected sources recover their aperture flux to 1.00000 without noise and 0.998 (range
 0.976 to 1.013) with noise; their width matches real stars of similar brightness to a median
 ratio of 1.04; one injected position was hand-checked (centroid offset 0.13 px at S/N 26, 0.03 px
-without noise).
+without noise). Independent flux check (script 10c_injection_flux_check.py): a noise-free AB 16.0
+and AB 18.0 source injected into one real exposure, summed over a 6 px aperture and converted by
+hand with a pixel solid angle of 8.890e-10 sr, comes back at AB 15.997 and 17.997.
 
 50 percent completeness magnitude (AB, flat spectrum, six detectors pooled; +/- from the binomial
 counts only; the 1 percent thresholds themselves rest on the top 3 or 4 null trials and are

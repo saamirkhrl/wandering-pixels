@@ -1,8 +1,10 @@
-import { isMock } from '../data';
 import type { Detector, MovieMode, Progress, SpherexErrorCode } from '../data';
 import { divergingColor } from './render';
 import type { PlayMode } from './player';
 import { STAGE_WORDS } from './load';
+import { createTimeline } from './timeline';
+
+export const PREPARED_DIFF_ENABLED = false;
 
 export interface FrameInfo {
   caption: string;
@@ -10,6 +12,9 @@ export interface FrameInfo {
   tip: string;
   option: string;
   mjd: number;
+  shortDate: string;
+  wavelength: number;
+  visitIndex: number;
 }
 
 export interface CompareInfo {
@@ -37,6 +42,9 @@ export interface PanelModel {
   overlays: { gaia: boolean; wise: boolean; masked: boolean };
   wiseAvailable: boolean;
   overlayNote: string;
+  smooth: boolean;
+  contrast: 'soft' | 'normal' | 'hard';
+  preparedResidual: string | null;
   compare: CompareInfo | null;
 }
 
@@ -58,18 +66,21 @@ export interface PanelHandlers {
   loadRest: () => void;
   stopRest: () => void;
   setSize: (n: number) => void;
+  setSmooth: (on: boolean) => void;
+  setContrast: (c: 'soft' | 'normal' | 'hard') => void;
   toggleOverlay: (k: 'gaia' | 'wise' | 'masked') => void;
   goBack: () => void;
   openPrepared: () => void;
 }
 
 export type RestState =
-  | { kind: 'optin'; n: number; mb: number; single: boolean }
-  | { kind: 'loading'; done: number; total: number; mb: number }
-  | { kind: 'stopped'; n: number; mb: number; loaded: number; total: number; single: boolean };
+  | { kind: 'optin'; n: number; mb: number; single: boolean; det: number; exact: boolean }
+  | { kind: 'loading'; done: number; total: number; mb: number; exact: boolean }
+  | { kind: 'stopped'; n: number; mb: number; loaded: number; total: number; single: boolean; det: number; exact: boolean };
 
 export interface Panel {
   el: HTMLElement;
+  setMockLine: (on: boolean) => void;
   setBack: (label: string | null) => void;
   setSkyEntry: (name: string | null) => void;
   attach: (spectrum: HTMLElement, quality: HTMLElement) => void;
@@ -78,6 +89,8 @@ export interface Panel {
   showEmpty: (targets: { slug: string; name: string; blurb: string }[]) => void;
   showControls: (on: boolean) => void;
   setHeader: (name: string, meta: string) => void;
+  setTitleNote: (text: string | null) => void;
+  setMatchNote: (text: string | null) => void;
   setProgress: (p: Progress | null, stageWord?: string) => void;
   setNotice: (text: string | null) => void;
   setStopped: (text: string, canTry: boolean) => void;
@@ -114,24 +127,6 @@ export function formatDate(mjd: number): string {
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-function monthStarts(m0: number, m1: number): { mjd: number; label: string; month: number }[] {
-  const out: { mjd: number; label: string; month: number }[] = [];
-  const d0 = new Date((m0 - MJD_UNIX) * 86400000);
-  let y = d0.getUTCFullYear();
-  let m = d0.getUTCMonth() + 1;
-  for (let guard = 0; guard < 600; guard++) {
-    if (m > 11) {
-      m = 0;
-      y += 1;
-    }
-    const mjd = Date.UTC(y, m, 1) / 86400000 + MJD_UNIX;
-    if (mjd > m1) break;
-    if (mjd >= m0) out.push({ mjd, label: `${MONTHS[m]} ${y}`, month: m });
-    m += 1;
-  }
-  return out;
-}
-
 export function createPanel(hd: PanelHandlers): Panel {
   const el = h('div', 'v-panel');
 
@@ -139,7 +134,11 @@ export function createPanel(hd: PanelHandlers): Panel {
   const head = h('header', 'v-head');
   const title = h('h2', 'v-title', '');
   const meta = h('p', 'v-meta', '');
-  head.append(title, meta);
+  const titleNote = h('p', 'v-detail v-titlenote');
+  titleNote.hidden = true;
+  head.append(title, meta, titleNote);
+  const matchLine = h('p', 'v-notice');
+  matchLine.hidden = true;
   const status = h('div', 'v-status');
   status.setAttribute('aria-live', 'polite');
 
@@ -175,50 +174,58 @@ export function createPanel(hd: PanelHandlers): Panel {
     return b;
   });
   speedRow.append(speedLabel, seg);
+  const caveat = h('p', 'v-caveat');
   const keys = h('p', 'v-hint', 'Space starts and stops. Left and right arrow keys step.');
-  secPlay.append(hPlay, caption, detail, rowMain, speedRow, keys);
+  secPlay.append(hPlay, caption, detail, rowMain, speedRow, caveat, keys);
 
   // timeline
   const secTl = h('section', 'v-sec');
   const hTl = h('h3', 'v-h', 'Timeline');
-  const tl = h('div', 'v-tl');
-  tl.setAttribute('role', 'group');
-  tl.setAttribute('aria-label', 'Images placed by date');
-  const tip = h('div', 'v-tl-tip');
-  tip.hidden = true;
+  const timeline = createTimeline({
+    onShow: (i) => hd.selectFrame(i),
+    onPickA: (i) => hd.setA(i),
+    onPickB: (i) => hd.setB(i),
+  });
   const scrub = h('input', 'v-scrub');
   scrub.type = 'range';
   scrub.min = '0';
   scrub.step = '1';
   scrub.setAttribute('aria-label', 'Exposure');
   scrub.addEventListener('input', () => hd.selectFrame(Number(scrub.value)));
-  const tlNote = h('p', 'v-hint', 'Each mark sits at the date the image was taken.');
-  secTl.append(hTl, tl, scrub, tlNote);
+  secTl.append(hTl, timeline.el, scrub);
 
   // compare
   const secCmp = h('section', 'v-sec');
-  const hCmp = h('h3', 'v-h', 'Compare two visits');
-  const selA = h('select', 'v-select');
-  const selB = h('select', 'v-select');
-  selA.id = 'v-sel-a';
-  selB.id = 'v-sel-b';
-  const labA = h('label', 'v-field');
-  labA.htmlFor = selA.id;
-  const labAt = h('span', 'v-lab', 'Image A');
-  labA.append(labAt, selA);
-  const labB = h('label', 'v-field');
-  labB.htmlFor = selB.id;
-  const labBt = h('span', 'v-lab', 'Image B');
-  labB.append(labBt, selB);
-  selA.addEventListener('change', () => hd.setA(Number(selA.value)));
-  selB.addEventListener('change', () => hd.setB(Number(selB.value)));
+  const hCmp = h('h3', 'v-h', 'Compare two images');
+  const cmpSeg = h('div', 'v-seg');
+  cmpSeg.setAttribute('role', 'group');
+  cmpSeg.setAttribute('aria-label', 'How to compare image A and image B');
+  const bCmpBlink = btn('Blink', 'v-seg-btn', () => hd.setDiff(false));
+  const bCmpDiff = btn('Difference', 'v-seg-btn', () => hd.setDiff(true));
+  cmpSeg.append(bCmpBlink, bCmpDiff);
   const cmpHint = h('p', 'v-hint', 'Blink flips between A and B. Difference shows B minus A.');
-  const bDiff = btn('Difference', 'v-btn v-toggle', () => hd.setDiff(bDiff.getAttribute('aria-pressed') !== 'true'));
-  bDiff.setAttribute('aria-pressed', 'false');
-  const bSnr = btn('Show in sigma', 'v-btn v-toggle', () => hd.setSnr(bSnr.getAttribute('aria-pressed') !== 'true'));
-  bSnr.setAttribute('aria-pressed', 'false');
-  const rowDiff = h('div', 'v-row');
-  rowDiff.append(bDiff, bSnr);
+  const unitSeg = h('div', 'v-seg v-unitseg');
+  unitSeg.setAttribute('role', 'group');
+  unitSeg.setAttribute('aria-label', 'Difference units');
+  const bUnitFlux = btn('MJy/sr', 'v-seg-btn', () => hd.setSnr(false));
+  const bUnitSig = btn('Sigma', 'v-seg-btn', () => hd.setSnr(true));
+  unitSeg.append(bUnitFlux, bUnitSig);
+  // Prepared difference slot. It sits between the units control and the legend. While
+  // PREPARED_DIFF_ENABLED is false nothing is rendered; when it is switched on, the Plain /
+  // Colour-matched control and its residual line appear here, so no other control moves.
+  const prepSlot = h('div', 'v-prepslot');
+  const prepResidual = h('p', 'v-detail', '');
+  if (PREPARED_DIFF_ENABLED) {
+    const prepSeg = h('div', 'v-seg');
+    prepSeg.setAttribute('role', 'group');
+    prepSeg.setAttribute('aria-label', 'Difference kind');
+    const bPlain = btn('Plain', 'v-seg-btn', () => undefined);
+    bPlain.setAttribute('aria-pressed', 'true');
+    const bColour = btn('Colour-matched', 'v-seg-btn', () => undefined);
+    bColour.disabled = true;
+    prepSeg.append(bPlain, bColour);
+    prepSlot.append(prepSeg, h('p', 'v-hint', 'Prepared for the five targets'), prepResidual);
+  }
   const legend = h('div', 'v-legend');
   legend.hidden = true;
   const ramp = h('canvas', 'v-ramp');
@@ -234,16 +241,28 @@ export function createPanel(hd: PanelHandlers): Panel {
     }
   }
   const legLabels = h('div', 'v-leg-labels');
-  const legA = h('span', '', 'A brighter');
-  const legZero = h('span', '', '0');
-  const legB = h('span', '', 'B brighter');
-  legLabels.append(legA, legZero, legB);
+  legLabels.append(h('span', '', 'A brighter'), h('span', '', '0'), h('span', '', 'B brighter'));
   const legRange = h('p', 'v-detail', '');
   const legNote = h('p', 'v-hint', '');
   const warn = h('p', 'v-warn');
   warn.hidden = true;
   legend.append(ramp, legLabels, legRange, legNote);
-  secCmp.append(hCmp, labA, labB, cmpHint, rowDiff, legend, warn);
+  const fallback = h('details', 'v-disclosure');
+  fallback.append(h('summary', '', 'Choose from a list'));
+  const selA = h('select', 'v-select');
+  const selB = h('select', 'v-select');
+  selA.id = 'v-sel-a';
+  selB.id = 'v-sel-b';
+  const labA = h('label', 'v-field');
+  labA.htmlFor = selA.id;
+  labA.append(h('span', 'v-lab', 'Image A'), selA);
+  const labB = h('label', 'v-field');
+  labB.htmlFor = selB.id;
+  labB.append(h('span', 'v-lab', 'Image B'), selB);
+  selA.addEventListener('change', () => hd.setA(Number(selA.value)));
+  selB.addEventListener('change', () => hd.setB(Number(selB.value)));
+  fallback.append(labA, labB);
+  secCmp.append(hCmp, cmpSeg, cmpHint, unitSeg, prepSlot, legend, warn, fallback);
 
   // display
   const secDisp = h('section', 'v-sec');
@@ -255,6 +274,24 @@ export function createPanel(hd: PanelHandlers): Panel {
   const bSingle = btn('Every exposure', 'v-seg-btn', () => hd.setMode('single'));
   modeSeg.append(bVisit, bSingle);
   const modeHint = h('p', 'v-hint', 'Per visit averages the exposures taken in one pass. Every exposure shows each one separately.');
+  const modeHint2 = h('p', 'v-hint', 'Stacked visits suit stars and brown dwarfs. A distant planet would move during a single visit and blur out.');
+  const smoothLab = h('p', 'v-lab v-subhead', 'Image');
+  const smoothSeg = h('div', 'v-seg');
+  smoothSeg.setAttribute('role', 'group');
+  smoothSeg.setAttribute('aria-label', 'Image smoothing');
+  const bSmooth = btn('Smooth', 'v-seg-btn', () => hd.setSmooth(true));
+  const bTrue = btn('True pixels', 'v-seg-btn', () => hd.setSmooth(false));
+  smoothSeg.append(bSmooth, bTrue);
+  const contrastLab = h('p', 'v-lab v-subhead', 'Contrast');
+  const contrastSeg = h('div', 'v-seg');
+  contrastSeg.setAttribute('role', 'group');
+  contrastSeg.setAttribute('aria-label', 'Contrast');
+  const contrastBtns = (['soft', 'normal', 'hard'] as const).map((c) => {
+    const b = btn(c === 'soft' ? 'Soft' : c === 'normal' ? 'Normal' : 'Hard', 'v-seg-btn', () => hd.setContrast(c));
+    b.dataset.contrast = c;
+    contrastSeg.append(b);
+    return b;
+  });
   const detLab = h('p', 'v-lab v-subhead', 'Detector');
   const detList = h('div', 'v-detlist');
   detList.setAttribute('role', 'group');
@@ -271,17 +308,23 @@ export function createPanel(hd: PanelHandlers): Panel {
     return b;
   });
   const sizeNote = h('p', 'v-hint', '');
-  secDisp.append(hDisp, modeSeg, modeHint, detLab, detList, sizeLab, sizeSeg, sizeNote);
+  secDisp.append(hDisp, modeSeg, modeHint, modeHint2, smoothLab, smoothSeg, contrastLab, contrastSeg, detLab, detList, sizeLab, sizeSeg, sizeNote);
 
   // overlays
   const secOv = h('section', 'v-sec');
   secOv.append(h('h3', 'v-h', 'Overlays'));
-  const ovRow = h('div', 'v-row');
+  const ovRow = h('div', 'v-checks');
   const mkOv = (key: 'gaia' | 'wise' | 'masked', text: string) => {
-    const b = btn(text, 'v-btn v-toggle', () => hd.toggleOverlay(key));
-    b.setAttribute('aria-pressed', 'false');
-    ovRow.append(b);
-    return b;
+    const lab = h('label', 'v-check');
+    const input = h('input');
+    input.type = 'checkbox';
+    input.addEventListener('change', () => hd.toggleOverlay(key));
+    const box = h('span', 'v-check-box');
+    box.setAttribute('aria-hidden', 'true');
+    const t = h('span', 'v-check-text', text);
+    lab.append(input, box, t);
+    ovRow.append(lab);
+    return { input, text: t };
   };
   const bGaia = mkOv('gaia', 'Gaia stars');
   const bWise = mkOv('wise', 'WISE sources');
@@ -368,109 +411,18 @@ export function createPanel(hd: PanelHandlers): Panel {
   controls.append(secPlay, secTl, secCmp, secDisp, secOv, slotSpec, slotQual, secShare);
   const restBox = h('div', 'v-rest');
   restBox.hidden = true;
-  if (isMock) {
-    const mockLine = h('p', 'v-mock', 'Simulated data. Real SPHEREx images are being connected.');
-    el.append(mockLine);
-  }
+  const mockLine = h('p', 'v-mock', 'Simulated data. Real SPHEREx images are being connected.');
+  mockLine.hidden = true;
+  el.append(mockLine);
   const backRow = h('div', 'v-top');
   backRow.hidden = true;
   const backBtn = btn('', 'v-btn', hd.goBack);
   backRow.append(backBtn);
   const skyRow = h('div', 'v-top v-skyline');
   skyRow.hidden = true;
-  el.append(backRow, skyRow, head, status, restBox, empty, controls);
+  el.append(backRow, skyRow, head, status, matchLine, restBox, empty, controls);
 
-  // timeline rendering
-  let tlKey = '';
-  let tlBtns: HTMLButtonElement[] = [];
-  let tlDomain: [number, number] = [0, 1];
-  let tlMonths: HTMLElement[] = [];
   let frames: FrameInfo[] = [];
-  const PAD = 18;
-
-  const posStyle = (frac: number) => `calc(${PAD}px + (100% - ${PAD * 2}px) * ${frac})`;
-
-  function buildTimeline(list: FrameInfo[]): void {
-    tl.replaceChildren();
-    tlBtns = [];
-    tlMonths = [];
-    const m = list.map((f) => f.mjd);
-    let lo = Math.min(...m);
-    let hi = Math.max(...m);
-    if (hi - lo < 30) {
-      const mid = (lo + hi) / 2;
-      lo = mid - 15;
-      hi = mid + 15;
-    } else {
-      const pad = (hi - lo) * 0.04;
-      lo -= pad;
-      hi += pad;
-    }
-    tlDomain = [lo, hi];
-    const axis = h('div', 'v-tl-axis');
-    tl.append(axis);
-    for (const ms of monthStarts(lo, hi)) {
-      const t = h('span', 'v-tl-month');
-      t.style.left = posStyle((ms.mjd - lo) / (hi - lo));
-      const lab = h('span', 'v-tl-mlabel', ms.label);
-      lab.dataset.month = String(ms.month);
-      t.append(lab);
-      tl.append(t);
-      tlMonths.push(t);
-    }
-    list.forEach((f, i) => {
-      const b = h('button', 'v-tl-f');
-      b.type = 'button';
-      b.style.left = posStyle((f.mjd - lo) / (hi - lo));
-      b.setAttribute('aria-label', f.caption);
-      const mark = h('span', 'v-tl-mark');
-      const tag = h('span', 'v-tl-ab', '');
-      b.append(mark, tag);
-      b.addEventListener('click', () => hd.selectFrame(i));
-      const show = () => {
-        tip.textContent = f.tip;
-        tip.hidden = false;
-        const w = tl.clientWidth;
-        const x = PAD + ((f.mjd - lo) / (hi - lo)) * (w - PAD * 2);
-        const tw = tip.offsetWidth;
-        tip.style.left = `${Math.min(Math.max(x - tw / 2, 0), Math.max(0, w - tw))}px`;
-      };
-      b.addEventListener('pointerenter', show);
-      b.addEventListener('focus', show);
-      b.addEventListener('pointerleave', () => {
-        tip.hidden = true;
-      });
-      b.addEventListener('blur', () => {
-        tip.hidden = true;
-      });
-      tl.append(b);
-      tlBtns.push(b);
-    });
-    tl.append(tip);
-    layoutTimeline();
-  }
-
-  function layoutTimeline(): void {
-    const w = tl.clientWidth;
-    if (w <= 0 || tlBtns.length === 0) return;
-    const [lo, hi] = tlDomain;
-    const xs = frames.map((f) => ((f.mjd - lo) / (hi - lo)) * (w - PAD * 2));
-    tlBtns.forEach((b, i) => {
-      let gap = Infinity;
-      for (let j = 0; j < xs.length; j++) if (j !== i) gap = Math.min(gap, Math.abs(xs[j] - xs[i]));
-      const width = Math.max(10, Math.min(40, gap));
-      b.style.width = `${width}px`;
-      b.style.marginLeft = `${-width / 2}px`;
-    });
-    // thin the month labels so they never touch
-    const per = Math.max(1, Math.ceil(tlMonths.length / Math.max(1, Math.floor(w / 80))));
-    tlMonths.forEach((t, i) => {
-      t.classList.toggle('v-tl-quiet', i % per !== 0);
-    });
-  }
-
-  const ro = new ResizeObserver(layoutTimeline);
-  ro.observe(tl);
 
   function fillSelect(sel: HTMLSelectElement, list: FrameInfo[], value: number): void {
     sel.replaceChildren();
@@ -483,6 +435,7 @@ export function createPanel(hd: PanelHandlers): Panel {
   }
 
   let lastSelKey = '';
+  let tlKey = '';
 
   function update(m: PanelModel): void {
     frames = m.frames;
@@ -490,7 +443,6 @@ export function createPanel(hd: PanelHandlers): Panel {
     const key = `${m.mode}|${n}|${frames.map((f) => f.mjd.toFixed(3)).join(',')}`;
     if (key !== tlKey) {
       tlKey = key;
-      if (n > 0) buildTimeline(frames);
       scrub.max = String(Math.max(0, n - 1));
     }
     const selKey = key + '|' + frames.map((f) => f.option).join('|');
@@ -523,20 +475,29 @@ export function createPanel(hd: PanelHandlers): Panel {
       b.setAttribute('aria-pressed', String(Number(b.dataset.fps) === m.fps));
     });
 
-    tlBtns.forEach((b, i) => {
-      b.classList.toggle('is-active', i === m.index);
-      b.classList.toggle('is-a', i === m.a);
-      b.classList.toggle('is-b', i === m.b);
-      const tag = b.lastElementChild as HTMLElement;
-      tag.textContent = i === m.a && i === m.b ? 'A B' : i === m.a ? 'A' : i === m.b ? 'B' : '';
-      if (i === m.index) b.setAttribute('aria-current', 'true');
-      else b.removeAttribute('aria-current');
-    });
+    timeline.set(
+      frames.map((f) => ({
+        mjd: f.mjd,
+        label: f.caption,
+        shortDate: f.shortDate,
+        wavelength: f.wavelength,
+        visitIndex: f.visitIndex,
+      })),
+      m.index,
+      m.a,
+      m.b,
+    );
+    timeline.setPickEnabled(n >= 2);
+    caveat.textContent = m.diff
+      ? 'Brightness needs care: each image is taken at a slightly different infrared colour, so a star can flicker without having changed. Bright stars also leave marks in a subtraction even when nothing moved.'
+      : 'Brightness needs care: each image is taken at a slightly different infrared colour, so a star can flicker without having changed.';
 
-    bDiff.setAttribute('aria-pressed', String(m.diff));
-    bDiff.disabled = few;
-    bSnr.setAttribute('aria-pressed', String(m.snr));
-    bSnr.hidden = !m.diff;
+    bCmpBlink.setAttribute('aria-pressed', String(!m.diff));
+    bCmpDiff.setAttribute('aria-pressed', String(m.diff));
+    bCmpDiff.disabled = few;
+    unitSeg.hidden = !m.diff;
+    bUnitFlux.setAttribute('aria-pressed', String(!m.snr));
+    bUnitSig.setAttribute('aria-pressed', String(m.snr));
     legend.hidden = !(m.diff && m.compare);
     if (m.compare) {
       legRange.textContent = m.compare.rangeText;
@@ -568,11 +529,15 @@ export function createPanel(hd: PanelHandlers): Panel {
       b.setAttribute('aria-pressed', String(Number(b.dataset.size) === m.size));
     });
     sizeNote.textContent = m.sizeNote;
-    bGaia.setAttribute('aria-pressed', String(m.overlays.gaia));
-    bMask.setAttribute('aria-pressed', String(m.overlays.masked));
-    bWise.setAttribute('aria-pressed', String(m.overlays.wise && m.wiseAvailable));
-    bWise.disabled = !m.wiseAvailable;
-    bWise.textContent = m.wiseAvailable ? 'WISE sources' : 'WISE sources, not available yet';
+    bSmooth.setAttribute('aria-pressed', String(m.smooth));
+    bTrue.setAttribute('aria-pressed', String(!m.smooth));
+    contrastBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.contrast === m.contrast)));
+    prepResidual.textContent = m.preparedResidual ?? '';
+    bGaia.input.checked = m.overlays.gaia;
+    bMask.input.checked = m.overlays.masked;
+    bWise.input.checked = m.overlays.wise && m.wiseAvailable;
+    bWise.input.disabled = !m.wiseAvailable;
+    bWise.text.textContent = m.wiseAvailable ? 'WISE sources' : 'WISE sources, not available yet';
     ovNote.textContent = m.overlayNote;
   }
 
@@ -636,18 +601,20 @@ export function createPanel(hd: PanelHandlers): Panel {
       const bar = h('progress', 'v-bar');
       bar.max = Math.max(1, r.total);
       bar.value = r.done;
-      box.append(bar, h('p', 'v-detail', `${r.done} of ${r.total}, about ${r.mb} MB downloaded`));
+      box.append(bar, h('p', 'v-detail', `${r.done} of ${r.total}, ${r.exact ? '' : 'about '}${r.mb} MB downloaded`));
       box.append(btn('Stop loading', 'v-btn', hd.stopRest));
     } else {
-      if (r.single) box.append(h('p', 'v-stage-word', 'You are looking at single exposures from different dates.'));
+      if (r.single) box.append(h('p', 'v-stage-word', 'Showing one image from each of two visits.'));
       if (r.kind === 'optin') {
-        box.append(h('p', '', `${r.n} more exposures, about ${r.mb} MB. Load them to see every visit.`));
+        box.append(
+          h('p', '', `Loading every image for this detector (${r.n} more, ${r.exact ? '' : 'about '}${r.mb} MB) gives cleaner, averaged visits.`),
+        );
       } else {
         box.append(
           h('p', '', `Stopped. ${r.loaded} of ${r.total} more exposures were loaded. ${r.n} left, about ${r.mb} MB.`),
         );
       }
-      box.append(btn('Load the rest', 'v-btn', hd.loadRest));
+      box.append(btn('Load full visits', 'v-btn', hd.loadRest));
     }
     restBox.append(box);
   }
@@ -698,8 +665,8 @@ export function createPanel(hd: PanelHandlers): Panel {
         body = 'Try a name such as Vega, or coordinates such as 269.45 4.69, or 17 57 48.5 +04 41 36.';
         break;
       default:
-        titleText = 'The archive returned something we could not use.';
-        body = 'Try again in a minute, or open one of the challenge targets, which work without the archive.';
+        titleText = 'The SPHEREx archive did not answer.';
+        body = 'Try again, or open a prepared target.';
         retry = true;
     }
     box.append(h('p', 'v-msg-title', titleText), h('p', '', body));
@@ -746,6 +713,9 @@ export function createPanel(hd: PanelHandlers): Panel {
   return {
     el,
     showEmpty,
+    setMockLine: (on) => {
+      mockLine.hidden = !on;
+    },
     setBack: (label) => {
       backRow.hidden = label === null;
       if (label !== null) backBtn.textContent = label;
@@ -768,8 +738,15 @@ export function createPanel(hd: PanelHandlers): Panel {
       if (on) {
         empty.hidden = true;
         head.hidden = false;
-        layoutTimeline();
       }
+    },
+    setTitleNote: (text) => {
+      titleNote.hidden = text === null;
+      titleNote.textContent = text ?? '';
+    },
+    setMatchNote: (text) => {
+      matchLine.hidden = text === null;
+      matchLine.textContent = text ?? '';
     },
     setHeader: (name, m) => {
       head.hidden = false;
@@ -784,6 +761,6 @@ export function createPanel(hd: PanelHandlers): Panel {
     clearStatus,
     setRest,
     update,
-    dispose: () => ro.disconnect(),
+    dispose: () => timeline.dispose(),
   };
 }

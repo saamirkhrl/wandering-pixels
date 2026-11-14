@@ -5,7 +5,7 @@ import '../../ui/viewer-parts.css';
 
 export interface QualityPanel {
   el: HTMLElement;
-  show(movie: Movie, current: MovieFrame, frames: Frame[]): void;
+  show(movie: Movie, current: MovieFrame, frames: Frame[], compare?: { a: MovieFrame; b: MovieFrame } | null): void;
   dispose(): void;
 }
 
@@ -51,7 +51,7 @@ export function createQualityPanel(): QualityPanel {
 
   return {
     el: root,
-    show(movie, current, frames): void {
+    show(movie, current, frames, compare): void {
       body.replaceChildren();
       const pct = Math.round(finiteFraction(current.pixels) * 100);
       const masked = maskFor(current, frames);
@@ -62,6 +62,30 @@ export function createQualityPanel(): QualityPanel {
       body.appendChild(el('p', undefined, `Coverage ${pct} percent of the patch has data.`));
       body.appendChild(el('p', undefined, `${n} ${n === 1 ? 'exposure' : 'exposures'} in this frame.`));
       body.appendChild(el('p', undefined, `Masked pixels ${nMasked.toLocaleString('en-US')}.`));
+      const bg = (f: MovieFrame): string => {
+        const v = (f as MovieFrame & { backgroundLevel?: number }).backgroundLevel;
+        return (typeof v === 'number' && Number.isFinite(v) ? v : 0).toFixed(2);
+      };
+      body.appendChild(
+        el(
+          'p',
+          undefined,
+          compare
+            ? `Background removed: A ${bg(compare.a)} MJy/sr, B ${bg(compare.b)} MJy/sr.`
+            : `Background removed: ${bg(current)} MJy/sr.`,
+        ),
+      );
+      body.appendChild(el('p', undefined, 'Frames are aligned to about 0.05 pixel (measured on Gaia stars).'));
+      const stray = new Set<string>();
+      for (const f of frames) {
+        const ex = f.exposure as typeof f.exposure & { inStack?: boolean };
+        if (ex.detector === movie.detector && ex.inStack === false) stray.add(ex.id);
+      }
+      if (stray.size > 0) {
+        body.appendChild(
+          el('p', undefined, `${stray.size} stray ${stray.size === 1 ? 'exposure' : 'exposures'} not averaged.`),
+        );
+      }
 
       const ids = new Set(current.exposureIds);
       let nSat = 0;
@@ -112,29 +136,31 @@ export function createQualityPanel(): QualityPanel {
       body.appendChild(scroll);
 
       // exposures in this frame
-      const byId = new Map(frames.map((f) => [f.exposure.id, f.exposure]));
-      const det = el('details', 'v-spec-details');
-      det.appendChild(el('summary', 'v-spec-sum', 'Exposures in this frame'));
-      const ul = el('ul', 'v-qual-list');
-      for (const id of current.exposureIds) {
-        const ex = byId.get(id);
-        const li = el('li');
-        if (ex) {
-          const a = el('a', 'v-qual-link');
-          a.href = ex.url;
-          a.target = '_blank';
-          a.rel = 'noopener';
-          const w = ex.wavelengthAtTarget;
-          a.textContent = `${id}, ${dateOf(ex.time)}${w !== null ? `, ${wl(w)} um` : ''}`;
-          li.appendChild(a);
-        } else {
-          li.textContent = id;
+      if (current.exposureIds.length > 0) {
+        const byId = new Map(frames.map((f) => [f.exposure.id, f.exposure]));
+        const det = el('details', 'v-spec-details');
+        det.appendChild(el('summary', 'v-qual-sum', 'Exposures in this frame'));
+        const ul = el('ul', 'v-qual-list');
+        for (const id of current.exposureIds) {
+          const ex = byId.get(id);
+          const li = el('li');
+          if (ex) {
+            const a = el('a', 'v-qual-link');
+            a.href = ex.url;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            const w = ex.wavelengthAtTarget;
+            a.textContent = `${id}, ${dateOf(ex.time)}${w !== null ? `, ${wl(w)} um` : ''}`;
+            li.appendChild(a);
+          } else {
+            li.textContent = id;
+          }
+          ul.appendChild(li);
         }
-        ul.appendChild(li);
+        det.appendChild(ul);
+        det.appendChild(el('p', 'v-hint', 'Links open the original Level 2 FITS file from the NASA archive.'));
+        body.appendChild(det);
       }
-      det.appendChild(ul);
-      det.appendChild(el('p', 'v-hint', 'Links open the original Level 2 FITS file from the NASA archive.'));
-      body.appendChild(det);
     },
     dispose(): void {
       root.remove();

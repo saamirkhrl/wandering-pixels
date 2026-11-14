@@ -1,12 +1,12 @@
 import {
   SpherexError,
-  annotateWavelengths,
+  loadBestPair,
+  loadFirstLook,
   findExposures,
   listCached,
   loadCached,
   loadFrames,
   makeGrid,
-  pickBlinkPair,
   resolveTarget,
   summarize,
 } from '../data';
@@ -40,6 +40,7 @@ export interface LiveContext {
   grid: Grid;
   rest: Exposure[];
   size: number;
+  detExposures: Exposure[];
 }
 
 export const ONCE_ONLY = 'ONCE_ONLY';
@@ -58,6 +59,7 @@ export interface LoadResult {
   failed: number;
   total: number;
   cached: boolean;
+  matched: boolean;
 }
 
 export const DET_BANDS: Record<Detector, [number, number]> = {
@@ -71,7 +73,7 @@ export const DET_BANDS: Record<Detector, [number, number]> = {
 
 export const STAGE_WORDS: Record<Progress['stage'], string> = {
   resolve: 'Finding the star',
-  search: 'Searching the archive',
+  search: 'Asking the SPHEREx archive',
   headers: 'Reading image headers',
   pixels: 'Downloading images',
   reproject: 'Lining up the images',
@@ -115,6 +117,10 @@ export async function findCachedByPosition(
   return null;
 }
 
+export function normalizeName(s: string): string {
+  return normalize(s);
+}
+
 export function chooseDetector(
   available: { detector: Detector; count: number }[],
   preferred: Detector | null,
@@ -153,58 +159,61 @@ export async function searchLive(req: LoadRequest, cb: LoadCallbacks, signal: Ab
   return { target, exposures, available: availableOf(exposures) };
 }
 
-export async function loadPair(
+export async function loadFirst(
   search: LiveSearch,
   preferred: Detector | null,
   size: number,
   cb: LoadCallbacks,
   signal: AbortSignal,
 ): Promise<LoadResult> {
-  const check = () => {
-    if (signal.aborted) throw abortedError();
-  };
   const { target, exposures, available } = search;
-  const stage = (s: Progress['stage'], message: string, done = 0, total = 0) =>
-    cb.onStage({ stage: s, done, total, message });
   const grid = makeGrid(target, exposures, size);
   const det = chooseDetector(available, preferred);
-  stage('headers', 'Reading image headers');
-  const annotated = await annotateWavelengths(
-    exposures.filter((e) => e.detector === det),
-    target.ra,
-    target.dec,
-    { signal, onProgress: cb.onStage },
-  );
-  check();
-  const pair = pickBlinkPair(annotated, det);
-  if (!pair) throw new SpherexError('NO_COVERAGE', ONCE_ONLY);
-
-  stage('pixels', 'Downloading two images to compare', 0, 2);
-  const got: Frame[] = [];
-  const result = await loadFrames([...pair], grid, {
+  cb.onStage({ stage: 'pixels', done: 0, total: 2, message: 'Downloading two images to compare' });
+  const first = await loadFirstLook(target, exposures, grid, {
     signal,
     onProgress: cb.onStage,
-    onFrame: (f) => {
-      got.push(f);
-      stage('pixels', 'Downloading two images to compare', got.length, 2);
-    },
+    detector: det,
   });
-  check();
-  if (result.frames.length === 0) throw new SpherexError('UPSTREAM_ERROR', 'None of the exposures could be read');
-  const frames = [...result.frames].sort((x, y) => x.exposure.mjd - y.exposure.mjd);
-  const pairIds = new Set(pair.map((e) => e.id));
+  if (signal.aborted) throw abortedError();
+  if (first.frames.length < 2) throw new SpherexError('NO_COVERAGE', ONCE_ONLY);
+  const frames = [...first.frames].sort((x, y) => x.exposure.mjd - y.exposure.mjd);
   return {
-    live: { grid, rest: annotated.filter((e) => !pairIds.has(e.id)), size },
+    live: { grid, rest: [], size, detExposures: exposures.filter((e) => e.detector === first.detector) },
     search,
     cachedData: null,
     target,
     frames,
-    det,
+    det: first.detector,
     available,
-    failed: result.failed.length,
+    failed: 0,
     total: 2,
     cached: false,
+    matched: first.matched,
   };
+}
+
+// Background step after the first look: look for a better wavelength-matched pair.
+export async function refineBest(
+  target: Target,
+  exposures: Exposure[],
+  grid: Grid,
+  det: Detector,
+  signal: AbortSignal,
+): Promise<{ frames: Frame[]; matched: boolean }> {
+  const r = await loadBestPair(target, exposures, grid, { detector: det, target, signal });
+  if (signal.aborted) throw abortedError();
+  return { frames: [...r.frames].sort((x, y) => x.exposure.mjd - y.exposure.mjd), matched: r.matched };
+}
+
+export async function loadFrameSet(
+  exposures: Exposure[],
+  grid: Grid,
+  signal: AbortSignal,
+): Promise<Frame[]> {
+  const r = await loadFrames(exposures, grid, { signal });
+  if (signal.aborted) throw abortedError();
+  return [...r.frames].sort((x, y) => x.exposure.mjd - y.exposure.mjd);
 }
 
 export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: AbortSignal): Promise<LoadResult> {
@@ -225,10 +234,11 @@ export async function loadViewer(req: LoadRequest, cb: LoadCallbacks, signal: Ab
       failed: 0,
       total: c.frames.length,
       cached: true,
+      matched: true,
     };
   }
   const search = await searchLive(req, cb, signal);
-  return loadPair(search, req.det, req.size ?? DEFAULT_SIZE, cb, signal);
+  return loadFirst(search, req.det, req.size ?? DEFAULT_SIZE, cb, signal);
 }
 
 export async function loadRest(

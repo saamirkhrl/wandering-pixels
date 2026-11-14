@@ -991,7 +991,7 @@ export async function findExposures(ra: number, dec: number, opts: CallOptions =
 
   const pace = (1300 + (hashStr(posKey(ra, dec)) % 2400)) / 2500;
   const nap = (ms: number) => wait(ms * pace, opts.signal);
-  say(0, 0, 'Searching the SPHEREx archive');
+  say(0, 0, 'Asking the SPHEREx archive');
   await nap(300);
 
   if (ra === 1 && dec === 1) {
@@ -1006,7 +1006,7 @@ export async function findExposures(ra: number, dec: number, opts: CallOptions =
     throw new SpherexError('NO_COVERAGE', 'SPHEREx has no exposures at this position.');
   }
 
-  say(0, 0, 'Searching the SPHEREx archive');
+  say(0, 0, 'Asking the SPHEREx archive');
   await nap(500);
   say(0, 0, 'The archive is busy, trying again in 2 s', true);
   await nap(1100);
@@ -1266,6 +1266,7 @@ export function buildMovie(frames: Frame[], mode: MovieMode, detector: Detector,
       nExposures: members.length,
       exposureIds: members.map((m) => m.exposure.id),
       targetXY,
+      backgroundLevel: 0,
     };
   });
 
@@ -1313,8 +1314,8 @@ export function difference(a: MovieFrame, b: MovieFrame): DifferenceImage {
   };
 }
 
-export function spectrumAt(frames: Frame[], ra: number, dec: number, apertureArcsec = 9): SpectrumPoint[] {
-  const out: SpectrumPoint[] = [];
+export function spectrumAt(frames: Frame[], ra: number, dec: number, apertureArcsec = 9): (SpectrumPoint & { advisory: boolean })[] {
+  const out: (SpectrumPoint & { advisory: boolean })[] = [];
   const sorted = [...frames].sort((a, b) => a.exposure.mjd - b.exposure.mjd);
   for (const f of sorted) {
     const [x0, y0] = worldToGrid(f.grid, ra, dec);
@@ -1372,6 +1373,7 @@ export function spectrumAt(frames: Frame[], ra: number, dec: number, apertureArc
       visitIndex: f.exposure.visitIndex,
       detector: f.exposure.detector,
       flagged,
+      advisory: false,
     });
   }
   return out;
@@ -1405,11 +1407,11 @@ export function pickBlinkPair(exposures: Exposure[], detector?: Detector): [Expo
   return pair[0].mjd <= pair[1].mjd ? pair : [pair[1], pair[0]];
 }
 
-export function summarize(exposures: Exposure[]): { detector: Detector; visits: number[]; count: number }[] {
+export function summarize(exposures: Exposure[]): { detector: Detector; visits: number[]; count: number; outOfStack: number }[] {
   return DETECTORS.map((detector) => {
     const mine = exposures.filter((e) => e.detector === detector);
     const visits = [...new Set(mine.map((e) => e.visitIndex))].sort((a, b) => a - b);
-    return { detector, visits, count: mine.length };
+    return { detector, visits, count: mine.length, outOfStack: 0 };
   });
 }
 
@@ -1475,3 +1477,21 @@ export const ORIENTATION_TEST_STAR: { ra: number; dec: number } = (() => {
   const ref = base('barnards-star').scene.ref;
   return tanInverse(ref.ra, ref.dec, 80, 80);
 })();
+
+export async function loadBestPair(
+  target: Target,
+  exposures: Exposure[],
+  grid: Grid,
+  opts: FrameOptions & { detector?: Detector; maxWavelengthGapUm?: number } = {},
+): Promise<FirstLook> {
+  const { detector: wanted, maxWavelengthGapUm: _gap, ...frameOpts } = opts;
+  const counts = summarize(exposures).sort((a, b) => b.count - a.count);
+  const detector = wanted ?? (counts.find((c) => c.detector === 2 && c.count > 0) ? 2 : counts[0].detector);
+  const onDet = exposures.filter((e) => e.detector === detector);
+  const annotated = await annotateWavelengths(onDet, target.ra, target.dec, frameOpts);
+  const pair = pickBlinkPair(annotated, detector);
+  if (!pair) return loadFirstLook(target, exposures, grid, { ...frameOpts, detector });
+  const res = await loadFrames(pair, grid, frameOpts);
+  if (res.failed.length > 0) throw res.failed[0].error;
+  return { frames: res.frames, matched: true, detector };
+}

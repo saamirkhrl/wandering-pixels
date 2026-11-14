@@ -1,33 +1,86 @@
 import * as mock from './mock';
-// Switch to the real library by changing this one line to: import * as real from '../../lib/spherex';
-import * as real from './mock';
+import * as real from '../../lib/spherex';
 
-const useMock = new URLSearchParams(location.search).get('mock') === '1';
-const lib: typeof mock = useMock ? mock : real;
+// Flip each half to the real library in one line.
+const LIVE_REAL = true;
+const CACHE_REAL = true;
+
+type Lib = Pick<
+  typeof real,
+  | 'resolveTarget'
+  | 'positionAt'
+  | 'findExposures'
+  | 'makeGrid'
+  | 'loadFrame'
+  | 'loadFrames'
+  | 'annotateWavelengths'
+  | 'pickBlinkPair'
+  | 'loadFirstLook'
+  | 'loadBestPair'
+  | 'saturatedSources'
+  | 'buildMovie'
+  | 'difference'
+  | 'spectrumAt'
+  | 'gaiaCone'
+  | 'wiseCone'
+  | 'worldToGrid'
+  | 'gridToWorld'
+  | 'summarize'
+>;
+type CacheLib = Pick<typeof real, 'loadCached' | 'listCached'>;
+
+const forceMock = new URLSearchParams(location.search).get('mock') === '1';
+const live: Lib = forceMock || !LIVE_REAL ? mock : real;
+const cache: CacheLib = forceMock || !CACHE_REAL ? mock : real;
 
 export * from './types';
 
-export const isMock = useMock || (real as unknown) === (mock as unknown);
+export const liveIsMock = live === (mock as unknown);
+export const cacheIsMock = cache === (mock as unknown);
+export const isMock = liveIsMock && cacheIsMock;
 
-export const resolveTarget = lib.resolveTarget;
-export const positionAt = lib.positionAt;
-export const findExposures = lib.findExposures;
-export const makeGrid = lib.makeGrid;
-export const loadFrame = lib.loadFrame;
-export const loadFrames = lib.loadFrames;
-export const annotateWavelengths = lib.annotateWavelengths;
-export const pickBlinkPair = lib.pickBlinkPair;
-export const loadFirstLook = lib.loadFirstLook;
-export const saturatedSources = lib.saturatedSources;
-export const buildMovie = lib.buildMovie;
-export const difference = lib.difference;
-export const spectrumAt = lib.spectrumAt;
-export const loadCached = lib.loadCached;
-export const listCached = lib.listCached;
-export const gaiaCone = lib.gaiaCone;
-export const wiseCone = lib.wiseCone;
+export const resolveTarget = live.resolveTarget;
+export const positionAt = live.positionAt;
+export const findExposures = live.findExposures;
+export const makeGrid = live.makeGrid;
+export const loadFrame = live.loadFrame;
+export const loadFrames = live.loadFrames;
+export const annotateWavelengths = live.annotateWavelengths;
+export const pickBlinkPair = live.pickBlinkPair;
+export const loadFirstLook = live.loadFirstLook;
+export const loadBestPair = live.loadBestPair;
+export const saturatedSources = live.saturatedSources;
+export const buildMovie = live.buildMovie;
+export const difference = live.difference;
+export const spectrumAt = live.spectrumAt;
+export const gaiaCone = live.gaiaCone;
+export const wiseCone = live.wiseCone;
+export const worldToGrid = live.worldToGrid;
+export const gridToWorld = live.gridToWorld;
+export const summarize = live.summarize;
+const fromMock = new WeakSet<object>();
+
+// Real prepared sets when present; any failure (missing files, bad data) falls back to the mock
+// for that target, and isSimulated() then reports it so the viewer can say so.
+export const loadCached: CacheLib['loadCached'] = async (slug, opts) => {
+  if (cache === (mock as unknown)) {
+    const c = await mock.loadCached(slug, opts);
+    fromMock.add(c);
+    return c;
+  }
+  try {
+    return await cache.loadCached(slug, opts);
+  } catch (err) {
+    if ((err as { code?: string } | null)?.code === 'ABORTED') throw err;
+    const c = await mock.loadCached(slug, opts);
+    fromMock.add(c);
+    return c;
+  }
+};
+export const listCached = cache.listCached;
+
+export function isSimulated(c: object): boolean {
+  return fromMock.has(c);
+}
 // wiseCone is real (CatWISE2020, radius capped at 300 arcsec).
 export const wiseAvailable = true;
-export const worldToGrid = lib.worldToGrid;
-export const gridToWorld = lib.gridToWorld;
-export const summarize = lib.summarize;

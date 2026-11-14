@@ -1,25 +1,27 @@
 export interface Stretch {
   lo: number;
   hi: number;
+  scale?: number;
 }
 
 export type Rgb = readonly [number, number, number];
 
-export const HATCH_A: Rgb = [42, 47, 58];
-export const HATCH_B: Rgb = [33, 38, 48];
+// Missing data: one flat tone, slightly lighter than the near-black sky. No texture.
+export const HATCH_A: Rgb = [18, 21, 29];
+export const HATCH_B: Rgb = [18, 21, 29];
 export const ZERO_RGB: Rgb = [6, 8, 14];
 
-export function asinhNorm(x: number, lo: number, hi: number): number {
+export function asinhNorm(x: number, lo: number, hi: number, scale?: number): number {
   const span = hi - lo;
   if (!(span > 0)) return 0;
-  const s = span / 50;
+  const s = scale !== undefined && scale > 0 ? scale : span / 50;
   const v = Math.asinh((x - lo) / s) / Math.asinh(span / s);
   if (!(v > 0)) return 0;
   return v > 1 ? 1 : v;
 }
 
 export function hatchColor(x: number, y: number): Rgb {
-  return (x + y) % 6 < 3 ? HATCH_A : HATCH_B;
+  return (x + y) % 2 === 0 ? HATCH_A : HATCH_B;
 }
 
 export function greyColor(v: number): Rgb {
@@ -32,7 +34,7 @@ export function renderPixels(pixels: Float32Array, w: number, h: number, stretch
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       const p = pixels[i];
-      const c = Number.isNaN(p) ? hatchColor(x, y) : greyColor(asinhNorm(p, stretch.lo, stretch.hi));
+      const c = Number.isNaN(p) ? hatchColor(x, y) : greyColor(asinhNorm(p, stretch.lo, stretch.hi, stretch.scale));
       out[i * 4] = c[0];
       out[i * 4 + 1] = c[1];
       out[i * 4 + 2] = c[2];
@@ -87,19 +89,60 @@ export function integerScale(w: number, h: number, boxW: number, boxH: number): 
   return Math.max(1, Math.floor(Math.min(boxW / w, boxH / h)));
 }
 
-// 1.4826 times the median absolute deviation of the finite pixels.
-export function robustSigma(pixels: ArrayLike<number>): number {
+function medianOf(sorted: Float64Array): number {
+  const n = sorted.length;
+  if (n === 0) return 0;
+  return n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+}
+
+function collectSorted(values: ArrayLike<number>[], maxSamples = 250000): Float64Array {
+  let total = 0;
+  for (const a of values) total += a.length;
+  const stride = Math.max(1, Math.ceil(total / maxSamples));
   const vals: number[] = [];
-  for (let i = 0; i < pixels.length; i++) {
-    const v = pixels[i];
-    if (Number.isFinite(v)) vals.push(v);
+  let k = 0;
+  for (const a of values) {
+    for (let i = 0; i < a.length; i++, k++) {
+      if (k % stride !== 0) continue;
+      const v = a[i];
+      if (Number.isFinite(v)) vals.push(v);
+    }
   }
-  if (vals.length === 0) return 0;
-  const median = (a: number[]): number => {
-    const s = Float64Array.from(a).sort();
-    const n = s.length;
-    return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
-  };
-  const m = median(vals);
-  return 1.4826 * median(vals.map((v) => Math.abs(v - m)));
+  return Float64Array.from(vals).sort();
+}
+
+function statsOf(sorted: Float64Array): { median: number; sigma: number } {
+  if (sorted.length === 0) return { median: 0, sigma: 0 };
+  const median = medianOf(sorted);
+  const dev = Float64Array.from(sorted, (v) => Math.abs(v - median)).sort();
+  return { median, sigma: 1.4826 * medianOf(dev) };
+}
+
+// Median and 1.4826 times the median absolute deviation of the finite values.
+export function robustStats(values: ArrayLike<number>[], maxSamples = 250000): { median: number; sigma: number } {
+  return statsOf(collectSorted(values, maxSamples));
+}
+
+export function robustSigma(pixels: ArrayLike<number>): number {
+  return robustStats([pixels]).sigma;
+}
+
+export function robustMedian(pixels: ArrayLike<number>): number {
+  return robustStats([pixels]).median;
+}
+
+export type Contrast = 'soft' | 'normal' | 'hard';
+export const CONTRAST_SCALE: Record<Contrast, number> = { soft: 3, normal: 1, hard: 1 / 3 };
+
+// One display stretch for a whole movie. The black point sits just under the background,
+// the white point comes from the bright sources, not from the noise.
+export function displayStretch(frames: ArrayLike<number>[], base: Stretch, contrast: Contrast = 'normal'): Stretch {
+  const sorted = collectSorted(frames);
+  const { median, sigma } = statsOf(sorted);
+  if (!(sigma > 0)) return base;
+  const n = sorted.length;
+  const p999 = sorted[Math.min(n - 1, Math.floor(0.999 * (n - 1)))];
+  const peak = sorted[n - 1] * 0.8;
+  const hi = Math.max(Math.min(p999, peak), median + 20 * sigma);
+  return { lo: median - 2 * sigma, hi, scale: 3 * sigma * CONTRAST_SCALE[contrast] };
 }

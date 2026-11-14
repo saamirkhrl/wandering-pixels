@@ -12,6 +12,7 @@ export interface ViewerParams {
   snr: boolean;
   frame: number | null;
   size: number | null;
+  trueSharp: boolean;
   overlays: string[];
   from: 'sky' | 'globe' | null;
   fromParams: Record<string, string>;
@@ -53,6 +54,7 @@ export function readParams(): ViewerParams {
     diff: sp.get('diff') === '1',
     snr: sp.get('snr') === '1',
     frame: int(sp.get('frame')),
+    trueSharp: sp.get('px') === '1',
     size: [200, 400, 800].includes(int(sp.get('size')) ?? 0) ? int(sp.get('size')) : null,
     overlays: (sp.get('overlays') ?? '')
       .split(',')

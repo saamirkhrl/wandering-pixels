@@ -39,6 +39,7 @@ const CSV_HEAD = [
 ];
 
 function csvCell(v: string | number | boolean): string {
+  if (typeof v === 'number' && !Number.isFinite(v)) return '';
   const s = String(v);
   return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
@@ -128,11 +129,19 @@ function fmtTick(v: number): string {
 }
 
 function fmtNum(v: number, dp: number): string {
-  return Number.isFinite(v) ? v.toFixed(dp) : 'n/a';
+  return Number.isFinite(v) ? v.toFixed(dp) : '';
 }
 
 function pointTitle(p: SpectrumPoint, visitNo: number): string {
   return `${fmtNum(p.wavelength, 2)} um, ${fmtNum(p.flux, 1)} +/- ${fmtNum(p.fluxErr, 1)} mJy, visit ${visitNo}`;
+}
+
+export function isUsablePoint(p: SpectrumPoint): boolean {
+  return Number.isFinite(p.flux) && Number.isFinite(p.wavelength) && Number.isFinite(p.fluxErr);
+}
+
+function bwOf(p: SpectrumPoint): number {
+  return Number.isFinite(p.bandwidth) ? p.bandwidth : 0;
 }
 
 function fileNum(v: number): string {
@@ -164,145 +173,156 @@ export function createSpectrumPanel(): SpectrumPanel {
       el('p', undefined, `Position ${pos}. ${n} ${n === 1 ? 'measurement' : 'measurements'}.`),
     );
 
-    const flux = points.map((p) => p.flux);
-    const posFlux = flux.filter((f) => f > 0);
-    const useLog =
-      posFlux.length >= 2 && Math.max(...posFlux) / Math.min(...posFlux) > 100;
-
-    // x domain
-    let xLo = Infinity;
-    let xHi = -Infinity;
-    for (const p of points) {
-      xLo = Math.min(xLo, p.wavelength - p.bandwidth / 2);
-      xHi = Math.max(xHi, p.wavelength + p.bandwidth / 2);
-    }
-    if (!(xHi > xLo)) {
-      xLo -= 0.1;
-      xHi += 0.1;
-    }
-    const xPad = (xHi - xLo) * 0.04;
-    xLo -= xPad;
-    xHi += xPad;
-
-    // y domain
-    let yLo: number;
-    let yHi: number;
-    let yTicks: number[];
-    if (useLog) {
-      const minPos = Math.min(...posFlux);
-      let top = -Infinity;
-      for (const p of points) top = Math.max(top, p.flux + p.fluxErr);
-      yLo = minPos / 1.5;
-      yHi = top * 1.5;
-      yTicks = logTicks(yLo, yHi);
-    } else {
-      let lo = Infinity;
-      let hi = -Infinity;
-      for (const p of points) {
-        lo = Math.min(lo, p.flux - p.fluxErr);
-        hi = Math.max(hi, p.flux + p.fluxErr);
-      }
-      if (!(hi > lo)) {
-        lo -= 1;
-        hi += 1;
-      }
-      const pad = (hi - lo) * 0.06;
-      yLo = lo - pad;
-      yHi = hi + pad;
-      yTicks = linearTicks(yLo, yHi, 5);
-    }
-    const xTicks = linearTicks(xLo, xHi, 6);
-
-    const pw = W - M.l - M.r;
-    const ph = H - M.t - M.b;
-    const sx = (v: number): number => M.l + ((v - xLo) / (xHi - xLo)) * pw;
-    const sy = (v: number): number => {
-      if (useLog) {
-        const c = Math.max(v, yLo);
-        return M.t + ph - ((Math.log(c) - Math.log(yLo)) / (Math.log(yHi) - Math.log(yLo))) * ph;
-      }
-      return M.t + ph - ((v - yLo) / (yHi - yLo)) * ph;
-    };
-    const clampY = (y: number): number => Math.min(M.t + ph, Math.max(M.t, y));
-
-    const chart = svg('svg', {
-      viewBox: `0 0 ${W} ${H}`,
-      class: 'v-spec-chart',
-      role: 'img',
-      'aria-label': `Flux in millijansky against wavelength in micrometres, ${n} points`,
-    });
-    const style = 'currentColor';
-
-    // grid and ticks
-    for (const t of yTicks) {
-      const y = sy(t);
-      svg('line', { x1: M.l, x2: M.l + pw, y1: y, y2: y, class: 'v-spec-grid' }, chart);
-      const lab = svg('text', { x: M.l - 6, y: y + 4, 'text-anchor': 'end', class: 'v-spec-tick' }, chart);
-      lab.textContent = fmtTick(t);
-    }
-    for (const t of xTicks) {
-      const x = sx(t);
-      svg('line', { x1: x, x2: x, y1: M.t + ph, y2: M.t + ph + 4, stroke: style, class: 'v-spec-axis' }, chart);
-      const lab = svg('text', { x, y: M.t + ph + 17, 'text-anchor': 'middle', class: 'v-spec-tick' }, chart);
-      lab.textContent = fmtTick(t);
-    }
-    svg('line', { x1: M.l, x2: M.l, y1: M.t, y2: M.t + ph, class: 'v-spec-axis' }, chart);
-    svg('line', { x1: M.l, x2: M.l + pw, y1: M.t + ph, y2: M.t + ph, class: 'v-spec-axis' }, chart);
-
-    const xl = svg('text', { x: M.l + pw / 2, y: H - 6, 'text-anchor': 'middle', class: 'v-spec-label' }, chart);
-    xl.textContent = 'Wavelength (micrometres)';
-    const yl = svg(
-      'text',
-      {
-        transform: `translate(12 ${M.t + ph / 2}) rotate(-90)`,
-        'text-anchor': 'middle',
-        class: 'v-spec-label',
-      },
-      chart,
-    );
-    yl.textContent = useLog ? 'Flux (mJy), log scale' : 'Flux (mJy)';
-
-    // points
-    for (const p of points) {
-      const col = visitColour(p.visitIndex);
-      const g = svg('g', { class: 'v-spec-pt', stroke: col, fill: p.flagged ? 'none' : col }, chart);
-      const cx = sx(p.wavelength);
-      const cy = sy(p.flux);
-      const x0 = sx(p.wavelength - p.bandwidth / 2);
-      const x1 = sx(p.wavelength + p.bandwidth / 2);
-      const y0 = clampY(sy(p.flux - p.fluxErr));
-      const y1 = clampY(sy(p.flux + p.fluxErr));
-      svg('line', { x1: x0, x2: x1, y1: cy, y2: cy, 'stroke-width': 1, fill: 'none' }, g);
-      svg('line', { x1: cx, x2: cx, y1: y0, y2: y1, 'stroke-width': 1.5, fill: 'none' }, g);
-      svg('circle', { cx, cy, r: 3.5, 'stroke-width': 1.5 }, g);
-      const t = svg('title', {}, g);
-      t.textContent = pointTitle(p, p.visitIndex + 1);
-    }
-    const wrap = el('div', 'v-spec-wrap');
-    wrap.appendChild(chart);
-    body.appendChild(wrap);
-
-    // legend
-    const visits = Array.from(new Set(points.map((p) => p.visitIndex))).sort((a, b) => a - b);
-    const legend = el('ul', 'v-spec-legend');
-    for (const v of visits) {
-      const li = el('li');
-      const sw = el('span', 'v-spec-swatch');
-      sw.style.background = visitColour(v);
-      sw.setAttribute('aria-hidden', 'true');
-      li.appendChild(sw);
-      li.appendChild(document.createTextNode(visitLabel(v)));
-      legend.appendChild(li);
-    }
-    body.appendChild(legend);
-
-    if (points.some((p) => p.flagged)) {
-      body.appendChild(el('p', 'v-hint', 'Hollow points touch a masked or saturated pixel.'));
-    }
-    if (useLog) {
+    const usable = points.filter(isUsablePoint);
+    const bad = n - usable.length;
+    if (bad > 0 && usable.length > 0) {
       body.appendChild(
-        el('p', 'v-hint', 'The brightest and faintest points differ by more than 100 times, so the flux axis is logarithmic.'),
+        el('p', 'v-hint', `${bad} ${bad === 1 ? 'measurement' : 'measurements'} could not be made here (masked or saturated pixels).`),
       );
+    }
+    if (usable.length === 0) {
+      body.appendChild(el('p', undefined, 'No usable measurements here: the pixels are masked or saturated.'));
+    } else {
+      const flux = usable.map((p) => p.flux);
+      const posFlux = flux.filter((f) => f > 0);
+      const useLog =
+        posFlux.length >= 2 && Math.max(...posFlux) / Math.min(...posFlux) > 100;
+
+      // x domain
+      let xLo = Infinity;
+      let xHi = -Infinity;
+      for (const p of usable) {
+        xLo = Math.min(xLo, p.wavelength - bwOf(p) / 2);
+        xHi = Math.max(xHi, p.wavelength + bwOf(p) / 2);
+      }
+      if (!(xHi > xLo)) {
+        xLo -= 0.1;
+        xHi += 0.1;
+      }
+      const xPad = (xHi - xLo) * 0.04;
+      xLo -= xPad;
+      xHi += xPad;
+
+      // y domain
+      let yLo: number;
+      let yHi: number;
+      let yTicks: number[];
+      if (useLog) {
+        const minPos = Math.min(...posFlux);
+        let top = -Infinity;
+        for (const p of usable) top = Math.max(top, p.flux + p.fluxErr);
+        yLo = minPos / 1.5;
+        yHi = top * 1.5;
+        yTicks = logTicks(yLo, yHi);
+      } else {
+        let lo = Infinity;
+        let hi = -Infinity;
+        for (const p of usable) {
+          lo = Math.min(lo, p.flux - p.fluxErr);
+          hi = Math.max(hi, p.flux + p.fluxErr);
+        }
+        if (!(hi > lo)) {
+          lo -= 1;
+          hi += 1;
+        }
+        const pad = (hi - lo) * 0.06;
+        yLo = lo - pad;
+        yHi = hi + pad;
+        yTicks = linearTicks(yLo, yHi, 5);
+      }
+      const xTicks = linearTicks(xLo, xHi, 6);
+
+      const pw = W - M.l - M.r;
+      const ph = H - M.t - M.b;
+      const sx = (v: number): number => M.l + ((v - xLo) / (xHi - xLo)) * pw;
+      const sy = (v: number): number => {
+        if (useLog) {
+          const c = Math.max(v, yLo);
+          return M.t + ph - ((Math.log(c) - Math.log(yLo)) / (Math.log(yHi) - Math.log(yLo))) * ph;
+        }
+        return M.t + ph - ((v - yLo) / (yHi - yLo)) * ph;
+      };
+      const clampY = (y: number): number => Math.min(M.t + ph, Math.max(M.t, y));
+
+      const chart = svg('svg', {
+        viewBox: `0 0 ${W} ${H}`,
+        class: 'v-spec-chart',
+        role: 'img',
+        'aria-label': `Flux in millijansky against wavelength in micrometres, ${usable.length} points`,
+      });
+      const style = 'currentColor';
+
+      // grid and ticks
+      for (const t of yTicks) {
+        const y = sy(t);
+        svg('line', { x1: M.l, x2: M.l + pw, y1: y, y2: y, class: 'v-spec-grid' }, chart);
+        const lab = svg('text', { x: M.l - 6, y: y + 4, 'text-anchor': 'end', class: 'v-spec-tick' }, chart);
+        lab.textContent = fmtTick(t);
+      }
+      for (const t of xTicks) {
+        const x = sx(t);
+        svg('line', { x1: x, x2: x, y1: M.t + ph, y2: M.t + ph + 4, stroke: style, class: 'v-spec-axis' }, chart);
+        const lab = svg('text', { x, y: M.t + ph + 17, 'text-anchor': 'middle', class: 'v-spec-tick' }, chart);
+        lab.textContent = fmtTick(t);
+      }
+      svg('line', { x1: M.l, x2: M.l, y1: M.t, y2: M.t + ph, class: 'v-spec-axis' }, chart);
+      svg('line', { x1: M.l, x2: M.l + pw, y1: M.t + ph, y2: M.t + ph, class: 'v-spec-axis' }, chart);
+
+      const xl = svg('text', { x: M.l + pw / 2, y: H - 6, 'text-anchor': 'middle', class: 'v-spec-label' }, chart);
+      xl.textContent = 'Wavelength (micrometres)';
+      const yl = svg(
+        'text',
+        {
+          transform: `translate(12 ${M.t + ph / 2}) rotate(-90)`,
+          'text-anchor': 'middle',
+          class: 'v-spec-label',
+        },
+        chart,
+      );
+      yl.textContent = useLog ? 'Flux (mJy), log scale' : 'Flux (mJy)';
+
+      // points
+      for (const p of usable) {
+        const col = visitColour(p.visitIndex);
+        const g = svg('g', { class: 'v-spec-pt', stroke: col, fill: p.flagged ? 'none' : col }, chart);
+        const cx = sx(p.wavelength);
+        const cy = sy(p.flux);
+        const x0 = sx(p.wavelength - bwOf(p) / 2);
+        const x1 = sx(p.wavelength + bwOf(p) / 2);
+        const y0 = clampY(sy(p.flux - p.fluxErr));
+        const y1 = clampY(sy(p.flux + p.fluxErr));
+        svg('line', { x1: x0, x2: x1, y1: cy, y2: cy, 'stroke-width': 1, fill: 'none' }, g);
+        svg('line', { x1: cx, x2: cx, y1: y0, y2: y1, 'stroke-width': 1.5, fill: 'none' }, g);
+        svg('circle', { cx, cy, r: 3.5, 'stroke-width': 1.5 }, g);
+        const t = svg('title', {}, g);
+        t.textContent = pointTitle(p, p.visitIndex + 1);
+      }
+      const wrap = el('div', 'v-spec-wrap');
+      wrap.appendChild(chart);
+      body.appendChild(wrap);
+
+      // legend
+      const visits = Array.from(new Set(usable.map((p) => p.visitIndex))).sort((a, b) => a - b);
+      const legend = el('ul', 'v-spec-legend');
+      for (const v of visits) {
+        const li = el('li');
+        const sw = el('span', 'v-spec-swatch');
+        sw.style.background = visitColour(v);
+        sw.setAttribute('aria-hidden', 'true');
+        li.appendChild(sw);
+        li.appendChild(document.createTextNode(visitLabel(v)));
+        legend.appendChild(li);
+      }
+      body.appendChild(legend);
+
+      if (usable.some((p) => p.flagged)) {
+        body.appendChild(el('p', 'v-hint', 'Hollow points touch a masked or saturated pixel.'));
+      }
+      if (useLog) {
+        body.appendChild(
+          el('p', 'v-hint', 'The brightest and faintest points differ by more than 100 times, so the flux axis is logarithmic.'),
+        );
+      }
     }
 
     // table

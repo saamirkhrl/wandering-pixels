@@ -65,15 +65,27 @@
   margin: 8px 0;
 }
 
-.v-spec-sum {
-  display: flex;
-  align-items: center;
-  min-height: var(--control-height);
+.v-spec-sum,
+.v-qual-sum {
+  display: list-item;
+  list-style-position: inside;
+  padding: 10px 0;
+  line-height: 24px;
   cursor: pointer;
+}
+
+.v-spec-sum {
   font-weight: 700;
 }
 
+.v-qual-sum {
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .v-spec-sum:focus-visible,
+.v-qual-sum:focus-visible,
 .v-qual-link:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;

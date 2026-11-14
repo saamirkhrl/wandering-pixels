@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SpectrumPoint } from '../data';
-import { spectrumCsv } from './spectrum';
+import { isUsablePoint, spectrumCsv } from './spectrum';
 
 const pt = (i: number, flagged: boolean): SpectrumPoint => ({
   exposureId: `OBS${i}D1`,
@@ -29,5 +29,17 @@ describe('spectrumCsv', () => {
 
   it('returns only the header for no points', () => {
     expect(spectrumCsv([]).trim().split('\n')).toHaveLength(1);
+  });
+});
+
+describe('non-finite points', () => {
+  it('flags unusable points and writes empty CSV cells', () => {
+    const bad = { ...pt(0, true), flux: NaN, fluxErr: NaN };
+    expect(isUsablePoint(bad)).toBe(false);
+    expect(isUsablePoint(pt(1, false))).toBe(true);
+    const row = spectrumCsv([bad]).trim().split('\n')[1].split(',');
+    expect(row).toHaveLength(10);
+    expect(row[3]).toBe('');
+    expect(row[4]).toBe('');
   });
 });

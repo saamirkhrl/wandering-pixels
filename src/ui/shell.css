@@ -219,3 +219,8 @@ header.shell-bar {
     min-height: var(--control-height);
   }
 }
+
+html[data-view='sky'] .shell-bar .targets-button,
+html[data-view='sky'] .shell-bar .targets-menu {
+  display: none;
+}

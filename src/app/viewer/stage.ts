@@ -52,7 +52,9 @@ export type ExtraDraw = (
 
 export interface Stage {
   el: HTMLElement;
-  setImage: (rgba: Uint8ClampedArray, w: number, h: number) => void;
+  setImage: (rgba: Uint8ClampedArray, w: number, h: number, k?: number) => void;
+  deviceScale: (w: number, h: number) => number;
+  onLayout: (fn: (() => void) | null) => void;
   setOverlay: (grid: Grid, targetXY: [number, number] | null) => void;
   setValueProvider: (fn: ((x: number, y: number) => string) | null) => void;
   setNote: (text: string | null) => void;
@@ -94,6 +96,8 @@ export function createStage(): Stage {
   el.append(box, readout);
 
   const off = document.createElement('canvas');
+  let imgK = 1;
+  let layoutFn: (() => void) | null = null;
   let imgW = 0;
   let imgH = 0;
   let hasImage = false;
@@ -130,7 +134,9 @@ export function createStage(): Stage {
       over.height = ch;
     }
     if (hasImage) {
+      const before = scale;
       scale = integerScale(imgW, imgH, cw, ch);
+      if (scale !== before && layoutFn) queueMicrotask(() => layoutFn?.());
       ox = Math.floor((cw - imgW * scale) / 2);
       oy = Math.floor((ch - imgH * scale) / 2);
     }
@@ -143,8 +149,8 @@ export function createStage(): Stage {
     if (!ctx) return;
     ctx.clearRect(0, 0, base.width, base.height);
     if (!hasImage) return;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(off, 0, 0, imgW, imgH, ox, oy, imgW * scale, imgH * scale);
+    ctx.imageSmoothingEnabled = imgK > 1 && imgK !== scale;
+    ctx.drawImage(off, 0, 0, imgW * imgK, imgH * imgK, ox, oy, imgW * scale, imgH * scale);
   }
 
   function drawOverlay(): void {
@@ -154,6 +160,9 @@ export function createStage(): Stage {
     if (!hasImage || !grid) return;
     if (extra) {
       ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, oy, imgW * scale, imgH * scale);
+      ctx.clip();
       extra(ctx, (gx, gy) => [ox + (gx + 0.5) * scale, oy + (gy + 0.5) * scale], scale, dpr);
       ctx.restore();
     }
@@ -255,14 +264,15 @@ export function createStage(): Stage {
     }
   }
 
-  function setImage(rgba: Uint8ClampedArray, w: number, h: number): void {
-    if (off.width !== w || off.height !== h) {
-      off.width = w;
-      off.height = h;
+  function setImage(rgba: Uint8ClampedArray, w: number, h: number, k = 1): void {
+    if (off.width !== w * k || off.height !== h * k) {
+      off.width = w * k;
+      off.height = h * k;
     }
     const octx = off.getContext('2d');
     if (!octx) return;
-    octx.putImageData(new ImageData(new Uint8ClampedArray(rgba), w, h), 0, 0);
+    octx.putImageData(new ImageData(new Uint8ClampedArray(rgba), w * k, h * k), 0, 0);
+    imgK = k;
     const sizeChanged = !hasImage || imgW !== w || imgH !== h;
     imgW = w;
     imgH = h;
@@ -328,6 +338,13 @@ export function createStage(): Stage {
   return {
     el,
     setImage,
+    deviceScale: (w, h) => {
+      const d = window.devicePixelRatio || 1;
+      return integerScale(w, h, Math.max(1, Math.round(box.clientWidth * d)), Math.max(1, Math.round(box.clientHeight * d)));
+    },
+    onLayout: (fn) => {
+      layoutFn = fn;
+    },
     setOverlay,
     setValueProvider: (fn) => {
       valueFn = fn;

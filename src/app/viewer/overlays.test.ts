@@ -8,12 +8,14 @@ vi.hoisted(() => {
 import {
   describeSource,
   hitTest,
+  MASK_BAD_BITS,
   maskFor,
   projectSources,
   sourcesFromGaia,
   sourcesFromWise,
   type OverlaySource,
 } from './overlays';
+import { ADVISORY_MASK, BAD_DATA_MASK } from '../data';
 
 const grid: Grid = { ra0: 150, dec0: 20, w: 101, h: 101, scaleArcsec: 6.2, epochMjd: 57388 };
 const EPOCH_MJD = 51544.5 + 16 * 365.25;
@@ -76,14 +78,16 @@ describe('hitTest', () => {
 
 describe('maskFor', () => {
   it('unions flags of member frames only', () => {
-    const mk = (id: string, set: number[]): Frame => {
+    const mk = (id: string, set: number[], bit = 2): Frame => {
       const flags = new Uint8Array(4);
-      for (const i of set) flags[i] = 1;
+      for (const i of set) flags[i] = bit;
       return { exposure: { id } as Frame['exposure'], flags, w: 2, h: 2 } as Frame;
     };
-    const frames = [mk('a', [0]), mk('b', [3]), mk('c', [1])];
-    const mf = { w: 2, h: 2, exposureIds: ['a', 'b'] } as MovieFrame;
+    const frames = [mk('a', [0]), mk('b', [3], 4), mk('c', [1]), mk('d', [2], 16)];
+    const mf = { w: 2, h: 2, exposureIds: ['a', 'b', 'd'] } as MovieFrame;
     expect(Array.from(maskFor(mf, frames))).toEqual([1, 0, 0, 1]);
+    expect(MASK_BAD_BITS).toBe(BAD_DATA_MASK);
+    expect(Array.from(maskFor(mf, frames, ADVISORY_MASK))).toEqual([0, 0, 1, 0]);
   });
 });
 

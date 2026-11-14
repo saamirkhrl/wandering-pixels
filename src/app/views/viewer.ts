@@ -6,7 +6,9 @@ import {
   difference,
   gaiaCone,
   gridToWorld,
+  isSimulated,
   listCached,
+  liveIsMock,
   saturatedSources,
   spectrumAt,
   wiseAvailable,
@@ -33,12 +35,25 @@ import {
   FRAME_MB_ESTIMATE,
   ONCE_ONLY,
   findCachedByPosition,
-  loadPair,
+  loadFirst,
   loadRest,
   loadViewer,
+  normalizeName,
+  refineBest,
 } from '../viewer/load';
 import type { DetInfo, LiveContext, LiveSearch, LoadResult } from '../viewer/load';
-import { renderDiverging, renderPixels, robustSigma } from '../viewer/render';
+import {
+  HATCH_A,
+  asinhNorm,
+  displayStretch,
+  divergingColor,
+  greyColor,
+  renderDiverging,
+  renderPixels,
+  robustStats,
+} from '../viewer/render';
+import type { Contrast, Rgb, Stretch } from '../viewer/render';
+import { toRGBA, upsampleSmooth } from '../viewer/smooth';
 import { createStage, formatDecDeg, formatRaDeg } from '../viewer/stage';
 import { hasTarget, readParams, writeParams } from '../viewer/state';
 import { createSpectrumPanel } from '../viewer/spectrum';
@@ -56,6 +71,12 @@ import {
 } from '../viewer/overlays';
 import type { OverlaySource, ProjectedSource } from '../viewer/overlays';
 
+interface DiffEntry {
+  key: string;
+  d: DifferenceImage;
+  range: number;
+}
+
 interface Loaded {
   target: Target;
   frames: Frame[];
@@ -67,6 +88,7 @@ interface Loaded {
 type Layer = 'gaia' | 'wise' | 'masked';
 
 const SIGMA_RANGE = 5;
+const OVERLAY_LIMIT = 40;
 const KNOWN_CODES = ['NOT_FOUND', 'NO_COVERAGE', 'UPSTREAM_BUSY', 'UPSTREAM_ERROR', 'BAD_INPUT'] as const;
 const DETECTORS: Detector[] = [1, 2, 3, 4, 5, 6];
 
@@ -108,7 +130,11 @@ export const mount: Mount = (root, ctx) => {
   let bMjd: number | null = null;
   let ctrl: AbortController | null = null;
   let token = 0;
-  let diffCache: { key: string; d: DifferenceImage; range: number } | null = null;
+  let diffCache: DiffEntry | null = null;
+  const stretchCache = new WeakMap<Movie, Map<Contrast, Stretch>>();
+  const imgCache = new WeakMap<object, Map<string, Uint8ClampedArray>>();
+  let smooth = !params.trueSharp;
+  let contrast: Contrast = 'normal';
   let current: { kind: 'frame'; pixels: Float32Array; w: number } | { kind: 'diff'; d: DifferenceImage } | null = null;
 
   // live state
@@ -121,6 +147,8 @@ export const mount: Mount = (root, ctx) => {
   let restTotal = 0;
   let restCtrl: AbortController | null = null;
   let skyName: string | null = null;
+  let abTouched = false;
+  let restBase = 0;
 
   // overlays and spectrum
   const ov: Record<Layer, boolean> = {
@@ -131,12 +159,14 @@ export const mount: Mount = (root, ctx) => {
   const ovSources: { gaia: OverlaySource[] | null; wise: OverlaySource[] | null } = { gaia: null, wise: null };
   let ovLoading = '';
   let ovToken = 0;
+  let gaiaTotal = 0;
+  let wiseTotal = 0;
   let drawGaia: ProjectedSource[] = [];
   let drawWise: ProjectedSource[] = [];
   let drawMaskArr: Uint8Array | null = null;
   let drawMaskW = 0;
   let drawSat: { x: number; y: number }[] = [];
-  let qualityKey: { movie: Movie | null; frame: unknown; n: number } = { movie: null, frame: null, n: 0 };
+  let qualityKey: { movie: Movie | null; frame: unknown; n: number; diff: string } = { movie: null, frame: null, n: 0, diff: '' };
 
   const rootEl = document.createElement('div');
   rootEl.className = 'viewer';
@@ -196,6 +226,15 @@ export const mount: Mount = (root, ctx) => {
       rebuild();
       persist();
     },
+    setSmooth: (on) => {
+      smooth = on;
+      render();
+      persist();
+    },
+    setContrast: (c) => {
+      contrast = c;
+      render();
+    },
     setSize: (n) => {
       if (n === size || !search || (loaded && loaded.cached)) return;
       size = n;
@@ -209,6 +248,7 @@ export const mount: Mount = (root, ctx) => {
     },
     setA: (i) => {
       aUser = i;
+      abTouched = true;
       aMjd = movie ? (movie.frames[i]?.mjd ?? null) : null;
       syncAB();
       render();
@@ -216,6 +256,7 @@ export const mount: Mount = (root, ctx) => {
     },
     setB: (i) => {
       bUser = i;
+      abTouched = true;
       bMjd = movie ? (movie.frames[i]?.mjd ?? null) : null;
       syncAB();
       render();
@@ -251,6 +292,7 @@ export const mount: Mount = (root, ctx) => {
     bMjd = null;
     pendingFrame = null;
     pairCache = null;
+    abTouched = false;
   }
 
   function defaultPair(m: Movie): [number, number] {
@@ -312,6 +354,7 @@ export const mount: Mount = (root, ctx) => {
       frame: player.index > 0 ? String(player.index) : null,
       size: size !== DEFAULT_SIZE ? String(size) : null,
       overlays: layers.length > 0 ? layers.join(',') : null,
+      px: smooth ? null : '1',
     });
   }
 
@@ -378,17 +421,28 @@ export const mount: Mount = (root, ctx) => {
               }`
             : '1 exposure'
           : `Detector ${m.detector}`;
-      return { caption, detail, tip: base, option: caption, mjd: f.mjd };
+      return {
+        caption,
+        detail,
+        tip: base,
+        option: caption,
+        mjd: f.mjd,
+        shortDate: date,
+        wavelength: f.wavelength,
+        visitIndex: f.visitIndex,
+      };
     });
   }
 
-  function getDiff(m: Movie, a: number, b: number): { d: DifferenceImage; range: number } | null {
-    const key = `${mode}|${m.detector}|${a}|${b}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
+  function getDiff(m: Movie, a: number, b: number): DiffEntry | null {
+    const fa = m.frames[a];
+    const fb = m.frames[b];
+    const key = `${mode}|${m.detector}|${fa?.exposureIds.join(',')}|${fb?.exposureIds.join(',')}|${m.frames.length}|${loaded?.frames.length ?? 0}`;
     if (diffCache && diffCache.key === key) return diffCache;
     try {
       const d = difference(m.frames[a], m.frames[b]);
       const smax = Math.max(Math.abs(d.stretch.lo), Math.abs(d.stretch.hi));
-      const sigma = robustSigma(d.pixels);
+      const sigma = robustStats([d.pixels]).sigma;
       const range = sigma > 0 ? Math.min(SIGMA_RANGE * sigma, smax > 0 ? smax : Infinity) : smax;
       diffCache = { key, d, range: range > 0 ? range : 1 };
       return diffCache;
@@ -397,9 +451,99 @@ export const mount: Mount = (root, ctx) => {
     }
   }
 
+  function movieStretch(m: Movie): Stretch {
+    let per = stretchCache.get(m);
+    if (!per) {
+      per = new Map();
+      stretchCache.set(m, per);
+    }
+    let st = per.get(contrast);
+    if (!st) {
+      st = displayStretch(
+        m.frames.map((f) => f.pixels),
+        m.stretch,
+        contrast,
+      );
+      per.set(contrast, st);
+    }
+    return st;
+  }
+
+  const SMOOTH_CAP = 1200;
+
+  function smoothK(w: number, h: number): number {
+    if (!smooth) return 1;
+    return Math.max(1, Math.min(stage.deviceScale(w, h), Math.floor(SMOOTH_CAP / Math.max(w, h))));
+  }
+
+  function cached(owner: object, key: string, make: () => Uint8ClampedArray): Uint8ClampedArray {
+    let map = imgCache.get(owner);
+    if (!map) {
+      map = new Map();
+      imgCache.set(owner, map);
+    }
+    const hit = map.get(key);
+    if (hit) return hit;
+    if (map.size > 12) map.clear();
+    const v = make();
+    map.set(key, v);
+    return v;
+  }
+
+  function smoothRgba(
+    norm: Float32Array,
+    w: number,
+    h: number,
+    k: number,
+    colour: (v: number) => Rgb,
+  ): Uint8ClampedArray {
+    const up = upsampleSmooth(norm, w, h, k);
+    const out = new Uint8ClampedArray(up.length * 4);
+    toRGBA(
+      up,
+      out,
+      (v) => {
+        const c = colour(v);
+        return [c[0], c[1], c[2]];
+      },
+      [HATCH_A[0], HATCH_A[1], HATCH_A[2]],
+    );
+    return out;
+  }
+
+  function frameImage(m: Movie, f: Movie['frames'][number]): { rgba: Uint8ClampedArray; k: number } {
+    const st = movieStretch(m);
+    const k = smoothK(f.w, f.h);
+    const key = `${k}|${st.lo}|${st.hi}|${st.scale}`;
+    const rgba = cached(f.pixels, key, () => {
+      if (k === 1) return renderPixels(f.pixels, f.w, f.h, st);
+      const norm = new Float32Array(f.pixels.length);
+      for (let i = 0; i < norm.length; i++) {
+        const p = f.pixels[i];
+        norm[i] = Number.isNaN(p) ? NaN : asinhNorm(p, st.lo, st.hi, st.scale);
+      }
+      return smoothRgba(norm, f.w, f.h, k, (v) => greyColor(Math.min(1, Math.max(0, v))));
+    });
+    return { rgba, k };
+  }
+
+  function diffImage(dr: DiffEntry): { rgba: Uint8ClampedArray; k: number } {
+    const d = dr.d;
+    const k = smoothK(d.w, d.h);
+    const src = snr ? d.snr : d.pixels;
+    const range = snr ? SIGMA_RANGE : dr.range;
+    const rgba = cached(src, `${k}|${range}`, () => {
+      if (k === 1) return renderDiverging(src, d.w, d.h, range);
+      const norm = new Float32Array(src.length);
+      // upsampleSmooth works in 0..1, so carry the signed -1..1 value as 0.5 + v / 2.
+      for (let i = 0; i < norm.length; i++) norm[i] = 0.5 + Math.max(-1, Math.min(1, src[i] / range)) / 2;
+      return smoothRgba(norm, d.w, d.h, k, (v) => divergingColor(v * 2 - 1));
+    });
+    return { rgba, k };
+  }
+
   function noteFor(d: DifferenceImage, fa: Movie['frames'][number], fb: Movie['frames'][number]): string {
-    let text =
-      'Orange is where B is brighter, blue where A is brighter. Bright stars often leave a two-toned smudge even when nothing moved; a real mover leaves a pair offset along its path.';
+    let text = 'Orange is where B is brighter, blue where A is brighter.';
     if (fa.targetXY && fb.targetXY) {
       const px = Math.hypot(fb.targetXY[0] - fa.targetXY[0], fb.targetXY[1] - fa.targetXY[1]);
       if (px > 0.5) {
@@ -410,7 +554,7 @@ export const mount: Mount = (root, ctx) => {
   }
 
   function compareInfo(
-    dr: { d: DifferenceImage; range: number } | null,
+    dr: DiffEntry | null,
     same: boolean,
     fa: Movie['frames'][number],
     fb: Movie['frames'][number],
@@ -466,12 +610,10 @@ export const mount: Mount = (root, ctx) => {
       compare = compareInfo(dr, same, m.frames[a], m.frames[b]);
       if (dr) {
         const d = dr.d;
-        const rgba = snr
-          ? renderDiverging(d.snr, d.w, d.h, SIGMA_RANGE)
-          : renderDiverging(d.pixels, d.w, d.h, dr.range);
+        const img = diffImage(dr);
         showFrame = m.frames[b];
         prepareOverlays(m, showFrame);
-        stage.setImage(rgba, d.w, d.h);
+        stage.setImage(img.rgba, d.w, d.h, img.k);
         stage.setOverlay(m.grid, showFrame.targetXY);
         current = { kind: 'diff', d };
       } else {
@@ -482,9 +624,9 @@ export const mount: Mount = (root, ctx) => {
       paintFrame(m, showFrame);
     }
 
-    if (qualityKey.movie !== m || qualityKey.frame !== showFrame || qualityKey.n !== (loaded?.frames.length ?? 0)) {
-      qualityKey = { movie: m, frame: showFrame, n: loaded?.frames.length ?? 0 };
-      quality.show(m, showFrame, loaded ? loaded.frames : []);
+    if (qualityKey.movie !== m || qualityKey.frame !== showFrame || qualityKey.diff !== (diffOn ? `${a}|${b}` : '') || qualityKey.n !== (loaded?.frames.length ?? 0)) {
+      qualityKey = { movie: m, frame: showFrame, n: loaded?.frames.length ?? 0, diff: diffOn ? `${a}|${b}` : '' };
+      quality.show(m, showFrame, loaded ? loaded.frames : [], diffOn && a !== b ? { a: m.frames[a], b: m.frames[b] } : null);
     }
 
     const cached = loaded ? loaded.cached : false;
@@ -505,17 +647,39 @@ export const mount: Mount = (root, ctx) => {
       sizeNote: cached
         ? 'Prepared sets come in one size.'
         : `Bigger patches mean more to download. The pair is about ${Math.round((2 * FRAME_MB_ESTIMATE * size) / DEFAULT_SIZE)} MB at ${size} arcsec.`,
+      smooth,
+      contrast,
+      preparedResidual: null,
       overlays: { gaia: ov.gaia, wise: ov.wise, masked: ov.masked },
       wiseAvailable,
-      overlayNote: ovLoading,
+      overlayNote:
+        ovLoading ||
+        [
+          gaiaTotal > OVERLAY_LIMIT ? `Brightest ${OVERLAY_LIMIT} of ${gaiaTotal} Gaia stars shown.` : '',
+          wiseTotal > OVERLAY_LIMIT ? `Brightest ${OVERLAY_LIMIT} of ${wiseTotal} WISE sources shown.` : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
       compare,
     };
     panel.update(model);
   }
 
   function prepareOverlays(m: Movie, f: Movie['frames'][number]): void {
-    drawGaia = ov.gaia && ovSources.gaia ? projectSources(ovSources.gaia, m.grid, f.mjd) : [];
-    drawWise = ov.wise && wiseAvailable && ovSources.wise ? projectSources(ovSources.wise, m.grid, f.mjd) : [];
+    const pick40 = (src: OverlaySource[] | null, on: boolean): { pts: ProjectedSource[]; total: number } => {
+      if (!on || !src) return { pts: [], total: 0 };
+      const inside = projectSources(src, m.grid, f.mjd).filter(
+        (p) => p.x >= -0.5 && p.y >= -0.5 && p.x <= m.grid.w - 0.5 && p.y <= m.grid.h - 0.5,
+      );
+      inside.sort((p, q) => (p.src.mag ?? Infinity) - (q.src.mag ?? Infinity));
+      return { pts: inside.slice(0, OVERLAY_LIMIT), total: inside.length };
+    };
+    const g = pick40(ovSources.gaia, ov.gaia);
+    const w = pick40(ovSources.wise, ov.wise && wiseAvailable);
+    drawGaia = g.pts;
+    drawWise = w.pts;
+    gaiaTotal = g.total;
+    wiseTotal = w.total;
     if (ov.masked && loaded) {
       drawMaskArr = maskFor(f, loaded.frames);
       drawMaskW = f.w;
@@ -537,10 +701,13 @@ export const mount: Mount = (root, ctx) => {
 
   function paintFrame(m: Movie, f: Movie['frames'][number]): void {
     prepareOverlays(m, f);
-    stage.setImage(renderPixels(f.pixels, f.w, f.h, m.stretch), f.w, f.h);
+    const img = frameImage(m, f);
+    stage.setImage(img.rgba, f.w, f.h, img.k);
     stage.setOverlay(f.grid, f.targetXY);
     current = { kind: 'frame', pixels: f.pixels, w: f.w };
   }
+
+  stage.onLayout(() => render());
 
   stage.setExtraDraw((c, toCanvas, scale, dpr) => {
     if (drawMaskArr) drawMask(c, drawMaskArr, drawMaskW, toCanvas, scale);
@@ -661,10 +828,19 @@ export const mount: Mount = (root, ctx) => {
     const fallback =
       params.q ?? (params.ra !== null && params.dec !== null ? `${params.ra}, ${params.dec}` : 'Viewer');
     if (!target) {
+      panel.setTitleNote(null);
       panel.setHeader(fallback, '');
       return;
     }
     const name = target.name ?? fallback;
+    const isWise =
+      cachedData?.slug === 'wise-0855' ||
+      normalizeName(`${target.name ?? ''} ${params.q ?? ''}`).includes('wise0855');
+    panel.setTitleNote(
+      isWise
+        ? 'WISE 0855 is one of the faintest known brown dwarfs and may not be visible in any single SPHEREx image; we mark where it should be.'
+        : null,
+    );
     panel.setHeader(
       name,
       `RA ${formatRaDeg(target.ra)} deg, Dec ${formatDecDeg(target.dec)} deg${det !== null ? `. Detector ${det}.` : ''}`,
@@ -690,6 +866,12 @@ export const mount: Mount = (root, ctx) => {
     return n;
   }
 
+  function bytesOf(frames: Frame[]): number {
+    let t = 0;
+    for (const f of frames) t += f.bytes > 0 ? f.bytes : 0;
+    return t;
+  }
+
   function showRest(): void {
     if (!live) {
       panel.setRest(null);
@@ -700,19 +882,25 @@ export const mount: Mount = (root, ctx) => {
       panel.setRest(null);
       return;
     }
-    const mb = Math.round(n * FRAME_MB_ESTIMATE);
+    const all = pairFrames.concat(landed);
+    const withBytes = all.filter((f) => f.bytes > 0);
+    const perFrame = withBytes.length > 0 ? bytesOf(withBytes) / withBytes.length / 1e6 : FRAME_MB_ESTIMATE;
+    const mb = Math.round(n * perFrame);
     const single = mode === 'single';
+    const d = det ?? 0;
     if (restCtrl) {
+      const real = bytesOf(landed.slice(restBase));
       panel.setRest({
         kind: 'loading',
         done: landed.length,
         total: restTotal,
-        mb: Math.round(landed.length * FRAME_MB_ESTIMATE),
+        mb: real > 0 ? Math.round(real / 1e6) : Math.round(landed.length * FRAME_MB_ESTIMATE),
+        exact: real > 0,
       });
     } else if (landed.length > 0) {
-      panel.setRest({ kind: 'stopped', n, mb, loaded: landed.length, total: restTotal, single });
+      panel.setRest({ kind: 'stopped', n, mb, loaded: landed.length, total: restTotal, single, det: d, exact: false });
     } else {
-      panel.setRest({ kind: 'optin', n, mb, single });
+      panel.setRest({ kind: 'optin', n, mb, single, det: d, exact: false });
     }
   }
 
@@ -735,6 +923,8 @@ export const mount: Mount = (root, ctx) => {
     restTotal = landed.length + toLoad.length;
     const doneBefore = landed.length;
     const baseLanded = landed.slice();
+    let landedNow: Frame[] = [];
+    restBase = baseLanded.length;
     const isLive = () => !disposed && mine === token;
     showRest();
     loadRest(
@@ -743,15 +933,18 @@ export const mount: Mount = (root, ctx) => {
       {
         onProgress: (done) => {
           if (!isLive()) return;
+          const real = bytesOf(landedNow);
           panel.setRest({
             kind: 'loading',
             done: doneBefore + done,
             total: restTotal,
-            mb: Math.round(done * FRAME_MB_ESTIMATE),
+            mb: real > 0 ? Math.round(real / 1e6) : Math.round(done * FRAME_MB_ESTIMATE),
+            exact: real > 0,
           });
         },
         onFrames: (got) => {
           if (!isLive()) return;
+          landedNow = got;
           landed = baseLanded.concat(got);
           adoptLive(false);
         },
@@ -791,13 +984,15 @@ export const mount: Mount = (root, ctx) => {
     remaining = [];
     diffCache = null;
     pairCache = null;
-    qualityKey = { movie: null, frame: null, n: 0 };
+    qualityKey = { movie: null, frame: null, n: 0, diff: '' };
     player.stop();
     clearPick();
     resetOverlayData();
     rootEl.dataset.state = 'loading';
     panel.clearStatus();
     panel.setRest(null);
+    panel.setMatchNote(null);
+    panel.setMockLine(false);
     panel.showControls(false);
     headerFor(null);
     stage.setNote('Loading');
@@ -805,18 +1000,26 @@ export const mount: Mount = (root, ctx) => {
 
   function handleResult(res: LoadResult): void {
     panel.setProgress(null);
+    panel.setMockLine(res.cached && res.cachedData ? isSimulated(res.cachedData) : liveIsMock);
     search = res.search ?? search;
     cachedData = res.cachedData;
     live = res.live;
     if (live) {
       size = live.size;
       pairFrames = res.frames;
-      remaining = live.rest.slice();
+      remaining = [];
       if (!modeUser) mode = 'single';
-      if (aUser === null && bUser === null && res.frames.length >= 2) {
+      if (!abTouched && aUser === null && bUser === null && res.frames.length >= 2) {
         aUser = 0;
         bUser = 1;
       }
+      panel.setMatchNote(
+        res.matched
+          ? null
+          : 'These two images are not at the same wavelength yet, so brightness differences may be colour, not change.',
+      );
+    } else {
+      panel.setMatchNote(null);
     }
     adopt({
       target: res.target,
@@ -831,10 +1034,43 @@ export const mount: Mount = (root, ctx) => {
     }
     ensureOverlayData();
     render();
-    if (live) {
+    if (live) startRefine(res);
+  }
+
+  function startRefine(res: LoadResult): void {
+    if (!live || !ctrl) return;
+    const mine = token;
+    const signal = ctrl.signal;
+    const lv = live;
+    const finish = (annotated: Exposure[]) => {
+      if (disposed || mine !== token) return;
+      const have = new Set(pairFrames.map((f) => f.exposure.id));
+      remaining = annotated.filter((e) => !have.has(e.id));
+      lv.rest = remaining;
       if (remaining.length > 0 && remaining.length <= AUTO_REST_LIMIT) startRest();
       else showRest();
-    }
+    };
+    refineBest(res.target, search ? search.exposures : lv.detExposures, lv.grid, res.det, signal)
+      .then((r) => {
+        if (disposed || mine !== token) return;
+        const have = new Set(pairFrames.map((f) => f.exposure.id));
+        if (r.frames.length >= 2 && !(have.has(r.frames[0].exposure.id) && have.has(r.frames[1].exposure.id))) {
+          pairFrames = r.frames;
+          if (!abTouched) {
+            aUser = 0;
+            bUser = 1;
+            aMjd = null;
+            bMjd = null;
+          }
+          adoptLive(false);
+        }
+        if (r.matched) panel.setMatchNote(null);
+        finish(lv.detExposures);
+      })
+      .catch(() => {
+        if (disposed || mine !== token) return;
+        finish(lv.detExposures);
+      });
   }
 
   function handleError(e: unknown): void {
@@ -904,7 +1140,7 @@ export const mount: Mount = (root, ctx) => {
     const isCurrent = () => !disposed && mine === token;
     resetChoices();
     if (!modeUser) mode = 'single';
-    loadPair(
+    loadFirst(
       keepSearch,
       newDet,
       newSize,

@@ -108,3 +108,10 @@
     margin-bottom: 10px;
   }
 }
+
+.about-credits {
+  margin: 16px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--paper-dim);
+}

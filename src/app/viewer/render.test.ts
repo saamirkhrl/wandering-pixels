@@ -6,7 +6,9 @@ import {
   HATCH_B,
   hatchColor,
   integerScale,
+  displayStretch,
   robustSigma,
+  robustStats,
   renderDiverging,
   renderPixels,
 } from './render';
@@ -52,7 +54,7 @@ describe('NaN pixels', () => {
       expect(rgb).toEqual(Array.from(hatchColor(x, y)));
       expect(rgb[0] + rgb[1] + rgb[2]).toBeGreaterThan(60);
     }
-    expect(HATCH_A).not.toEqual(HATCH_B);
+    expect(HATCH_A).toEqual(HATCH_B);
   });
 
   it('are distinct from a sky pixel at the low end', () => {
@@ -117,5 +119,52 @@ describe('diverging noise level', () => {
   it('keeps one sigma of a five sigma range dark', () => {
     const [r, g, b] = divergingColor(0.2);
     expect(Math.max(r, g, b)).toBeLessThan(60);
+  });
+});
+
+describe('displayStretch', () => {
+  const noisy = (seed: number, n = 2000): Float32Array => {
+    const a = new Float32Array(n);
+    let s = seed;
+    for (let i = 0; i < n; i++) {
+      s = (s * 16807) % 2147483647;
+      a[i] = 0.036 + (s / 2147483647 - 0.5) * 0.06;
+    }
+    return a;
+  };
+
+  it('puts the background median near black', () => {
+    const f = noisy(3);
+    f[10] = 7.3;
+    const st = displayStretch([f], { lo: -0.009, hi: 1.31 });
+    const { median } = robustStats([f]);
+    expect(asinhNorm(median, st.lo, st.hi, st.scale)).toBeLessThan(0.3);
+  });
+
+  it('does not clip a faint star to white', () => {
+    const f = noisy(11);
+    for (let i = 0; i < 20; i++) f[i] = 0.3 + i * 0.05;
+    f[100] = 40;
+    const st = displayStretch([f], { lo: 0, hi: 1 });
+    expect(asinhNorm(0.5, st.lo, st.hi, st.scale)).toBeLessThan(0.95);
+    expect(asinhNorm(0.5, st.lo, st.hi, st.scale)).toBeGreaterThan(asinhNorm(0.1, st.lo, st.hi, st.scale));
+  });
+
+  it('uses every frame and is one stretch for the movie', () => {
+    const st = displayStretch([noisy(5), noisy(9)], { lo: 0, hi: 1 });
+    expect(st.hi).toBeGreaterThan(st.lo);
+    expect(st.scale).toBeGreaterThan(0);
+  });
+
+  it('scales the soft parameter with the contrast setting', () => {
+    const f = noisy(4);
+    const soft = displayStretch([f], { lo: 0, hi: 1 }, 'soft');
+    const hard = displayStretch([f], { lo: 0, hi: 1 }, 'hard');
+    expect((soft.scale as number) / (hard.scale as number)).toBeCloseTo(9, 5);
+  });
+
+  it('falls back to the base stretch with no noise estimate', () => {
+    const st = displayStretch([new Float32Array([NaN, NaN])], { lo: 0, hi: 2 });
+    expect(st).toEqual({ lo: 0, hi: 2 });
   });
 });

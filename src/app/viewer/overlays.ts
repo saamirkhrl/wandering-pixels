@@ -1,4 +1,4 @@
-import { worldToGrid } from '../data';
+import { ADVISORY_MASK, BAD_DATA_MASK, worldToGrid } from '../data';
 import type { Frame, GaiaStar, Grid, MovieFrame, WiseSource } from '../data';
 import '../../ui/viewer-parts.css';
 
@@ -21,6 +21,9 @@ export interface ProjectedSource {
   x: number;
   y: number;
 }
+
+export const MASK_BAD_BITS = BAD_DATA_MASK;
+export const MASK_ADVISORY_BITS = ADVISORY_MASK;
 
 const GAIA_EPOCH = 2016.0;
 const WISE_EPOCH = 2015.4;
@@ -89,9 +92,10 @@ export function drawSources(
   scale: number,
   dpr: number,
 ): void {
-  const r = Math.max(5 * dpr, 1.6 * scale);
+  const rg = Math.max(4 * dpr, 0.9 * scale);
+  const rw = Math.max(3.5 * dpr, 0.75 * scale);
   ctx.save();
-  ctx.globalAlpha = 0.85;
+  ctx.globalAlpha = 0.8;
   ctx.lineWidth = 1 * dpr;
   ctx.fillStyle = 'transparent';
   for (const p of pts) {
@@ -99,12 +103,11 @@ export function drawSources(
     if (p.src.kind === 'gaia') {
       ctx.strokeStyle = '#7fd4ff';
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.arc(cx, cy, rg, 0, Math.PI * 2);
       ctx.stroke();
     } else {
       ctx.strokeStyle = '#ff9fd0';
-      const s = r * 0.85;
-      ctx.strokeRect(cx - s, cy - s, s * 2, s * 2);
+      ctx.strokeRect(cx - rw, cy - rw, rw * 2, rw * 2);
     }
   }
   ctx.restore();
@@ -173,13 +176,13 @@ export function drawSaturated(
   ctx.restore();
 }
 
-export function maskFor(mf: MovieFrame, frames: Frame[]): Uint8Array {
+export function maskFor(mf: MovieFrame, frames: Frame[], bits: number = MASK_BAD_BITS): Uint8Array {
   const out = new Uint8Array(mf.w * mf.h);
   const ids = new Set(mf.exposureIds);
   for (const f of frames) {
     if (!ids.has(f.exposure.id)) continue;
     const n = Math.min(out.length, f.flags.length);
-    for (let i = 0; i < n; i++) if (f.flags[i] !== 0) out[i] = 1;
+    for (let i = 0; i < n; i++) if ((f.flags[i] & bits) !== 0) out[i] = 1;
   }
   return out;
 }

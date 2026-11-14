@@ -13,10 +13,12 @@ export const ABOUT_COPY = {
     },
     {
       lead: 'What it means.',
-      text: 'Most of the sky stays put. Anything that shifts position between visits shows up when you blink or subtract. Brightness needs more care: each image is taken at a slightly different infrared colour, and bright stars leave marks in a subtraction. Searching for motion this way is how nearby stars and brown dwarfs were found, and how astronomers look for a possible distant planet.',
+      text: 'Most of the sky stays put. Anything that shifts position between visits shows up when you blink or subtract. Searching for motion this way is how nearby stars and brown dwarfs were found, and how astronomers look for a possible distant planet.',
     },
   ],
   button: 'Close',
+  credits:
+    'Sky map and images: NASA SPHEREx, served by IRSA at Caltech/IPAC. Earth: NASA Blue Marble. Stars: Yale Bright Star Catalogue via NASA HEASARC.',
 };
 
 const STORAGE_KEY = 'wp-about-dismissed';
@@ -128,6 +130,11 @@ export function createAbout(): {
     btn.textContent = ABOUT_COPY.button;
     btn.addEventListener('click', () => close());
     panel.appendChild(btn);
+
+    const credits = document.createElement('p');
+    credits.className = 'about-credits';
+    credits.textContent = ABOUT_COPY.credits;
+    panel.appendChild(credits);
 
     s.appendChild(panel);
     document.body.appendChild(s);

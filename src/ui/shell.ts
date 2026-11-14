@@ -199,6 +199,12 @@ export function createShell(
   new ResizeObserver(fitViewRoot).observe(bar);
   about.maybeOpenOnArrival();
 
+  const syncView = () => {
+    document.documentElement.dataset.view = new URLSearchParams(location.search).get('view') ?? 'globe';
+  };
+  syncView();
+  new MutationObserver(syncView).observe(viewRoot, { childList: true });
+
   return {
     viewRoot,
     setQuery: (q) => {
